@@ -665,7 +665,9 @@
             </div>
 
             <div class="p-4 border-t border-slate-100 bg-white rounded-b-2xl">
-                <button type="button" id="parentFormSubmitBtn" data-i18n="btnSubmitApp"
+                <button type="button" id="parentFormSubmitBtn"
+                    onclick="switchModal(document.getElementById('parentFormModal'), document.getElementById('childWithYouModal'))"
+                    data-i18n="btnSubmitApp"
                     class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300">
                     Submit Application
                 </button>
@@ -1188,11 +1190,6 @@
 
         btnRoleParent.addEventListener('click', () => {
             switchModal(roleSelectionModal, parentFormModal);
-        });
-
-        // Parent form submit → ask if child is present
-        document.getElementById('parentFormSubmitBtn').addEventListener('click', () => {
-            switchModal(parentFormModal, childWithYouModal);
         });
 
         btnRoleChild.addEventListener('click', () => {
