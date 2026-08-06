@@ -24,9 +24,10 @@ function loadApiEnv() {
 }
 
 export default defineConfig(({ command }) => {
+  // Only load the API key during local dev — NEVER bake it into the production bundle
   const envData = command === 'serve' ? loadApiEnv() : {
-    endpoint: process.env.VITE_AZURE_ENDPOINT || '',
-    apiKey: process.env.VITE_AZURE_API_KEY || ''
+    endpoint: '',
+    apiKey: ''  // Empty in prod → AI client returns null → procedural generator runs
   };
 
   return {
