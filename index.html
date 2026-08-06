@@ -1412,6 +1412,22 @@
             document.body.classList.remove('exam-mode');
             window.scrollTo(0, 0);
         }
+
+        // --- Prevent Right-Click Context Menu ---
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // --- Prevent F12 and DevTools Shortcuts ---
+        document.addEventListener('keydown', (e) => {
+            if (
+                e.key === 'F12' ||
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+                (e.ctrlKey && (e.key === 'U' || e.key === 'u'))
+            ) {
+                e.preventDefault();
+            }
+        });
     </script>
     <script type="module" src="/src/main.ts"></script>
 </body>
