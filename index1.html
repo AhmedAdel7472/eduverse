@@ -138,6 +138,19 @@
             border-color: #3b82f6;
             color: #1d4ed8;
         }
+
+        /* Exam overlay — hidden by default, becomes fullscreen fixed on activation */
+        #childTestPage {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            overflow-y: auto;
+            display: none;
+        }
+        #childTestPage.exam-active {
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 
@@ -1042,7 +1055,7 @@
     </footer>
 
     <!-- Child Exam / Placement Test Container -->
-    <div id="childTestPage" class="hidden min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col relative z-50">
+    <div id="childTestPage" class="bg-[#0b0f19] text-slate-100">
         <!-- Exam Header -->
         <header class="app-header">
             <div class="brand-title">
@@ -1336,13 +1349,11 @@
 
         function startChildTest() {
             closeModal();
-            document.querySelector('header').classList.add('hidden');
-            document.querySelector('main').classList.add('hidden');
-            document.querySelector('footer').classList.add('hidden');
             document.body.classList.add('exam-mode');
             const testPage = document.getElementById('childTestPage');
             if (testPage) {
                 testPage.classList.remove('hidden');
+                testPage.classList.add('exam-active');
             }
             window.scrollTo(0, 0);
 
@@ -1354,11 +1365,9 @@
         function exitChildTest() {
             const testPage = document.getElementById('childTestPage');
             if (testPage) {
+                testPage.classList.remove('exam-active');
                 testPage.classList.add('hidden');
             }
-            document.querySelector('header').classList.remove('hidden');
-            document.querySelector('main').classList.remove('hidden');
-            document.querySelector('footer').classList.remove('hidden');
             document.body.classList.remove('exam-mode');
             window.scrollTo(0, 0);
         }

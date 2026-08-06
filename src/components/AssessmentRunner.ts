@@ -300,14 +300,22 @@ export class AssessmentRunner {
             </div>
           </div>
           <div>
-            <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">Program Sequence:</h4>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+              <h4 style="font-size:0.9rem; color:var(--text-secondary); margin:0;">Program Sequence (${answerState.robotSequence.length} steps):</h4>
+              ${answerState.robotSequence.length > 0 ? `
+                <button id="clear-sequence-btn" style="font-size:0.75rem; color:var(--accent-amber); background:rgba(245,158,11,0.1); border:1px solid var(--accent-amber); padding:0.25rem 0.6rem; border-radius:6px; cursor:pointer;">🗑️ Clear All</button>
+              ` : ''}
+            </div>
             <div class="sequence-dropzone" id="sequence-box">
-              ${answerState.robotSequence.length === 0 ? '<span style="color:var(--text-secondary); font-size:0.85rem;">Click blocks on left to build sequence...</span>' : ''}
-              ${answerState.robotSequence.map((blk, i) => `
-                <div style="background:var(--accent-blue); padding:0.4rem 0.8rem; border-radius:6px; font-size:0.85rem; font-weight:600; display:flex; justify-content:space-between;">
-                  <span>${i + 1}. ${blk}</span>
+              ${answerState.robotSequence.length === 0
+                ? '<span style="color:var(--text-secondary); font-size:0.85rem;">Click blocks on the left to build your sequence...</span>'
+                : answerState.robotSequence.map((blk, i) => `
+                <div class="sequence-step" style="background:var(--accent-blue); padding:0.4rem 0.8rem; border-radius:6px; font-size:0.85rem; font-weight:600; display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+                  <span>📌 ${i + 1}. ${blk}</span>
+                  <button class="remove-block-btn" data-idx="${i}" style="background:rgba(0,0,0,0.25); border:none; color:#fff; width:20px; height:20px; border-radius:50%; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;" title="Remove this step">×</button>
                 </div>
-              `).join('')}
+              `).join('')
+              }
             </div>
           </div>
         </div>
@@ -428,7 +436,7 @@ export class AssessmentRunner {
       });
     });
 
-    // Robot Mission Code block click
+    // Robot Mission Code block click (add to sequence)
     const blockBtns = this.container.querySelectorAll('.code-block');
     blockBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -436,12 +444,36 @@ export class AssessmentRunner {
         const blockName = target.getAttribute('data-block');
         if (blockName) {
           answerState.robotSequence.push(blockName);
-          answerState.isSolved = true;
+          answerState.isSolved = answerState.robotSequence.length > 0;
           answerState.attemptsCount = Math.max(1, answerState.attemptsCount + 1);
           this.render();
         }
       });
     });
+
+    // Remove individual block from sequence
+    const removeBtns = this.container.querySelectorAll('.remove-block-btn');
+    removeBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = e.currentTarget as HTMLElement;
+        const idx = parseInt(target.getAttribute('data-idx') || '0', 10);
+        answerState.robotSequence.splice(idx, 1);
+        answerState.isSolved = answerState.robotSequence.length > 0;
+        this.render();
+      });
+    });
+
+    // Clear entire sequence
+    const clearSeqBtn = this.container.querySelector('#clear-sequence-btn');
+    if (clearSeqBtn) {
+      clearSeqBtn.addEventListener('click', () => {
+        answerState.robotSequence = [];
+        answerState.isSolved = false;
+        answerState.attemptsCount = 0;
+        this.render();
+      });
+    }
 
     // Fine Motor Target click
     const targetEl = this.container.querySelector('#target-element');

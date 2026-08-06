@@ -33,26 +33,42 @@ export class ActivityGenerator {
       schemaGuide = `"payload": { "sequence": ["🔺", "▶️", "🔻", "◀️", "?"], "options": ["🔺", "▶️", "🔻", "⭐"], "correctIndex": 0 }`;
     } else if (domain === 'functional_skills') {
       typeName = 'robot_mission';
-      schemaGuide = `"payload": { "availableBlocks": ["Move Forward", "Turn Right", "Pick Up Item"], "correctSequence": ["Move Forward", "Move Forward", "Pick Up Item"] }`;
+      schemaGuide = `"payload": { "availableBlocks": ["Move Forward", "Turn Right", "Pick Up Item", "Turn Left"], "correctSequence": ["Move Forward", "Move Forward", "Turn Right", "Pick Up Item"] }`;
     } else if (domain === 'communication_level') {
       typeName = 'picture_match';
-      schemaGuide = `"payload": { "audioPromptText": "Select the lunar rover", "options": [{"label": "Lunar Rover", "emoji": "🛸", "correct": true}, {"label": "Bicycle", "emoji": "🚲", "correct": false}] }`;
+      schemaGuide = `"payload": { "audioPromptText": "Select the item that is used to write code", "options": [{"label": "Laptop", "emoji": "💻", "correct": true}, {"label": "Soccer Ball", "emoji": "⚽", "correct": false}, {"label": "Apple", "emoji": "🍎", "correct": false}, {"label": "Hammer", "emoji": "🔨", "correct": false}], "correctIndex": 0 }`;
     } else if (domain === 'behavioral_readiness') {
-      typeName = 'rule_shift';
-      schemaGuide = `"payload": { "initialRule": "Rule 1: Sort by Color", "shiftedRule": "⚡ Rule Shift! Sort by Shape", "itemsToSort": [{"label": "Blue Circle", "color": "blue", "shape": "circle"}] }`;
+      typeName = 'pattern_matrix';
+      schemaGuide = `"payload": { "scenario": "Your friend takes the last turn on the computer and you wanted it. What do you do?", "options": ["Wait patiently for the next turn", "Grab it from them immediately", "Start crying and refuse to do anything", "Tell the teacher it's not fair without waiting"], "correctIndex": 0 }`;
     } else {
       typeName = 'motor_target';
       schemaGuide = `"payload": { "targetsCount": 4, "movementSpeed": 1.5 }`;
     }
 
-    const prompt = `Generate question #${questionIndex} of 20 for AI Placement Assessment.
-Domain: "${domain}", Difficulty: ${difficulty}/5.
-Return strictly valid JSON with this structure:
+    let domainContext = '';
+    if (domain === 'behavioral_readiness') {
+      domainContext = `
+IMPORTANT: This is a behavioral readiness question for children aged 6-12 with special educational needs.
+Create a REALISTIC SCENARIO-BASED multiple choice question that assesses ONE of these behaviors:
+- Impulse control (waiting your turn, handling frustration without outbursts)
+- Adaptability (handling unexpected changes, switching tasks)
+- Attention & persistence (staying on task, not giving up easily)
+- Social readiness (asking for help appropriately, group work behavior)
+The scenario should be relatable (classroom, playground, computer lab).
+Make 4 clear answer options: 1 correct (adaptive, self-regulated behavior) and 3 wrong (impulsive, avoidant, or socially inappropriate).
+Put the CORRECT answer at a RANDOM index (0-3) and set correctIndex accordingly.
+`;
+    }
+
+    const prompt = `Generate question #${questionIndex} of 20 for a Cognix AI Placement Assessment for children aged 6-12 with special educational needs.
+Domain: "${domain}", Difficulty level: ${difficulty}/5 (1=very easy, 5=challenging).
+${domainContext}
+Return ONLY valid JSON with this exact structure (no markdown, no explanation):
 {
-  "title": "Short Question Title",
-  "instructions": "Clear instruction text",
+  "title": "Short descriptive question title (max 8 words)",
+  "instructions": "Clear child-friendly instruction text",
   "type": "${typeName}",
-  "hintText": "Helpful hint for student",
+  "hintText": "Helpful, encouraging hint for the student",
   ${schemaGuide}
 }`;
     
@@ -66,11 +82,18 @@ Return strictly valid JSON with this structure:
         } else if (cleanJson.startsWith('```')) {
           cleanJson = cleanJson.replace(/^```/, '').replace(/```$/, '').trim();
         }
+        // Strip any trailing non-JSON characters
+        const lastBrace = cleanJson.lastIndexOf('}');
+        if (lastBrace !== -1) cleanJson = cleanJson.substring(0, lastBrace + 1);
 
         const parsed = JSON.parse(cleanJson);
         if (parsed.title && parsed.payload) {
           parsed.id = `ai_q_${questionIndex}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
           if (!parsed.type) parsed.type = typeName;
+          parsed.domain = domain;
+          parsed.skill = domain === 'behavioral_readiness' ? 'adaptability' : (parsed.skill || 'pattern_recognition');
+          parsed.difficulty = difficulty;
+          parsed.expectedTimeMs = parsed.expectedTimeMs || 15000;
           return parsed as ActivityItem;
         }
       }
@@ -311,36 +334,120 @@ Return strictly valid JSON with this structure:
       }
 
       case 'behavioral_readiness': {
-        const rules = [
+        // Rich scenario-based MCQ questions assessing real child behavioral readiness
+        const behaviorScenarios = [
           {
-            title: `Dynamic Sorting Rule Shift: Color vs Shape (Variant ${randSeed})`,
-            initialRule: 'Rule 1: Sort by Color (Blue Bucket vs Red Bucket)',
-            shiftedRule: '⚡ Rule Shift! Now Sort by Shape (Circle vs Triangle)',
-            hint: 'Watch closely when the sorting rule changes mid-game!'
+            title: `Impulse Control: Waiting Your Turn`,
+            scenario: 'Your classmate is using the only computer and you really want to use it. What is the BEST thing to do?',
+            options: [
+              'Wait patiently and ask politely when they finish',
+              'Grab the computer keyboard away from them',
+              'Start crying loudly until the teacher intervenes',
+              'Give up and do nothing for the rest of the class'
+            ],
+            correctIndex: 0,
+            hint: 'The best choice keeps everyone happy and shows respect. Think about what a calm and patient student would do.'
           },
           {
-            title: `Adaptability Challenge: Rapid vs Timed Response (Variant ${randSeed})`,
-            initialRule: 'Rule 1: Sort by Priority (High vs Low)',
-            shiftedRule: '⚡ Rule Shift! Sort by Category (Hardware vs Software)',
-            hint: 'Adapt your classification criteria after the rule shift.'
+            title: `Adaptability: Handling Unexpected Changes`,
+            scenario: 'Your teacher changes today\'s plan and you cannot do the robot activity you were excited about. What do you do?',
+            options: [
+              'Stay upset the whole class and refuse to participate',
+              'Take a deep breath, accept the change, and try the new activity',
+              'Keep asking repeatedly when the robot activity will happen',
+              'Pretend to be sick so you can leave class'
+            ],
+            correctIndex: 1,
+            hint: 'Being flexible and trying new things is a great skill. Which choice shows a positive attitude?'
+          },
+          {
+            title: `Attention & Persistence: Not Giving Up`,
+            scenario: 'You are solving a coding puzzle and it is very hard. You have tried twice and it still is not working. What do you do?',
+            options: [
+              'Quit immediately and play a game instead',
+              'Ask someone else to do it all for you',
+              'Take a short breath, re-read the instructions, and try again',
+              'Complain that the puzzle is impossible and unfair'
+            ],
+            correctIndex: 2,
+            hint: 'Great coders don\'t give up easily! Which option shows determination and problem-solving?'
+          },
+          {
+            title: `Asking for Help Appropriately`,
+            scenario: 'You do not understand the instructions for the activity. The teacher is busy with another student. What should you do?',
+            options: [
+              'Start doing the activity the wrong way without asking',
+              'Raise your hand quietly and wait for the teacher to be free',
+              'Call out loudly across the room to get immediate attention',
+              'Do nothing and wait until the class ends'
+            ],
+            correctIndex: 1,
+            hint: 'There is a polite and effective way to get help. Which choice is respectful and smart?'
+          },
+          {
+            title: `Frustration Management: When Things Go Wrong`,
+            scenario: 'Your robot program does not work and your teammate says you did it wrong. How do you respond?',
+            options: [
+              'Shout angrily at your teammate and walk away',
+              'Listen calmly, check the code together, and fix the problem',
+              'Blame the robot and say the equipment is broken',
+              'Stop working and refuse to continue the project'
+            ],
+            correctIndex: 1,
+            hint: 'Working together and staying calm leads to the best solutions. Which choice shows teamwork?'
+          },
+          {
+            title: `Group Work Readiness: Sharing Resources`,
+            scenario: 'There is only one set of robot pieces for two students. Your partner took most of the pieces. What do you do?',
+            options: [
+              'Take all the pieces back because you saw them first',
+              'Suggest you both divide the pieces fairly and work together',
+              'Refuse to do the activity until you get more pieces',
+              'Tell the teacher immediately without trying to solve it yourself'
+            ],
+            correctIndex: 1,
+            hint: 'Being fair and working as a team makes the project better for everyone. What\'s the smartest move?'
+          },
+          {
+            title: `Task Transition: Switching Between Activities`,
+            scenario: 'The timer goes off and it is time to stop your game and move to math. You are almost at the top score. What do you do?',
+            options: [
+              'Ignore the timer and keep playing until you finish',
+              'Quickly save your progress if possible, then switch to math',
+              'Get very upset and refuse to do math work',
+              'Ask to skip math class just this one time'
+            ],
+            correctIndex: 1,
+            hint: 'Following class routines helps everyone. Which choice shows maturity and self-control?'
+          },
+          {
+            title: `Following Classroom Rules`,
+            scenario: 'The class rule is to work silently during the coding activity, but you want to tell your friend something exciting. What do you do?',
+            options: [
+              'Whisper very loudly to your friend right away',
+              'Pass a note to disturb them during the activity',
+              'Write it down and wait until the activity break to share',
+              'Ignore the rule because your news is very important'
+            ],
+            correctIndex: 2,
+            hint: 'Class rules help everyone focus and learn. Which choice follows the rules AND still lets you share your news?'
           }
         ];
 
-        const r = rules[(questionIndex + randSeed) % rules.length];
+        const scenarioSet = behaviorScenarios[(questionIndex + randSeed) % behaviorScenarios.length];
         return {
           id,
           domain: 'behavioral_readiness',
           skill: 'adaptability',
-          title: `Behavioral Q${questionIndex}: ${r.title}`,
-          instructions: 'Sort the items according to the active rule. Attention: rules shift during the game!',
+          title: `Behavioral Q${questionIndex}: ${scenarioSet.title}`,
+          instructions: scenarioSet.scenario,
           difficulty,
-          expectedTimeMs: 15000,
-          type: 'rule_shift',
-          hintText: r.hint,
+          expectedTimeMs: 20000,
+          type: 'pattern_matrix',
+          hintText: scenarioSet.hint,
           payload: {
-            initialRule: r.initialRule,
-            shiftedRule: r.shiftedRule,
-            itemsToSort: [{ label: 'Microcontroller Target', color: 'blue', shape: 'circle' }]
+            options: scenarioSet.options,
+            correctIndex: scenarioSet.correctIndex
           }
         };
       }
