@@ -20,7 +20,8 @@
   padding: 0;
 }
 
-body {
+body.exam-mode,
+#childTestPage {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-family);

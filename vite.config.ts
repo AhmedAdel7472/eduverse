@@ -18,26 +18,32 @@ function loadApiEnv() {
     }
   } catch (e) {}
   return {
-    endpoint: 'https://ah30309142502238-8748-resource.services.ai.azure.com/openai/v1/responses',
-    apiKey: ''
+    endpoint: process.env.VITE_AZURE_ENDPOINT || '',
+    apiKey: process.env.VITE_AZURE_API_KEY || ''
   };
 }
 
-const envData = loadApiEnv();
+export default defineConfig(({ command }) => {
+  const envData = command === 'serve' ? loadApiEnv() : {
+    endpoint: process.env.VITE_AZURE_ENDPOINT || '',
+    apiKey: process.env.VITE_AZURE_API_KEY || ''
+  };
 
-export default defineConfig({
-  define: {
-    'import.meta.env.VITE_AZURE_ENDPOINT': JSON.stringify(envData.endpoint),
-    'import.meta.env.VITE_AZURE_API_KEY': JSON.stringify(envData.apiKey)
-  },
-  server: {
-    proxy: {
-      '/api/openai-proxy': {
-        target: 'https://ah30309142502238-8748-resource.services.ai.azure.com',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (p) => p.replace(/^\/api\/openai-proxy/, '/openai/v1/responses')
+  return {
+    base: './',
+    define: {
+      'import.meta.env.VITE_AZURE_ENDPOINT': JSON.stringify(envData.endpoint),
+      'import.meta.env.VITE_AZURE_API_KEY': JSON.stringify(envData.apiKey)
+    },
+    server: {
+      proxy: {
+        '/api/openai-proxy': {
+          target: 'https://ah30309142502238-8748-resource.services.ai.azure.com',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (p) => p.replace(/^\/api\/openai-proxy/, '/openai/v1/responses')
+        }
       }
     }
-  }
+  };
 });
