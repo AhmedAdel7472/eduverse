@@ -665,10 +665,36 @@
             </div>
 
             <div class="p-4 border-t border-slate-100 bg-white rounded-b-2xl">
-                <button type="button" data-i18n="btnSubmitApp"
+                <button type="button" id="parentFormSubmitBtn" data-i18n="btnSubmitApp"
                     class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300">
                     Submit Application
                 </button>
+            </div>
+        </div>
+
+        <!-- Child With You Modal (shown after parent form submission) -->
+        <div id="childWithYouModal"
+            class="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-8 hidden transform scale-95 transition-transform duration-300 relative">
+            <button class="closeModal absolute top-4 end-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <div class="text-center">
+                <div class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4 text-green-500 text-2xl">
+                    <i class="fa-solid fa-child-reaching"></i>
+                </div>
+                <h2 data-i18n="childWithYouTitle" class="text-xl font-bold text-slate-900 mb-2">Application Submitted! 🎉</h2>
+                <p data-i18n="childWithYouDesc" class="text-slate-500 text-sm mb-6">Is your child with you right now? We can start the placement assessment immediately.</p>
+                <div class="space-y-3">
+                    <button type="button" onclick="startChildTest()" data-i18n="childWithYouYes"
+                        class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i>
+                        Yes, start the assessment now
+                    </button>
+                    <button type="button" onclick="closeModal()" data-i18n="childWithYouNo"
+                        class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-300">
+                        Not right now, go back home
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1102,6 +1128,7 @@
         const parentFormModal = document.getElementById('parentFormModal');
         const childConfirmModal = document.getElementById('childConfirmModal');
         const institutionFormModal = document.getElementById('institutionFormModal');
+        const childWithYouModal = document.getElementById('childWithYouModal');
 
         const navSignInBtn = document.getElementById('navSignInBtn');
         const navSignUpBtn = document.getElementById('navSignUpBtn');
@@ -1127,7 +1154,7 @@
 
         function closeModal() {
             modalOverlay.classList.add('opacity-0');
-            const allModals = [signUpModal, signInModal, trackModal, roleSelectionModal, parentFormModal, childConfirmModal, institutionFormModal];
+            const allModals = [signUpModal, signInModal, trackModal, roleSelectionModal, parentFormModal, childConfirmModal, institutionFormModal, childWithYouModal];
             allModals.forEach(m => m.classList.add('scale-95'));
 
             setTimeout(() => {
@@ -1161,6 +1188,11 @@
 
         btnRoleParent.addEventListener('click', () => {
             switchModal(roleSelectionModal, parentFormModal);
+        });
+
+        // Parent form submit → ask if child is present
+        document.getElementById('parentFormSubmitBtn').addEventListener('click', () => {
+            switchModal(parentFormModal, childWithYouModal);
         });
 
         btnRoleChild.addEventListener('click', () => {
@@ -1265,6 +1297,12 @@
                 qMouse: "Can use a mouse?", qInstructions: "Can follow two instructions?", qIndependent: "Works independently?",
                 secInterests: "Interests", qLikes: "What do they like? (Select all that apply)", btnSubmitApp: "Submit Application",
 
+                // Child With You Modal
+                childWithYouTitle: "Application Submitted! 🎉",
+                childWithYouDesc: "Is your child with you right now? We can start the placement assessment immediately.",
+                childWithYouYes: "Yes, start the assessment now",
+                childWithYouNo: "Not right now, go back home",
+
                 // Exam Page
                 exitTest: "Exit", examTitle: "Cognix AI Placement Assessment", studentLabel: "Student: Alex Rivers"
             },
@@ -1311,6 +1349,12 @@
                 stage2Title: "المرحلة الثانية: استبيان ولي الأمر", secDailyLiving: "الحياة اليومية", qTablet: "هل يستخدم التابلت؟", qComputer: "هل يستخدم الكمبيوتر؟",
                 qMouse: "هل يستطيع استخدام الماوس؟", qInstructions: "هل يستطيع اتباع تعليمتين؟", qIndependent: "هل يعمل منفردًا؟",
                 secInterests: "الاهتمامات", qLikes: "ماذا يحب؟ (اختر كل ما ينطبق)", btnSubmitApp: "تقديم الطلب",
+
+                // Child With You Modal
+                childWithYouTitle: "تم تقديم الطلب! 🎉",
+                childWithYouDesc: "هل طفلك معك الآن؟ يمكننا البدء في اختبار التسكين فوراً.",
+                childWithYouYes: "نعم، ابدأ الاختبار الآن",
+                childWithYouNo: "ليس الآن، العودة للرئيسية",
 
                 // Exam Page
                 exitTest: "الخروج", examTitle: "تقييم التسكين بالذكاء الاصطناعي - كوجنيكس", studentLabel: "الطالب: أليكس ريفرز"
