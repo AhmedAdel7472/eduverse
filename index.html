@@ -138,6 +138,19 @@
             border-color: #3b82f6;
             color: #1d4ed8;
         }
+
+        /* Exam overlay — hidden by default, becomes fullscreen fixed on activation */
+        #childTestPage {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            overflow-y: auto;
+            display: none;
+        }
+        #childTestPage.exam-active {
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 
@@ -652,10 +665,38 @@
             </div>
 
             <div class="p-4 border-t border-slate-100 bg-white rounded-b-2xl">
-                <button type="button" data-i18n="btnSubmitApp"
+                <button type="button" id="parentFormSubmitBtn"
+                    onclick="switchModal(parentFormModal, childWithYouModal)"
+                    data-i18n="btnSubmitApp"
                     class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300">
                     Submit Application
                 </button>
+            </div>
+        </div>
+
+        <!-- Child With You Modal (shown after parent form submission) -->
+        <div id="childWithYouModal"
+            class="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-8 hidden transform scale-95 transition-transform duration-300 relative">
+            <button class="closeModal absolute top-4 end-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <div class="text-center">
+                <div class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4 text-green-500 text-2xl">
+                    <i class="fa-solid fa-child-reaching"></i>
+                </div>
+                <h2 data-i18n="childWithYouTitle" class="text-xl font-bold text-slate-900 mb-2">Application Submitted! 🎉</h2>
+                <p data-i18n="childWithYouDesc" class="text-slate-500 text-sm mb-6">Is your child with you right now? We can start the placement assessment immediately.</p>
+                <div class="space-y-3">
+                    <button type="button" onclick="startChildTest()" data-i18n="childWithYouYes"
+                        class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i>
+                        Yes, start the assessment now
+                    </button>
+                    <button type="button" onclick="closeModal()" data-i18n="childWithYouNo"
+                        class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-300">
+                        Not right now, go back home
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1042,7 +1083,7 @@
     </footer>
 
     <!-- Child Exam / Placement Test Container -->
-    <div id="childTestPage" class="hidden min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col relative z-50">
+    <div id="childTestPage" class="bg-[#0b0f19] text-slate-100">
         <!-- Exam Header -->
         <header class="app-header">
             <div class="brand-title">
@@ -1089,6 +1130,7 @@
         const parentFormModal = document.getElementById('parentFormModal');
         const childConfirmModal = document.getElementById('childConfirmModal');
         const institutionFormModal = document.getElementById('institutionFormModal');
+        const childWithYouModal = document.getElementById('childWithYouModal');
 
         const navSignInBtn = document.getElementById('navSignInBtn');
         const navSignUpBtn = document.getElementById('navSignUpBtn');
@@ -1114,7 +1156,7 @@
 
         function closeModal() {
             modalOverlay.classList.add('opacity-0');
-            const allModals = [signUpModal, signInModal, trackModal, roleSelectionModal, parentFormModal, childConfirmModal, institutionFormModal];
+            const allModals = [signUpModal, signInModal, trackModal, roleSelectionModal, parentFormModal, childConfirmModal, institutionFormModal, childWithYouModal];
             allModals.forEach(m => m.classList.add('scale-95'));
 
             setTimeout(() => {
@@ -1252,6 +1294,12 @@
                 qMouse: "Can use a mouse?", qInstructions: "Can follow two instructions?", qIndependent: "Works independently?",
                 secInterests: "Interests", qLikes: "What do they like? (Select all that apply)", btnSubmitApp: "Submit Application",
 
+                // Child With You Modal
+                childWithYouTitle: "Application Submitted! 🎉",
+                childWithYouDesc: "Is your child with you right now? We can start the placement assessment immediately.",
+                childWithYouYes: "Yes, start the assessment now",
+                childWithYouNo: "Not right now, go back home",
+
                 // Exam Page
                 exitTest: "Exit", examTitle: "Cognix AI Placement Assessment", studentLabel: "Student: Alex Rivers"
             },
@@ -1299,6 +1347,12 @@
                 qMouse: "هل يستطيع استخدام الماوس؟", qInstructions: "هل يستطيع اتباع تعليمتين؟", qIndependent: "هل يعمل منفردًا؟",
                 secInterests: "الاهتمامات", qLikes: "ماذا يحب؟ (اختر كل ما ينطبق)", btnSubmitApp: "تقديم الطلب",
 
+                // Child With You Modal
+                childWithYouTitle: "تم تقديم الطلب! 🎉",
+                childWithYouDesc: "هل طفلك معك الآن؟ يمكننا البدء في اختبار التسكين فوراً.",
+                childWithYouYes: "نعم، ابدأ الاختبار الآن",
+                childWithYouNo: "ليس الآن، العودة للرئيسية",
+
                 // Exam Page
                 exitTest: "الخروج", examTitle: "تقييم التسكين بالذكاء الاصطناعي - كوجنيكس", studentLabel: "الطالب: أليكس ريفرز"
             }
@@ -1336,13 +1390,11 @@
 
         function startChildTest() {
             closeModal();
-            document.querySelector('header').classList.add('hidden');
-            document.querySelector('main').classList.add('hidden');
-            document.querySelector('footer').classList.add('hidden');
             document.body.classList.add('exam-mode');
             const testPage = document.getElementById('childTestPage');
             if (testPage) {
                 testPage.classList.remove('hidden');
+                testPage.classList.add('exam-active');
             }
             window.scrollTo(0, 0);
 
@@ -1354,11 +1406,9 @@
         function exitChildTest() {
             const testPage = document.getElementById('childTestPage');
             if (testPage) {
+                testPage.classList.remove('exam-active');
                 testPage.classList.add('hidden');
             }
-            document.querySelector('header').classList.remove('hidden');
-            document.querySelector('main').classList.remove('hidden');
-            document.querySelector('footer').classList.remove('hidden');
             document.body.classList.remove('exam-mode');
             window.scrollTo(0, 0);
         }
