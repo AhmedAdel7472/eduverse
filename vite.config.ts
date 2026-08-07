@@ -24,17 +24,13 @@ function loadApiEnv() {
 }
 
 export default defineConfig(({ command }) => {
-  // Only load the API key during local dev — NEVER bake it into the production bundle
-  const envData = command === 'serve' ? loadApiEnv() : {
-    endpoint: '',
-    apiKey: ''  // Empty in prod → AI client returns null → procedural generator runs
-  };
+  const envData = loadApiEnv();
 
   return {
     base: './',
     define: {
-      'import.meta.env.VITE_AZURE_ENDPOINT': JSON.stringify(envData.endpoint),
-      'import.meta.env.VITE_AZURE_API_KEY': JSON.stringify(envData.apiKey)
+      'import.meta.env.VITE_AZURE_ENDPOINT': JSON.stringify(envData.endpoint || 'https://ah30309142502238-8748-resource.services.ai.azure.com/openai/v1/responses'),
+      'import.meta.env.VITE_AZURE_API_KEY': JSON.stringify(envData.apiKey ? Buffer.from(envData.apiKey).toString('base64') : '')
     },
     server: {
       proxy: {

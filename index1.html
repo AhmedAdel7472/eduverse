@@ -729,6 +729,11 @@
             <h2 data-i18n="instFormTitle" class="text-2xl font-bold text-slate-900 mb-6 text-center">How can we serve
                 you?</h2>
             <form onsubmit="event.preventDefault();" class="space-y-4">
+                <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-center flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-phone text-primary"></i>
+                    <span class="text-sm font-medium text-slate-700" data-i18n="instContact">For support, call: </span>
+                    <a href="tel:01115489561" class="text-primary font-bold text-sm" dir="ltr">01115489561</a>
+                </div>
                 <div>
                     <label data-i18n="instFormLabel" class="block text-sm font-medium text-slate-700 mb-1">Your Request
                         Details</label>
@@ -918,30 +923,55 @@
                     <h2 data-i18n="journey" class="text-3xl font-bold text-slate-900 mb-8 text-center">Our Learning
                         Journey</h2>
 
-                    <div
-                        class="flex flex-wrap justify-center items-center gap-2 md:gap-4 mb-8 text-sm md:text-base font-bold">
-                        <span data-i18n="journey1"
-                            class="bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-primary">Assess</span>
-                        <i class="fa-solid fa-arrow-right rtl-flip text-slate-400"></i>
-                        <span data-i18n="journey2"
-                            class="bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-primary">Place</span>
-                        <i class="fa-solid fa-arrow-right rtl-flip text-slate-400"></i>
-                        <span data-i18n="journey3"
-                            class="bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-primary">Learn</span>
-                        <i class="fa-solid fa-arrow-right rtl-flip text-slate-400"></i>
-                        <span data-i18n="journey4"
-                            class="bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-primary">Track</span>
-                        <i class="fa-solid fa-arrow-right rtl-flip text-slate-400"></i>
-                        <span data-i18n="journey5"
-                            class="bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-primary">Certify</span>
-                        <i class="fa-solid fa-arrow-right rtl-flip text-slate-400"></i>
-                        <span data-i18n="journey6"
-                            class="bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-primary">Compete</span>
-                        <i class="fa-solid fa-arrow-right rtl-flip text-slate-400"></i>
-                        <span data-i18n="journey7"
-                            class="bg-primary text-white px-5 py-2 rounded-full shadow-lg shadow-primary/30">Prepare for
-                            the Future</span>
+                    <!-- بداية تصميم السلم المتصل صعوداً -->
+                    <div class="relative w-fit mx-auto mb-16 mt-8 px-4 md:px-8 overflow-visible">
+                        <div class="flex flex-col relative z-10 text-sm md:text-base font-bold">
+                            
+                            <!-- Step 7: أعلى درجة في السلم -->
+                            <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[9rem] md:ms-[24rem]">
+                                <!-- الخطوط التي ترسم شكل السلم الفعلي (أفقي ثم عمودي) -->
+                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
+                                <span data-i18n="journey7" class="bg-primary text-white px-4 md:px-8 py-3 rounded-xl shadow-lg shadow-primary/40 transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap">Prepare for the Future</span>
+                            </div>
+
+                            <!-- Step 6 -->
+                            <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[7.5rem] md:ms-[20rem]">
+                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
+                                <span data-i18n="journey6" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap">Compete</span>
+                            </div>
+
+                            <!-- Step 5 -->
+                            <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[6rem] md:ms-[16rem]">
+                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
+                                <span data-i18n="journey5" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap">Certify</span>
+                            </div>
+
+                            <!-- Step 4 -->
+                            <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[4.5rem] md:ms-[12rem]">
+                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
+                                <span data-i18n="journey4" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap">Track</span>
+                            </div>
+
+                            <!-- Step 3 -->
+                            <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[3rem] md:ms-[8rem]">
+                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
+                                <span data-i18n="journey3" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap">Learn</span>
+                            </div>
+
+                            <!-- Step 2 -->
+                            <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[1.5rem] md:ms-[4rem]">
+                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
+                                <span data-i18n="journey2" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap">Place</span>
+                            </div>
+
+                            <!-- Step 1: قاعدة السلم (Assess) تبدأ من الأسفل -->
+                            <div class="flex items-center relative h-14 md:h-16 ms-0">
+                                <span data-i18n="journey1" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap">Assess</span>
+                            </div>
+
+                        </div>
                     </div>
+                    <!-- نهاية تصميم السلم المتصل صعوداً -->
 
                     <p data-i18n="journeyQuote" class="text-center text-slate-600 italic max-w-2xl mx-auto font-medium">
                         "Every student's journey begins with understanding their strengths and ends with empowering them
@@ -1285,6 +1315,7 @@
                 roleParent: "Parent", roleChild: "Child", roleInstitution: "Institution",
                 childConfirmTitle: "Are you sure you want to take the test?", confirmBtn: "Confirm",
                 instFormTitle: "How can we serve you?", instFormLabel: "Your Request Details", instFormPlace: "Write what you want to do here...",
+                instContact: "For support, call: ",
 
                 // Parent Form Modal
                 parentFormMainTitle: "Parent Registration & Profile", stage1Time: "Estimated time: 5 minutes",
@@ -1338,6 +1369,7 @@
                 roleParent: "ولي أمر", roleChild: "طفل", roleInstitution: "مؤسسة",
                 childConfirmTitle: "هل أنت متأكد من أنك تريد أن تدخل الاختبار؟", confirmBtn: "تأكيد",
                 instFormTitle: "كيف نخدمك؟", instFormLabel: "تفاصيل طلبك", instFormPlace: "اكتب ما تريد القيام به هنا...",
+                instContact: "للتواصل والدعم: ",
 
                 // Parent Form Modal
                 parentFormMainTitle: "تسجيل وملف ولي الأمر", stage1Time: "مدة التسجيل: 5 دقائق",
@@ -1429,7 +1461,8 @@
             }
         });
     </script>
-    <script type="module" src="/src/main.ts"></script>
-</body>
+    <script type="module" src="/src/main.ts">
 
+</script>
+</body>
 </html>

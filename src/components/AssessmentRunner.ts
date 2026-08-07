@@ -23,10 +23,22 @@ interface StoredUserAnswer {
   isSolved: boolean;
 }
 
+export interface SavedAssessmentSession {
+  studentName: string;
+  currentQuestionIndex: number;
+  totalTimerSeconds: number;
+  cachedActivities: (ActivityItem | null)[];
+  userAnswers: StoredUserAnswer[];
+  savedAt: number;
+}
+
 export class AssessmentRunner {
+  public static STORAGE_KEY = 'cognix_active_assessment_session';
+
   private container: HTMLElement;
   private generator: ActivityGenerator;
   private analyzer: QualitativeAnalyzer;
+  private studentName: string = 'Alex Rivers';
 
   // 20-Question Plan & Cached Activities
   private questionPlan: AssessmentQuestionPlan[] = [];
@@ -45,6 +57,54 @@ export class AssessmentRunner {
     this.analyzer = new QualitativeAnalyzer();
     this.build20QuestionPlan();
     this.initUserAnswers();
+  }
+
+  public static getSavedSession(): SavedAssessmentSession | null {
+    try {
+      const data = localStorage.getItem(AssessmentRunner.STORAGE_KEY);
+      if (!data) return null;
+      const parsed = JSON.parse(data) as SavedAssessmentSession;
+      if (parsed && Array.isArray(parsed.userAnswers) && parsed.userAnswers.length === 20) {
+        return parsed;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  public static clearSavedSession(): void {
+    try {
+      localStorage.removeItem(AssessmentRunner.STORAGE_KEY);
+    } catch (e) {}
+  }
+
+  public saveSession(studentName: string = this.studentName) {
+    try {
+      this.studentName = studentName;
+      const sessionData: SavedAssessmentSession = {
+        studentName,
+        currentQuestionIndex: this.currentQuestionIndex,
+        totalTimerSeconds: this.totalTimerSeconds,
+        cachedActivities: this.cachedActivities,
+        userAnswers: this.userAnswers,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(AssessmentRunner.STORAGE_KEY, JSON.stringify(sessionData));
+    } catch (e) {}
+  }
+
+  private beforeUnloadHandler = () => {
+    this.saveSession(this.studentName);
+  };
+
+  private attachBeforeUnload() {
+    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
+  }
+
+  private detachBeforeUnload() {
+    window.removeEventListener('beforeunload', this.beforeUnloadHandler);
   }
 
   private build20QuestionPlan() {
@@ -86,19 +146,38 @@ export class AssessmentRunner {
     }));
   }
 
-  public async startSession(studentName: string = 'Alex Rivers') {
-    this.currentQuestionIndex = 0;
-    this.cachedActivities = new Array(20).fill(null);
-    this.initUserAnswers();
-    this.startGlobalTimer();
-    await this.loadQuestion(0);
+  public async startSession(studentName: string = 'Alex Rivers', restoreIfAvailable: boolean = true) {
+    this.studentName = studentName;
+    const saved = restoreIfAvailable ? AssessmentRunner.getSavedSession() : null;
+
+    if (saved) {
+      this.currentQuestionIndex = Math.max(0, Math.min(19, saved.currentQuestionIndex || 0));
+      this.cachedActivities = saved.cachedActivities || new Array(20).fill(null);
+      this.userAnswers = saved.userAnswers;
+      this.totalTimerSeconds = saved.totalTimerSeconds || 0;
+      this.startGlobalTimer(this.totalTimerSeconds);
+      this.attachBeforeUnload();
+      await this.loadQuestion(this.currentQuestionIndex);
+    } else {
+      this.currentQuestionIndex = 0;
+      this.cachedActivities = new Array(20).fill(null);
+      this.initUserAnswers();
+      this.totalTimerSeconds = 0;
+      this.startGlobalTimer(0);
+      this.attachBeforeUnload();
+      this.saveSession(studentName);
+      await this.loadQuestion(0);
+    }
   }
 
-  private startGlobalTimer() {
-    this.totalTimerSeconds = 0;
+  private startGlobalTimer(initialSeconds: number = 0) {
+    this.totalTimerSeconds = initialSeconds;
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = setInterval(() => {
       this.totalTimerSeconds++;
+      if (this.totalTimerSeconds % 3 === 0) {
+        this.saveSession(this.studentName);
+      }
       const timerEl = document.getElementById('global-timer');
       if (timerEl) {
         const mins = String(Math.floor(this.totalTimerSeconds / 60)).padStart(2, '0');
@@ -127,6 +206,7 @@ export class AssessmentRunner {
     }
 
     this.itemStartTime = Date.now();
+    this.saveSession(this.studentName);
     this.render();
 
     // Pre-fetch next question in background for instant transition
@@ -544,6 +624,8 @@ export class AssessmentRunner {
 
   private async completeAssessment() {
     if (this.timerInterval) clearInterval(this.timerInterval);
+    this.detachBeforeUnload();
+    AssessmentRunner.clearSavedSession();
 
     // Save final spent time
     if (this.itemStartTime > 0 && this.userAnswers[this.currentQuestionIndex]) {
@@ -573,9 +655,9 @@ export class AssessmentRunner {
         isCorrect = answerState.motorClicks.length > 0;
         accuracyScore = Math.min(1.0, answerState.motorClicks.length / (activity.payload?.targetsCount || 4));
       } else {
-        // Options based questions
+        // Options based questions: correct answer gives 1.0, incorrect gives 0.0
         isCorrect = (answerState.selectedAnswerIndex === (activity.payload?.correctIndex ?? 0));
-        accuracyScore = isCorrect ? 1.0 : (answerState.selectedAnswerIndex !== null ? 0.5 : 0.0);
+        accuracyScore = isCorrect ? 1.0 : 0.0;
       }
 
       const fineMotorMetrics = answerState.motorClicks.length > 0 ? {
@@ -612,7 +694,7 @@ export class AssessmentRunner {
 
     const session: StudentSessionTelemetry = {
       session_id: `sess_${Date.now()}`,
-      student_name: 'Alex Rivers',
+      student_name: this.studentName || 'Alex Rivers',
       age_group: '7-9',
       start_time: new Date().toISOString(),
       item_telemetries: itemTelemetries,

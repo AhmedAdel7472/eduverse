@@ -1399,11 +1399,14 @@
             window.scrollTo(0, 0);
 
             if (typeof window.initAssessment === 'function') {
-                window.initAssessment('Alex Rivers');
+                window.initAssessment('Alex Rivers', false);
             }
         }
 
         function exitChildTest() {
+            if (typeof window.exitAssessment === 'function') {
+                window.exitAssessment();
+            }
             const testPage = document.getElementById('childTestPage');
             if (testPage) {
                 testPage.classList.remove('exam-active');

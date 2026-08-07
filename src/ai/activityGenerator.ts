@@ -63,12 +63,13 @@ Put the CORRECT answer at a RANDOM index (0-3) and set correctIndex accordingly.
     const prompt = `Generate question #${questionIndex} of 20 for a Cognix AI Placement Assessment for children aged 6-12 with special educational needs.
 Domain: "${domain}", Difficulty level: ${difficulty}/5 (1=very easy, 5=challenging).
 ${domainContext}
+IMPORTANT: Make titles, instructions, hints, and answer choices simple, encouraging, child-friendly, and easy to understand for young learners.
 Return ONLY valid JSON with this exact structure (no markdown, no explanation):
 {
-  "title": "Short descriptive question title (max 8 words)",
-  "instructions": "Clear child-friendly instruction text",
+  "title": "Short friendly question title (max 6 words)",
+  "instructions": "Clear, simple, child-friendly instruction text",
   "type": "${typeName}",
-  "hintText": "Helpful, encouraging hint for the student",
+  "hintText": "Encouraging, step-by-step hint for the student",
   ${schemaGuide}
 }`;
     
@@ -129,12 +130,12 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
             const wrongOptions = set.filter(x => x !== correct);
             const options = this.shuffleArray([correct, ...wrongOptions]);
             return {
-              title: `Visual Pattern Matrix: Directional Rotation (Variant ${randSeed})`,
-              instructions: 'Observe the 90-degree spatial rotation sequence and select the missing shape.',
+              title: `Pattern Match: Shape Spin`,
+              instructions: 'Which shape comes next in the turning pattern?',
               sequence,
               options,
               correctIndex: options.indexOf(correct),
-              hint: 'The shape rotates clockwise around its center axis by 90° per step.'
+              hint: 'Look closely at how the shape turns 90 degrees clockwise in each step.'
             };
           },
           // Type 1: Color Series
@@ -149,12 +150,12 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
             const correct = trio[2];
             const options = this.shuffleArray([correct, trio[0], trio[1], '⬛ Black Box']);
             return {
-              title: `Visual Pattern Matrix: Color Geometry Series (Variant ${randSeed})`,
-              instructions: 'Identify the next shape completing the repeating color-geometry sequence.',
+              title: `Pattern Match: Color & Shape Series`,
+              instructions: 'What shape comes next in the repeating color pattern?',
               sequence,
               options,
               correctIndex: options.indexOf(correct),
-              hint: `The sequence follows a repeating 3-step pattern: ${trio[0]} ➔ ${trio[1]} ➔ ${trio[2]}.`
+              hint: `Follow the order of colors: ${trio[0]} ➔ ${trio[1]} ➔ ${trio[2]}.`
             };
           },
           // Type 2: Side Progression
@@ -166,26 +167,26 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
             const selected = numSequences[randSeed % numSequences.length];
             const options = this.shuffleArray([...selected.opts]);
             return {
-              title: `Logical Progression: Quantity & Sides (Variant ${randSeed})`,
-              instructions: 'Predict the next element in the increasing geometric quantity series.',
+              title: `Counting Pattern: Next Shape`,
+              instructions: 'Which shape comes next in the counting pattern?',
               sequence: selected.seq,
               options,
               correctIndex: options.indexOf(selected.correct),
-              hint: 'Count the number of elements or sides increasing progressively by +1.'
+              hint: 'Count the number of items or sides increasing by 1 each time.'
             };
           },
           // Type 3: Category Odd One Out
           () => {
             const oddSets = [
-              { items: ['📡 Distance Sensor', '📷 Camera Module', '🌡️ Temperature Probe'], odd: '🍎 Fresh Apple', hint: 'Find the organic fruit among electronic tech sensors.' },
-              { items: ['💻 Laptop Computer', '📱 Smartphone', '🖥️ Desktop Workstation'], odd: '👟 Running Shoe', hint: 'Spot the non-electronic wearable item.' },
-              { items: ['⚙️ Mechanical Gear', '🔩 Steel Bolt', '🔧 Wrench Tool'], odd: '🍕 Pepperoni Pizza', hint: 'Identify the food item among mechanical hardware tools.' }
+              { items: ['📡 Sensor', '📷 Camera', '🌡️ Temp Sensor'], odd: '🍎 Fresh Apple', hint: 'Find the natural fruit among digital technology tools.' },
+              { items: ['💻 Laptop', '📱 Phone', '🖥️ Computer'], odd: '👟 Shoe', hint: 'Spot the shoe among electronic devices.' },
+              { items: ['⚙️ Gear', '🔩 Bolt', '🔧 Wrench'], odd: '🍕 Pizza', hint: 'Find the pizza slice among mechanical tools.' }
             ];
             const set = oddSets[randSeed % oddSets.length];
             const options = this.shuffleArray([...set.items, set.odd]);
             return {
-              title: `Visual Classification: Odd One Out (Variant ${randSeed})`,
-              instructions: 'Select the item that does NOT belong to the technology category.',
+              title: `Odd One Out: Spot the Non-Tech Item`,
+              instructions: 'Select the item that does NOT belong to tech or tools.',
               sequence: [...set.items, set.odd],
               options,
               correctIndex: options.indexOf(set.odd),
@@ -218,32 +219,32 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
       case 'functional_skills': {
         const funcMissions = [
           {
-            title: `Mars Rover Solar Pickup (Variant ${randSeed})`,
-            instructions: 'Sequence the commands to advance the rover 2 steps forward and collect the energy pod.',
+            title: `Space Rover Mission: Energy Pick Up`,
+            instructions: 'Build a program to move the rover 2 steps forward and pick up the energy pod.',
             available: ['Move Forward', 'Turn Right', 'Pick Up Item', 'Turn Left'],
             correctSeq: ['Move Forward', 'Move Forward', 'Pick Up Item'],
-            hint: 'Use "Move Forward" twice then "Pick Up Item".'
+            hint: 'Click "Move Forward" twice, then click "Pick Up Item".'
           },
           {
-            title: `Obstacle Navigation Protocol (Variant ${randSeed})`,
-            instructions: 'Guide the drone around the barrier by turning right before moving ahead.',
+            title: `Drone Adventure: Detour Around Block`,
+            instructions: 'Guide the drone around the barrier by turning right to navigate ahead.',
             available: ['Move Forward', 'Turn Right', 'Turn Left', 'Pick Up Item'],
             correctSeq: ['Move Forward', 'Turn Right', 'Move Forward', 'Turn Left', 'Move Forward'],
-            hint: 'Turn Right to detour around the obstacle.'
+            hint: 'Turn Right to go around the obstacle safely.'
           },
           {
-            title: `Robotic Sorting Arm Mission (Variant ${randSeed})`,
-            instructions: 'Assemble the multi-step arm sequence to lower, clamp, and deposit cargo.',
+            title: `Robot Arm: Move Cargo Box`,
+            instructions: 'Build the steps to lower the robot arm, grab the box, and move it.',
             available: ['Lower Arm', 'Grasp Container', 'Raise Arm', 'Rotate 90°', 'Release Cargo'],
             correctSeq: ['Lower Arm', 'Grasp Container', 'Raise Arm', 'Rotate 90°', 'Release Cargo'],
-            hint: 'Lower and clamp the container before rotating.'
+            hint: 'Lower the arm and grasp the box before lifting and moving.'
           },
           {
-            title: `Automated Charging Docking (Variant ${randSeed})`,
-            instructions: 'Program the shuttle loop to make two left turns and initiate battery charging.',
+            title: `Shuttle Docking: Charge Station`,
+            instructions: 'Program the shuttle to turn left twice and connect to the battery charger.',
             available: ['Move Forward', 'Turn Left', 'Charge Battery', 'Turn Right'],
             correctSeq: ['Move Forward', 'Turn Left', 'Move Forward', 'Turn Left', 'Charge Battery'],
-            hint: 'Turn Left twice to orient towards the charging station.'
+            hint: 'Turn Left twice to point toward the charger.'
           }
         ];
 
@@ -268,41 +269,41 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
       case 'communication_level': {
         const commPrompts = [
           {
-            title: `Rover Vehicle Identification (Variant ${randSeed})`,
-            audio: '"Select the autonomous lunar rover designed to explore planetary surfaces."',
+            title: `Listen & Match: Space Rover`,
+            audio: '"Select the space rover vehicle used to explore distant planets."',
             options: [
-              { id: 'opt1', label: 'Lunar Rover', emoji: '🛸', correct: true },
+              { id: 'opt1', label: 'Space Rover', emoji: '🛸', correct: true },
               { id: 'opt2', label: 'Bicycle', emoji: '🚲', correct: false },
               { id: 'opt3', label: 'Submarine', emoji: '🚢', correct: false },
               { id: 'opt4', label: 'Airplane', emoji: '✈️', correct: false }
             ],
-            hint: 'Listen for "autonomous lunar rover".'
+            hint: 'Look for the space rover icon.'
           },
           {
-            title: `Electronics Component Recognition (Variant ${randSeed})`,
-            audio: '"Choose the glowing light-emitting diode (LED) component."',
+            title: `Listen & Match: Light Bulb (LED)`,
+            audio: '"Choose the glowing light bulb component."',
             options: [
-              { id: 'opt1', label: 'Glowing LED', emoji: '💡', correct: true },
+              { id: 'opt1', label: 'Glowing Light Bulb', emoji: '💡', correct: true },
               { id: 'opt2', label: 'Resistor', emoji: '⚡', correct: false },
               { id: 'opt3', label: 'Connecting Wire', emoji: '〰️', correct: false },
               { id: 'opt4', label: 'Drive Gear', emoji: '⚙️', correct: false }
             ],
-            hint: 'Focus on the glowing light source icon.'
+            hint: 'Look for the bright glowing light bulb.'
           },
           {
-            title: `Gripper Mechanism Prompt (Variant ${randSeed})`,
-            audio: '"Select the mechanical claw arm used to grab items."',
+            title: `Listen & Match: Robot Arm Claw`,
+            audio: '"Select the robotic claw arm used to grab items."',
             options: [
               { id: 'opt1', label: 'Robotic Claw', emoji: '🦾', correct: true },
               { id: 'opt2', label: 'Steering Wheel', emoji: '🛞', correct: false },
               { id: 'opt3', label: 'Solar Panel', emoji: '☀️', correct: false },
               { id: 'opt4', label: 'Audio Speaker', emoji: '🔊', correct: false }
             ],
-            hint: 'Listen for "mechanical claw arm".'
+            hint: 'Look for the mechanical robot claw.'
           },
           {
-            title: `Algorithm Loop Command (Variant ${randSeed})`,
-            audio: '"Select the repeat loop symbol representing iterative execution."',
+            title: `Listen & Match: Repeat Loop`,
+            audio: '"Select the repeat loop symbol."',
             options: [
               { id: 'opt1', label: 'Repeat Loop', emoji: '🔁', correct: true },
               { id: 'opt2', label: 'Stop Sign', emoji: '🛑', correct: false },
@@ -321,7 +322,7 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
           domain: 'communication_level',
           skill: 'picture_matching',
           title: `Communication Q${questionIndex}: ${c.title}`,
-          instructions: 'Listen to the verbal instruction audio prompt and select the matching icon.',
+          instructions: 'Listen to the prompt and select the matching icon below.',
           difficulty,
           expectedTimeMs: 10000,
           type: 'picture_match',
