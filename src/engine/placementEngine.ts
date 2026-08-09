@@ -24,15 +24,13 @@ export class PlacementEngine {
     domainScores: Record<AssessmentDomain, DomainScore>,
     items: ItemTelemetry[]
   ): PlacementResult {
-    // Base Track Placement mapping
+    // Base Track Placement mapping (4 Levels per specification)
     let baseTrack = 'Explorer';
-    if (totalScore >= 91) {
-      baseTrack = 'Future Engineer';
-    } else if (totalScore >= 76) {
+    if (totalScore >= 90) {
       baseTrack = 'Innovator';
-    } else if (totalScore >= 51) {
+    } else if (totalScore >= 75) {
       baseTrack = 'Creator';
-    } else if (totalScore >= 26) {
+    } else if (totalScore >= 60) {
       baseTrack = 'Builder';
     } else {
       baseTrack = 'Explorer';

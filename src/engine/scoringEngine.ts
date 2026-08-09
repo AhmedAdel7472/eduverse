@@ -1,19 +1,19 @@
 import { AssessmentDomain, DomainScore, ItemTelemetry } from './telemetrySchema';
 
-export const DOMAIN_CONFIG: Record<AssessmentDomain, { name: string; weight: number; maxScore: number; questionCount: number }> = {
-  cognitive_ability: { name: 'Cognitive Ability', weight: 0.25, maxScore: 25, questionCount: 5 },
-  functional_skills: { name: 'Functional Skills', weight: 0.25, maxScore: 25, questionCount: 5 },
-  communication_level: { name: 'Communication Level', weight: 0.20, maxScore: 20, questionCount: 4 },
-  behavioral_readiness: { name: 'Behavioral Learning Readiness', weight: 0.15, maxScore: 15, questionCount: 3 },
-  fine_motor_technology: { name: 'Fine Motor & Technology Skills', weight: 0.15, maxScore: 15, questionCount: 3 }
+export const DOMAIN_CONFIG: Record<AssessmentDomain, { name: string; weight: number; maxScore: number; questionCount: number; recommendedTimeMin: number }> = {
+  cognitive_ability: { name: 'Cognitive Ability', weight: 0.25, maxScore: 25, questionCount: 15, recommendedTimeMin: 20 },
+  functional_skills: { name: 'Functional Abilities', weight: 0.25, maxScore: 25, questionCount: 15, recommendedTimeMin: 20 },
+  communication_level: { name: 'Communication Level', weight: 0.20, maxScore: 20, questionCount: 10, recommendedTimeMin: 15 },
+  behavioral_readiness: { name: 'Behavioral & Learning Readiness', weight: 0.15, maxScore: 15, questionCount: 10, recommendedTimeMin: 15 },
+  fine_motor_technology: { name: 'Fine Motor & Technology Skills', weight: 0.15, maxScore: 15, questionCount: 10, recommendedTimeMin: 20 }
 };
 
 export class ScoringEngine {
   /**
-   * Calculates raw item score Q_i out of 5.0 points according to the standardized formula:
-   * Q_i = 5.0 * accuracy * multiplier_time * multiplier_hints * multiplier_attempts
+   * Calculates raw item score Q_i out of itemMaxPts (default 1 or 2 pts depending on item specification).
+   * Formula: Q_i = itemMaxPts * accuracy * multiplier_time * multiplier_hints * multiplier_attempts
    */
-  public static calculateItemScore(item: ItemTelemetry): number {
+  public static calculateItemScore(item: ItemTelemetry, itemMaxPts: number = 2.0): number {
     if (!item.is_correct && item.accuracy_score === 0) {
       return 0;
     }
@@ -21,7 +21,8 @@ export class ScoringEngine {
     const accuracy = Math.max(0, Math.min(1.0, item.accuracy_score));
 
     // Time efficiency multiplier: max(0.7, 1.0 - 0.1 * max(0, (T_actual - T_exp) / T_exp))
-    const timeRatio = Math.max(0, (item.response_time_ms - item.expected_time_ms) / Math.max(1000, item.expected_time_ms));
+    const expectedMs = item.expected_time_ms || 90000;
+    const timeRatio = Math.max(0, (item.response_time_ms - expectedMs) / Math.max(1000, expectedMs));
     const multiplierTime = Math.max(0.7, 1.0 - 0.1 * timeRatio);
 
     // Hint multiplier: max(0.5, 1.0 - 0.15 * hints_used)
@@ -30,14 +31,14 @@ export class ScoringEngine {
     // Attempt multiplier: max(0.6, 1.0 - 0.10 * (attempts - 1))
     const multiplierAttempts = Math.max(0.6, 1.0 - 0.10 * Math.max(0, item.attempts_count - 1));
 
-    const rawPoints = 5.0 * accuracy * multiplierTime * multiplierHints * multiplierAttempts;
-    return Math.max(0, Math.min(5.0, Math.round(rawPoints * 10) / 10));
+    const rawPoints = itemMaxPts * accuracy * multiplierTime * multiplierHints * multiplierAttempts;
+    return Math.max(0, Math.min(itemMaxPts, Math.round(rawPoints * 10) / 10));
   }
 
   /**
-   * Aggregate domain scores from session items across the 20-question matrix.
+   * Aggregate domain scores from session items across the 60-question matrix.
    */
-  public static calculateDomainScores(items: ItemTelemetry[]): Record<AssessmentDomain, DomainScore> {
+  public static calculateDomainScores(items: ItemTelemetry[], itemMaxPtsMap?: Record<string, number>): Record<AssessmentDomain, DomainScore> {
     const domains: AssessmentDomain[] = [
       'cognitive_ability',
       'functional_skills',
@@ -68,17 +69,18 @@ export class ScoringEngine {
 
       let totalEarnedDomainPts = 0;
       let totalAcc = 0;
-      const skillsMap: Record<string, { total: number; count: number }> = {};
+      const skillsMap: Record<string, { totalEarnedRatio: number; count: number }> = {};
 
       for (const item of domainItems) {
-        const itemPts = this.calculateItemScore(item);
+        const itemMaxPts = itemMaxPtsMap?.[item.item_id] ?? 2.0;
+        const itemPts = this.calculateItemScore(item, itemMaxPts);
         totalEarnedDomainPts += itemPts;
         totalAcc += item.accuracy_score;
 
         if (!skillsMap[item.skill]) {
-          skillsMap[item.skill] = { total: 0, count: 0 };
+          skillsMap[item.skill] = { totalEarnedRatio: 0, count: 0 };
         }
-        skillsMap[item.skill].total += (itemPts / 5.0);
+        skillsMap[item.skill].totalEarnedRatio += (itemPts / Math.max(0.1, itemMaxPts));
         skillsMap[item.skill].count += 1;
       }
 
@@ -88,7 +90,7 @@ export class ScoringEngine {
 
       const skillsBreakdown: Record<string, number> = {};
       for (const [skill, val] of Object.entries(skillsMap)) {
-        skillsBreakdown[skill] = Math.round((val.total / val.count) * 100);
+        skillsBreakdown[skill] = Math.round((val.totalEarnedRatio / val.count) * 100);
       }
 
       result[domainKey] = {
@@ -117,3 +119,4 @@ export class ScoringEngine {
     return Math.min(100, Math.round(total * 10) / 10);
   }
 }
+

@@ -77,6 +77,36 @@ export interface DomainScore {
   skills_breakdown: Record<string, number>; // Skill -> score (0-100%)
 }
 
+export interface QuestionTimeRecord {
+  questionSlot: number;              // 1-60
+  domain: AssessmentDomain;
+  subSkill: string;                  // e.g., "visual_discrimination"
+  questionTitle: string;
+  questionStartTimestamp: number;    // Date.now() when question appeared
+  questionEndTimestamp: number;      // Date.now() when question was locked
+  totalDurationMs: number;           // end - start (wall clock)
+  pausedDurationMs: number;          // total ms spent paused during this question
+  activeDurationMs: number;          // totalDuration - pausedDuration (actual thinking time)
+  responseLatencyMs: number | null;  // ms from question appearing to first answer click (null if never answered)
+  answeredAt: number | null;         // timestamp of answer selection (null if timed out)
+  timedOut: boolean;                 // true if the 1:30 expired before answering
+  wasAnswered: boolean;              // true if student selected an answer before time ran out
+  remainingTimeWhenAnsweredMs: number | null; // how many ms were left on the countdown when they answered
+  breaksDuringQuestion: number;      // how many times the student paused during this question
+  earnedScore: number;               // Points earned for this question
+  maxScore: number;                  // Max points possible for this question
+}
+
+export interface BreakEvent {
+  breakIndex: number;                // sequential break number (1, 2, 3...)
+  questionSlotAtPause: number;       // which question was active when paused
+  domainAtPause: AssessmentDomain;   // which domain was active
+  pauseStartTimestamp: number;       // Date.now() when pause was pressed
+  resumeTimestamp: number;           // Date.now() when resume was pressed
+  breakDurationMs: number;           // resume - pauseStart
+  countdownRemainingAtPause: number; // how many ms were left on the question timer
+}
+
 export interface StudentSessionTelemetry {
   session_id: string;
   student_name: string;
@@ -90,4 +120,19 @@ export interface StudentSessionTelemetry {
   recommended_track: string;
   flags: string[];
   qualitative_summary?: string;
+  
+  // CEO Time & Analytics
+  question_time_records: QuestionTimeRecord[];
+  break_events: BreakEvent[];
+  total_breaks_count: number;
+  total_break_duration_ms: number;
+  total_active_duration_ms: number;
+  total_wall_clock_duration_ms: number;
+  domain_time_summary: Record<AssessmentDomain, {
+    totalActiveMs: number;
+    totalPausedMs: number;
+    questionsTimedOut: number;
+    avgResponseLatencyMs: number;
+  }>;
 }
+

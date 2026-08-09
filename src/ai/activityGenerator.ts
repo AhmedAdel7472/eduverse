@@ -3,16 +3,103 @@ import { AzureOpenAIClient } from './azureOpenAIClient';
 
 export interface ActivityItem {
   id: string;
+  slot: number; // 1 to 60
   domain: AssessmentDomain;
   skill: SkillName;
+  subSkill: string;
   title: string;
   instructions: string;
   difficulty: number;
   expectedTimeMs: number;
+  maxPoints: number;
   type: 'pattern_matrix' | 'robot_mission' | 'picture_match' | 'rule_shift' | 'motor_target';
   payload: any;
   hintText: string;
 }
+
+export interface QuestionBaseline {
+  slot: number; // 1 to 60
+  domain: AssessmentDomain;
+  skill: SkillName;
+  subSkill: string;
+  title: string;
+  baselinePrompt: string;
+  maxPoints: number;
+  difficulty: 1 | 2 | 3;
+  type: 'pattern_matrix' | 'robot_mission' | 'picture_match' | 'rule_shift' | 'motor_target';
+}
+
+export const QUESTION_BASELINES: QuestionBaseline[] = [
+  // --- DOMAIN 1: COGNITIVE ABILITIES (Q1 - Q15 | 25 Pts) ---
+  { slot: 1, domain: 'cognitive_ability', skill: 'classification', subSkill: 'Visual Discrimination', title: 'Match Identical Shapes', baselinePrompt: 'Match the identical shapes.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 2, domain: 'cognitive_ability', skill: 'classification', subSkill: 'Visual Discrimination', title: 'Spot the Difference', baselinePrompt: 'Identify the object that is different.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 3, domain: 'cognitive_ability', skill: 'pattern_recognition', subSkill: 'Visual Discrimination', title: 'Match the Pattern', baselinePrompt: 'Match the same visual pattern.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 4, domain: 'cognitive_ability', skill: 'classification', subSkill: 'Classification', title: 'Group Together', baselinePrompt: 'Which objects belong together in the same group?', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 5, domain: 'cognitive_ability', skill: 'classification', subSkill: 'Classification', title: 'Does Not Belong', baselinePrompt: 'Which object does not belong in this group?', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 6, domain: 'cognitive_ability', skill: 'sequencing', subSkill: 'Sequencing', title: 'Next in Sequence', baselinePrompt: 'What comes next in the sequence?', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 7, domain: 'cognitive_ability', skill: 'sequencing', subSkill: 'Sequencing', title: 'Order the Story', baselinePrompt: 'Arrange the pictures in the correct logical order.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 8, domain: 'cognitive_ability', skill: 'pattern_recognition', subSkill: 'Pattern Recognition', title: 'Complete Visual Pattern', baselinePrompt: 'Complete the visual pattern.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 9, domain: 'cognitive_ability', skill: 'pattern_recognition', subSkill: 'Pattern Recognition', title: 'Identify Missing Element', baselinePrompt: 'Identify the missing element in the grid.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 10, domain: 'cognitive_ability', skill: 'pattern_recognition', subSkill: 'Pattern Recognition', title: 'Continue Pattern', baselinePrompt: 'Continue the pattern to the next step.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 11, domain: 'cognitive_ability', skill: 'logical_reasoning', subSkill: 'Logical Reasoning', title: 'Solve the Problem', baselinePrompt: 'Which answer solves the logical problem?', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
+  { slot: 12, domain: 'cognitive_ability', skill: 'logical_reasoning', subSkill: 'Logical Reasoning', title: 'What Happens Next', baselinePrompt: 'What should logically happen next?', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
+  { slot: 13, domain: 'cognitive_ability', skill: 'problem_solving', subSkill: 'Problem Solving', title: 'Best Solution', baselinePrompt: 'Select the best solution for this situation.', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
+  { slot: 14, domain: 'cognitive_ability', skill: 'problem_solving', subSkill: 'Problem Solving', title: 'Sequence to Solve', baselinePrompt: 'Identify the correct sequence of actions to solve the problem.', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
+  { slot: 15, domain: 'cognitive_ability', skill: 'cause_and_effect', subSkill: 'Cause & Effect', title: 'Predict Cause & Effect', baselinePrompt: 'What will happen if this action is performed?', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
+
+  // --- DOMAIN 2: FUNCTIONAL ABILITIES (Q16 - Q30 | 25 Pts) ---
+  { slot: 16, domain: 'functional_skills', skill: 'following_instructions', subSkill: '1-Step Instruction', title: 'Follow Simple Instruction', baselinePrompt: 'Follow a simple 1-step instruction.', maxPoints: 1, difficulty: 1, type: 'robot_mission' },
+  { slot: 17, domain: 'functional_skills', skill: 'following_instructions', subSkill: '1-Step Instruction', title: 'Independent Instruction', baselinePrompt: 'Complete a second independent 1-step action.', maxPoints: 1, difficulty: 1, type: 'robot_mission' },
+  { slot: 18, domain: 'functional_skills', skill: 'following_instructions', subSkill: '2-Step Instruction', title: 'Two-Step Action', baselinePrompt: 'Complete two actions in the correct order.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 19, domain: 'functional_skills', skill: 'following_instructions', subSkill: '2-Step Instruction', title: 'Direct Execution', baselinePrompt: 'Complete the task smoothly without repeating steps.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 20, domain: 'functional_skills', skill: 'following_instructions', subSkill: 'Multi-Step Task', title: 'Three-Step Activity', baselinePrompt: 'Complete a 3-step structured activity.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 21, domain: 'functional_skills', skill: 'following_instructions', subSkill: 'Multi-Step Task', title: 'Sequential Workflow', baselinePrompt: 'Complete the activity in the exact correct sequence.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 22, domain: 'functional_skills', skill: 'task_completion', subSkill: 'Task Completion', title: 'Finish Structured Task', baselinePrompt: 'Start and finish the structured robotics task.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 23, domain: 'functional_skills', skill: 'task_completion', subSkill: 'Task Completion', title: 'Minimal Prompt Task', baselinePrompt: 'Complete the goal with minimal visual prompting.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 24, domain: 'functional_skills', skill: 'working_memory', subSkill: 'Organization', title: 'Organize Tools', baselinePrompt: 'Organize the programming blocks before beginning.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 25, domain: 'functional_skills', skill: 'working_memory', subSkill: 'Organization', title: 'Return Materials', baselinePrompt: 'Return all unused blocks to their correct place.', maxPoints: 1, difficulty: 1, type: 'robot_mission' },
+  { slot: 26, domain: 'functional_skills', skill: 'problem_solving', subSkill: 'Independence', title: 'Independent Task', baselinePrompt: 'Complete the familiar coding mission independently.', maxPoints: 2, difficulty: 3, type: 'robot_mission' },
+  { slot: 27, domain: 'functional_skills', skill: 'problem_solving', subSkill: 'Independence', title: 'Ask for Help', baselinePrompt: 'Identify when and how to request assistance appropriately.', maxPoints: 1, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 28, domain: 'functional_skills', skill: 'problem_solving', subSkill: 'Functional Problem Solving', title: 'Overcome Blockade', baselinePrompt: 'Identify what to do when a path cannot be completed.', maxPoints: 2, difficulty: 3, type: 'robot_mission' },
+  { slot: 29, domain: 'functional_skills', skill: 'attention', subSkill: 'Learning Routine', title: 'Learning Routine', baselinePrompt: 'Follow the expected technology learning routine.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 30, domain: 'functional_skills', skill: 'task_completion', subSkill: 'Functional Learning', title: 'Practical Learning Task', baselinePrompt: 'Complete a simple practical digital learning task.', maxPoints: 1, difficulty: 2, type: 'robot_mission' },
+
+  // --- DOMAIN 3: COMMUNICATION LEVEL (Q31 - Q40 | 20 Pts) ---
+  { slot: 31, domain: 'communication_level', skill: 'listening', subSkill: 'Receptive Communication', title: 'Listen & Follow', baselinePrompt: 'Follow a spoken audio instruction.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 32, domain: 'communication_level', skill: 'listening', subSkill: 'Receptive Communication', title: 'Identify Object', baselinePrompt: 'Identify the requested target object from audio prompt.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 33, domain: 'communication_level', skill: 'vocabulary', subSkill: 'Expressive Communication', title: 'Name Component', baselinePrompt: 'Select the correct name for the highlighted technology item.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 34, domain: 'communication_level', skill: 'vocabulary', subSkill: 'Expressive Communication', title: 'Express Choice', baselinePrompt: 'Communicate the correct preference or action needed.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 35, domain: 'communication_level', skill: 'understanding_instructions', subSkill: 'Following Instructions', title: 'Two-Step Audio', baselinePrompt: 'Follow a 2-step audio communication instruction.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 36, domain: 'communication_level', skill: 'understanding_instructions', subSkill: 'Following Instructions', title: 'Classroom Tech Instruction', baselinePrompt: 'Follow a functional technology classroom command.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 37, domain: 'communication_level', skill: 'picture_matching', subSkill: 'Identification', title: 'Identify Digital Icon', baselinePrompt: 'Identify the matching digital icon or symbol.', maxPoints: 2, difficulty: 1, type: 'picture_match' },
+  { slot: 38, domain: 'communication_level', skill: 'verbal_comprehension', subSkill: 'Question Response', title: 'Answer WH-Question', baselinePrompt: 'Answer the question: "Which tool helps robots move?"', maxPoints: 2, difficulty: 3, type: 'picture_match' },
+  { slot: 39, domain: 'communication_level', skill: 'verbal_comprehension', subSkill: 'Functional Communication', title: 'Request Clarification', baselinePrompt: 'Choose the symbol used to request help or clarification.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 40, domain: 'communication_level', skill: 'understanding_instructions', subSkill: 'Problem Solving Communication', title: 'Communicate Solution', baselinePrompt: 'Communicate the correct solution choice to the team.', maxPoints: 2, difficulty: 3, type: 'picture_match' },
+
+  // --- DOMAIN 4: BEHAVIORAL & LEARNING READINESS (Q41 - Q50 | 15 Pts) ---
+  { slot: 41, domain: 'behavioral_readiness', skill: 'persistence', subSkill: 'Attention', title: 'Sustain Attention', baselinePrompt: 'Maintains focus when a puzzle takes longer to solve.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 42, domain: 'behavioral_readiness', skill: 'persistence', subSkill: 'Task Engagement', title: 'Remain Engaged', baselinePrompt: 'Remains engaged in the learning activity despite distractions.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 43, domain: 'behavioral_readiness', skill: 'adaptability', subSkill: 'Instruction Following', title: 'Responds to Signals', baselinePrompt: 'Responds promptly when given a stop or transition instruction.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 44, domain: 'behavioral_readiness', skill: 'error_recovery', subSkill: 'Response to Correction', title: 'Accept Redirection', baselinePrompt: 'Accepts gentle feedback and adjusts the approach calmly.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 45, domain: 'behavioral_readiness', skill: 'flexibility', subSkill: 'Frustration Tolerance', title: 'Persevere on Error', baselinePrompt: 'Continues trying calmly after an initial error or bug.', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
+  { slot: 46, domain: 'behavioral_readiness', skill: 'adaptability', subSkill: 'Transition', title: 'Smooth Transition', baselinePrompt: 'Moves smoothly from one activity to the next when time is up.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 47, domain: 'behavioral_readiness', skill: 'adaptability', subSkill: 'Turn Taking / Waiting', title: 'Wait Appropriately', baselinePrompt: 'Waits patiently while another student or robot finishes their turn.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 48, domain: 'behavioral_readiness', skill: 'persistence', subSkill: 'Motivation', title: 'Eager to Learn', baselinePrompt: 'Demonstrates willingness to try a new technology challenge.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 49, domain: 'behavioral_readiness', skill: 'response_to_feedback', subSkill: 'Independence', title: 'Independent Effort', baselinePrompt: 'Attempts the problem independently before asking for help.', maxPoints: 1, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 50, domain: 'behavioral_readiness', skill: 'response_to_feedback', subSkill: 'Help Seeking', title: 'Polite Help Request', baselinePrompt: 'Requests assistance politely and appropriately when stuck.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+
+  // --- DOMAIN 5: FINE MOTOR & TECHNOLOGY SKILLS (Q51 - Q60 | 15 Pts) ---
+  { slot: 51, domain: 'fine_motor_technology', skill: 'touch_interaction', subSkill: 'Fine Motor Control', title: 'Object Precision', baselinePrompt: 'Tap or manipulate small digital targets with precision.', maxPoints: 2, difficulty: 2, type: 'motor_target' },
+  { slot: 52, domain: 'fine_motor_technology', skill: 'mouse_control', subSkill: 'Hand-Eye Coordination', title: 'Accurate Movement', baselinePrompt: 'Move pointer accurately to the target element.', maxPoints: 1, difficulty: 1, type: 'motor_target' },
+  { slot: 53, domain: 'fine_motor_technology', skill: 'drag_and_drop', subSkill: 'Object Manipulation', title: 'Assemble Structure', baselinePrompt: 'Drag blocks to assemble a simple structure.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 54, domain: 'fine_motor_technology', skill: 'mouse_control', subSkill: 'Mouse/Trackpad', title: 'Pointer Navigation', baselinePrompt: 'Control pointer speed and target alignment.', maxPoints: 2, difficulty: 2, type: 'motor_target' },
+  { slot: 55, domain: 'fine_motor_technology', skill: 'keyboard_navigation', subSkill: 'Keyboard Skills', title: 'Key Identification', baselinePrompt: 'Locate and press key directional arrows or spacebar.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 56, domain: 'fine_motor_technology', skill: 'touch_interaction', subSkill: 'Touchscreen', title: 'Touch Target', baselinePrompt: 'Select the highlighted item cleanly on screen.', maxPoints: 1, difficulty: 1, type: 'motor_target' },
+  { slot: 57, domain: 'fine_motor_technology', skill: 'drag_and_drop', subSkill: 'Drag & Drop', title: 'Drag Block to Slot', baselinePrompt: 'Complete a digital drag-and-drop alignment.', maxPoints: 1, difficulty: 1, type: 'robot_mission' },
+  { slot: 58, domain: 'fine_motor_technology', skill: 'basic_robot_control', subSkill: 'Digital Navigation', title: 'Select App Icon', baselinePrompt: 'Open or select the correct learning activity application.', maxPoints: 1, difficulty: 2, type: 'picture_match' },
+  { slot: 59, domain: 'fine_motor_technology', skill: 'basic_robot_control', subSkill: 'Tech Problem Solving', title: 'Fix Screen Freeze', baselinePrompt: 'Identify what button to click if a digital task freezes.', maxPoints: 1, difficulty: 3, type: 'pattern_matrix' },
+  { slot: 60, domain: 'fine_motor_technology', skill: 'basic_robot_control', subSkill: 'Technology Independence', title: 'Independent Navigation', baselinePrompt: 'Complete the basic technology startup sequence independently.', maxPoints: 2, difficulty: 3, type: 'robot_mission' }
+];
 
 export class ActivityGenerator {
   private client: AzureOpenAIClient;
@@ -22,57 +109,38 @@ export class ActivityGenerator {
   }
 
   /**
-   * Generates or retrieves a unique assessment activity tailored to domain, difficulty, and question index.
+   * Generates a unique assessment activity (1 of 60) based on its fixed baseline specification.
+   * Ensures EXACTLY 3 answer choices per question.
    */
-  public async generateActivity(domain: AssessmentDomain, difficulty: number, questionIndex: number): Promise<ActivityItem> {
-    let typeName = 'pattern_matrix';
-    let schemaGuide = '';
-    
-    if (domain === 'cognitive_ability') {
-      typeName = 'pattern_matrix';
-      schemaGuide = `"payload": { "sequence": ["🔺", "▶️", "🔻", "◀️", "?"], "options": ["🔺", "▶️", "🔻", "⭐"], "correctIndex": 0 }`;
-    } else if (domain === 'functional_skills') {
-      typeName = 'robot_mission';
-      schemaGuide = `"payload": { "availableBlocks": ["Move Forward", "Turn Right", "Pick Up Item", "Turn Left"], "correctSequence": ["Move Forward", "Move Forward", "Turn Right", "Pick Up Item"] }`;
-    } else if (domain === 'communication_level') {
-      typeName = 'picture_match';
-      schemaGuide = `"payload": { "audioPromptText": "Select the item that is used to write code", "options": [{"label": "Laptop", "emoji": "💻", "correct": true}, {"label": "Soccer Ball", "emoji": "⚽", "correct": false}, {"label": "Apple", "emoji": "🍎", "correct": false}, {"label": "Hammer", "emoji": "🔨", "correct": false}], "correctIndex": 0 }`;
-    } else if (domain === 'behavioral_readiness') {
-      typeName = 'pattern_matrix';
-      schemaGuide = `"payload": { "scenario": "Your friend takes the last turn on the computer and you wanted it. What do you do?", "options": ["Wait patiently for the next turn", "Grab it from them immediately", "Start crying and refuse to do anything", "Tell the teacher it's not fair without waiting"], "correctIndex": 0 }`;
-    } else {
-      typeName = 'motor_target';
-      schemaGuide = `"payload": { "targetsCount": 4, "movementSpeed": 1.5 }`;
-    }
+  public async generateActivity(slot: number): Promise<ActivityItem> {
+    const safeSlot = Math.max(1, Math.min(60, slot));
+    const baseline = QUESTION_BASELINES[safeSlot - 1];
 
-    let domainContext = '';
-    if (domain === 'behavioral_readiness') {
-      domainContext = `
-IMPORTANT: This is a behavioral readiness question for children aged 6-12 with special educational needs.
-Create a REALISTIC SCENARIO-BASED multiple choice question that assesses ONE of these behaviors:
-- Impulse control (waiting your turn, handling frustration without outbursts)
-- Adaptability (handling unexpected changes, switching tasks)
-- Attention & persistence (staying on task, not giving up easily)
-- Social readiness (asking for help appropriately, group work behavior)
-The scenario should be relatable (classroom, playground, computer lab).
-Make 4 clear answer options: 1 correct (adaptive, self-regulated behavior) and 3 wrong (impulsive, avoidant, or socially inappropriate).
-Put the CORRECT answer at a RANDOM index (0-3) and set correctIndex accordingly.
-`;
-    }
+    const prompt = `You are generating Question #${baseline.slot} of 60 for the Cognix SEN Placement Assessment (aged 6-12).
+Baseline Competency: "${baseline.baselinePrompt}" (Domain: ${baseline.domain}, Sub-skill: ${baseline.subSkill}, Difficulty: ${baseline.difficulty}/3).
 
-    const prompt = `Generate question #${questionIndex} of 20 for a Cognix AI Placement Assessment for children aged 6-12 with special educational needs.
-Domain: "${domain}", Difficulty level: ${difficulty}/5 (1=very easy, 5=challenging).
-${domainContext}
-IMPORTANT: Make titles, instructions, hints, and answer choices simple, encouraging, child-friendly, and easy to understand for young learners.
-Return ONLY valid JSON with this exact structure (no markdown, no explanation):
+CRITICAL REQUIREMENT:
+- Generate a child-friendly, engaging variation of this question.
+- MUST HAVE EXACTLY 3 ANSWER CHOICES (A, B, C).
+- 1 choice MUST be fully correct, 2 choices MUST be plausible wrong distractors.
+- Keep language simple, positive, encouraging, and easy to read.
+
+Return ONLY valid JSON with no markdown wrapping:
 {
-  "title": "Short friendly question title (max 6 words)",
-  "instructions": "Clear, simple, child-friendly instruction text",
-  "type": "${typeName}",
-  "hintText": "Encouraging, step-by-step hint for the student",
-  ${schemaGuide}
+  "title": "${baseline.title}",
+  "instructions": "Clear simple question prompt for the child",
+  "type": "${baseline.type}",
+  "hintText": "Step-by-step encouraging hint",
+  "payload": {
+    "options": [
+      { "label": "Option A text or emoji", "correct": true },
+      { "label": "Option B text or emoji", "correct": false },
+      { "label": "Option C text or emoji", "correct": false }
+    ],
+    "correctIndex": 0
+  }
 }`;
-    
+
     try {
       const aiResponse = await this.client.generateCompletion(prompt);
 
@@ -83,399 +151,147 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
         } else if (cleanJson.startsWith('```')) {
           cleanJson = cleanJson.replace(/^```/, '').replace(/```$/, '').trim();
         }
-        // Strip any trailing non-JSON characters
         const lastBrace = cleanJson.lastIndexOf('}');
         if (lastBrace !== -1) cleanJson = cleanJson.substring(0, lastBrace + 1);
 
         const parsed = JSON.parse(cleanJson);
-        if (parsed.title && parsed.payload) {
-          parsed.id = `ai_q_${questionIndex}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-          if (!parsed.type) parsed.type = typeName;
-          parsed.domain = domain;
-          parsed.skill = domain === 'behavioral_readiness' ? 'adaptability' : (parsed.skill || 'pattern_recognition');
-          parsed.difficulty = difficulty;
-          parsed.expectedTimeMs = parsed.expectedTimeMs || 15000;
-          return parsed as ActivityItem;
+        if (parsed.instructions && parsed.payload && Array.isArray(parsed.payload.options)) {
+          // Force exactly 3 options
+          if (parsed.payload.options.length > 3) {
+            parsed.payload.options = parsed.payload.options.slice(0, 3);
+          }
+          
+          return {
+            id: `q_slot_${baseline.slot}_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            slot: baseline.slot,
+            domain: baseline.domain,
+            skill: baseline.skill,
+            subSkill: baseline.subSkill,
+            title: parsed.title || baseline.title,
+            instructions: parsed.instructions,
+            difficulty: baseline.difficulty,
+            expectedTimeMs: 90000, // 1:30 fixed timer
+            maxPoints: baseline.maxPoints,
+            type: baseline.type,
+            payload: parsed.payload,
+            hintText: parsed.hintText || 'Take your time and think carefully!'
+          };
         }
       }
     } catch (e) {
-      // Fallback to procedurally unique dynamic activity generator
+      // Fall through to procedural fallback
     }
 
-    return this.generateDynamicActivity(domain, difficulty, questionIndex);
+    return this.generateDynamicFallback(safeSlot);
   }
 
   /**
-   * Procedural AI generator creating randomized, non-repeating questions across all 5 domains.
+   * Procedural generator creating a deterministic unique 3-choice variation for any of the 60 question slots.
    */
-  public generateDynamicActivity(domain: AssessmentDomain, difficulty: number, questionIndex: number): ActivityItem {
-    const id = `dyn_q_${questionIndex}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    const randSeed = Math.floor(Math.random() * 100);
+  public generateDynamicFallback(slot: number): ActivityItem {
+    const safeSlot = Math.max(1, Math.min(60, slot));
+    const baseline = QUESTION_BASELINES[safeSlot - 1];
+    const id = `fallback_q_${safeSlot}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-    switch (domain) {
-      case 'cognitive_ability': {
-        const patternTypes = [
-          // Type 0: Rotations
-          () => {
-            const rotSets = [
-              ['🔺', '▶️', '🔻', '◀️'],
-              ['⬆️', '➡️', '⬇️', '⬅️'],
-              ['👆', '👉', '👇', '👈'],
-              ['🌙', '🌖', '🌕', '🌔']
-            ];
-            const set = rotSets[randSeed % rotSets.length];
-            const startIdx = Math.floor(Math.random() * 4);
-            const sequence = [set[startIdx], set[(startIdx + 1) % 4], set[(startIdx + 2) % 4], set[(startIdx + 3) % 4], '?'];
-            const correct = set[startIdx]; // repeats
-            const wrongOptions = set.filter(x => x !== correct);
-            const options = this.shuffleArray([correct, ...wrongOptions]);
-            return {
-              title: `Pattern Match: Shape Spin`,
-              instructions: 'Which shape comes next in the turning pattern?',
-              sequence,
-              options,
-              correctIndex: options.indexOf(correct),
-              hint: 'Look closely at how the shape turns 90 degrees clockwise in each step.'
-            };
-          },
-          // Type 1: Color Series
-          () => {
-            const colorTrios = [
-              ['🔵 Blue Circle', '🟥 Red Square', '🟢 Green Triangle'],
-              ['🟣 Purple Star', '🟡 Yellow Gem', '🟧 Orange Diamond'],
-              ['🔴 Red Ruby', '🟦 Blue Sapphire', '🟩 Green Emerald']
-            ];
-            const trio = colorTrios[randSeed % colorTrios.length];
-            const sequence = [trio[0], trio[1], trio[2], trio[0], trio[1], '?'];
-            const correct = trio[2];
-            const options = this.shuffleArray([correct, trio[0], trio[1], '⬛ Black Box']);
-            return {
-              title: `Pattern Match: Color & Shape Series`,
-              instructions: 'What shape comes next in the repeating color pattern?',
-              sequence,
-              options,
-              correctIndex: options.indexOf(correct),
-              hint: `Follow the order of colors: ${trio[0]} ➔ ${trio[1]} ➔ ${trio[2]}.`
-            };
-          },
-          // Type 2: Side Progression
-          () => {
-            const numSequences = [
-              { seq: ['⚪ (1 Circle)', '➖ (2 Lines)', '🔺 (3 Triangle)', '⏹️ (4 Square)', '?'], correct: '⭐ (5 Star)', opts: ['⭐ (5 Star)', '🔴 (1 Circle)', '🔷 (4 Diamond)', '⬛ (6 Hexagon)'] },
-              { seq: ['🔹 (Level 1)', '🔹🔹 (Level 2)', '🔹🔹🔹 (Level 3)', '?'], correct: '🔹🔹🔹🔹 (Level 4)', opts: ['🔹🔹🔹🔹 (Level 4)', '🔹 (Level 1)', '🔹🔹 (Level 2)', '❌ (Stop)'] }
-            ];
-            const selected = numSequences[randSeed % numSequences.length];
-            const options = this.shuffleArray([...selected.opts]);
-            return {
-              title: `Counting Pattern: Next Shape`,
-              instructions: 'Which shape comes next in the counting pattern?',
-              sequence: selected.seq,
-              options,
-              correctIndex: options.indexOf(selected.correct),
-              hint: 'Count the number of items or sides increasing by 1 each time.'
-            };
-          },
-          // Type 3: Category Odd One Out
-          () => {
-            const oddSets = [
-              { items: ['📡 Sensor', '📷 Camera', '🌡️ Temp Sensor'], odd: '🍎 Fresh Apple', hint: 'Find the natural fruit among digital technology tools.' },
-              { items: ['💻 Laptop', '📱 Phone', '🖥️ Computer'], odd: '👟 Shoe', hint: 'Spot the shoe among electronic devices.' },
-              { items: ['⚙️ Gear', '🔩 Bolt', '🔧 Wrench'], odd: '🍕 Pizza', hint: 'Find the pizza slice among mechanical tools.' }
-            ];
-            const set = oddSets[randSeed % oddSets.length];
-            const options = this.shuffleArray([...set.items, set.odd]);
-            return {
-              title: `Odd One Out: Spot the Non-Tech Item`,
-              instructions: 'Select the item that does NOT belong to tech or tools.',
-              sequence: [...set.items, set.odd],
-              options,
-              correctIndex: options.indexOf(set.odd),
-              hint: set.hint
-            };
-          }
-        ];
+    let payload: any = {};
+    let instructions = baseline.baselinePrompt;
+    let hintText = 'Look at all options carefully before picking.';
 
-        const generatorFn = patternTypes[questionIndex % patternTypes.length];
-        const res = generatorFn();
-
-        return {
-          id,
-          domain: 'cognitive_ability',
-          skill: 'pattern_recognition',
-          title: `Cognitive Q${questionIndex}: ${res.title}`,
-          instructions: res.instructions,
-          difficulty,
-          expectedTimeMs: 12000,
-          type: 'pattern_matrix',
-          hintText: res.hint,
-          payload: {
-            sequence: res.sequence,
-            options: res.options,
-            correctIndex: res.correctIndex
-          }
+    // Generate custom 3-choice payload based on baseline skill
+    if (baseline.type === 'robot_mission') {
+      const blocks = ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'];
+      payload = {
+        availableBlocks: blocks,
+        correctSequence: ['Move Forward ⬆️', 'Grab Item 🦾'],
+        options: [
+          { label: 'Move Forward ➔ Grab Item', correct: true },
+          { label: 'Turn Right ➔ Turn Right', correct: false },
+          { label: 'Grab Item ➔ Stop', correct: false }
+        ],
+        correctIndex: 0
+      };
+      hintText = 'Add the move block first, then grab the item!';
+    } else if (baseline.type === 'picture_match') {
+      payload = {
+        audioPromptText: `Select the item: ${baseline.title}`,
+        options: [
+          { label: 'Target Item 🎯', emoji: '🤖', correct: true },
+          { label: 'Other Item A', emoji: '🍎', correct: false },
+          { label: 'Other Item B', emoji: '⚽', correct: false }
+        ],
+        correctIndex: 0
+      };
+      hintText = 'Click the robot icon!';
+    } else if (baseline.type === 'motor_target') {
+      payload = {
+        targetsCount: 3,
+        movementSpeed: 1.2,
+        options: [
+          { label: 'Target Center 🎯', correct: true },
+          { label: 'Side Corner 📐', correct: false },
+          { label: 'Outer Boundary ⭕', correct: false }
+        ],
+        correctIndex: 0
+      };
+      hintText = 'Click directly inside the glowing circle.';
+    } else {
+      // General MCQ (exactly 3 choices)
+      if (baseline.domain === 'cognitive_ability') {
+        payload = {
+          sequence: ['🔵', '🔴', '🔵', '🔴', '?'],
+          options: [
+            { label: '🔵 Blue Circle', correct: true },
+            { label: '🟢 Green Circle', correct: false },
+            { label: '🟡 Yellow Star', correct: false }
+          ],
+          correctIndex: 0
         };
-      }
-
-      case 'functional_skills': {
-        const funcMissions = [
-          {
-            title: `Space Rover Mission: Energy Pick Up`,
-            instructions: 'Build a program to move the rover 2 steps forward and pick up the energy pod.',
-            available: ['Move Forward', 'Turn Right', 'Pick Up Item', 'Turn Left'],
-            correctSeq: ['Move Forward', 'Move Forward', 'Pick Up Item'],
-            hint: 'Click "Move Forward" twice, then click "Pick Up Item".'
-          },
-          {
-            title: `Drone Adventure: Detour Around Block`,
-            instructions: 'Guide the drone around the barrier by turning right to navigate ahead.',
-            available: ['Move Forward', 'Turn Right', 'Turn Left', 'Pick Up Item'],
-            correctSeq: ['Move Forward', 'Turn Right', 'Move Forward', 'Turn Left', 'Move Forward'],
-            hint: 'Turn Right to go around the obstacle safely.'
-          },
-          {
-            title: `Robot Arm: Move Cargo Box`,
-            instructions: 'Build the steps to lower the robot arm, grab the box, and move it.',
-            available: ['Lower Arm', 'Grasp Container', 'Raise Arm', 'Rotate 90°', 'Release Cargo'],
-            correctSeq: ['Lower Arm', 'Grasp Container', 'Raise Arm', 'Rotate 90°', 'Release Cargo'],
-            hint: 'Lower the arm and grasp the box before lifting and moving.'
-          },
-          {
-            title: `Shuttle Docking: Charge Station`,
-            instructions: 'Program the shuttle to turn left twice and connect to the battery charger.',
-            available: ['Move Forward', 'Turn Left', 'Charge Battery', 'Turn Right'],
-            correctSeq: ['Move Forward', 'Turn Left', 'Move Forward', 'Turn Left', 'Charge Battery'],
-            hint: 'Turn Left twice to point toward the charger.'
-          }
-        ];
-
-        const m = funcMissions[(questionIndex + randSeed) % funcMissions.length];
-        return {
-          id,
-          domain: 'functional_skills',
-          skill: 'following_instructions',
-          title: `Functional Q${questionIndex}: ${m.title}`,
-          instructions: m.instructions,
-          difficulty,
-          expectedTimeMs: 18000,
-          type: 'robot_mission',
-          hintText: m.hint,
-          payload: {
-            availableBlocks: m.available,
-            correctSequence: m.correctSeq
-          }
+        hintText = 'Notice how Blue and Red repeat one after another.';
+      } else if (baseline.domain === 'behavioral_readiness') {
+        payload = {
+          options: [
+            { label: 'Stay calm, wait your turn, and try politely', correct: true },
+            { label: 'Get upset and stop working', correct: false },
+            { label: 'Leave the room immediately', correct: false }
+          ],
+          correctIndex: 0
         };
-      }
-
-      case 'communication_level': {
-        const commPrompts = [
-          {
-            title: `Listen & Match: Space Rover`,
-            audio: '"Select the space rover vehicle used to explore distant planets."',
-            options: [
-              { id: 'opt1', label: 'Space Rover', emoji: '🛸', correct: true },
-              { id: 'opt2', label: 'Bicycle', emoji: '🚲', correct: false },
-              { id: 'opt3', label: 'Submarine', emoji: '🚢', correct: false },
-              { id: 'opt4', label: 'Airplane', emoji: '✈️', correct: false }
-            ],
-            hint: 'Look for the space rover icon.'
-          },
-          {
-            title: `Listen & Match: Light Bulb (LED)`,
-            audio: '"Choose the glowing light bulb component."',
-            options: [
-              { id: 'opt1', label: 'Glowing Light Bulb', emoji: '💡', correct: true },
-              { id: 'opt2', label: 'Resistor', emoji: '⚡', correct: false },
-              { id: 'opt3', label: 'Connecting Wire', emoji: '〰️', correct: false },
-              { id: 'opt4', label: 'Drive Gear', emoji: '⚙️', correct: false }
-            ],
-            hint: 'Look for the bright glowing light bulb.'
-          },
-          {
-            title: `Listen & Match: Robot Arm Claw`,
-            audio: '"Select the robotic claw arm used to grab items."',
-            options: [
-              { id: 'opt1', label: 'Robotic Claw', emoji: '🦾', correct: true },
-              { id: 'opt2', label: 'Steering Wheel', emoji: '🛞', correct: false },
-              { id: 'opt3', label: 'Solar Panel', emoji: '☀️', correct: false },
-              { id: 'opt4', label: 'Audio Speaker', emoji: '🔊', correct: false }
-            ],
-            hint: 'Look for the mechanical robot claw.'
-          },
-          {
-            title: `Listen & Match: Repeat Loop`,
-            audio: '"Select the repeat loop symbol."',
-            options: [
-              { id: 'opt1', label: 'Repeat Loop', emoji: '🔁', correct: true },
-              { id: 'opt2', label: 'Stop Sign', emoji: '🛑', correct: false },
-              { id: 'opt3', label: 'Help Mark', emoji: '❓', correct: false },
-              { id: 'opt4', label: 'Lightning Unit', emoji: '⚡', correct: false }
-            ],
-            hint: 'Look for circular loop arrows.'
-          }
-        ];
-
-        const c = commPrompts[(questionIndex + randSeed) % commPrompts.length];
-        const shuffledOpts = this.shuffleArray([...c.options]);
-
-        return {
-          id,
-          domain: 'communication_level',
-          skill: 'picture_matching',
-          title: `Communication Q${questionIndex}: ${c.title}`,
-          instructions: 'Listen to the prompt and select the matching icon below.',
-          difficulty,
-          expectedTimeMs: 10000,
-          type: 'picture_match',
-          hintText: c.hint,
-          payload: {
-            audioPromptText: c.audio,
-            options: shuffledOpts
-          }
-        };
-      }
-
-      case 'behavioral_readiness': {
-        // Rich scenario-based MCQ questions assessing real child behavioral readiness
-        const behaviorScenarios = [
-          {
-            title: `Impulse Control: Waiting Your Turn`,
-            scenario: 'Your classmate is using the only computer and you really want to use it. What is the BEST thing to do?',
-            options: [
-              'Wait patiently and ask politely when they finish',
-              'Grab the computer keyboard away from them',
-              'Start crying loudly until the teacher intervenes',
-              'Give up and do nothing for the rest of the class'
-            ],
-            correctIndex: 0,
-            hint: 'The best choice keeps everyone happy and shows respect. Think about what a calm and patient student would do.'
-          },
-          {
-            title: `Adaptability: Handling Unexpected Changes`,
-            scenario: 'Your teacher changes today\'s plan and you cannot do the robot activity you were excited about. What do you do?',
-            options: [
-              'Stay upset the whole class and refuse to participate',
-              'Take a deep breath, accept the change, and try the new activity',
-              'Keep asking repeatedly when the robot activity will happen',
-              'Pretend to be sick so you can leave class'
-            ],
-            correctIndex: 1,
-            hint: 'Being flexible and trying new things is a great skill. Which choice shows a positive attitude?'
-          },
-          {
-            title: `Attention & Persistence: Not Giving Up`,
-            scenario: 'You are solving a coding puzzle and it is very hard. You have tried twice and it still is not working. What do you do?',
-            options: [
-              'Quit immediately and play a game instead',
-              'Ask someone else to do it all for you',
-              'Take a short breath, re-read the instructions, and try again',
-              'Complain that the puzzle is impossible and unfair'
-            ],
-            correctIndex: 2,
-            hint: 'Great coders don\'t give up easily! Which option shows determination and problem-solving?'
-          },
-          {
-            title: `Asking for Help Appropriately`,
-            scenario: 'You do not understand the instructions for the activity. The teacher is busy with another student. What should you do?',
-            options: [
-              'Start doing the activity the wrong way without asking',
-              'Raise your hand quietly and wait for the teacher to be free',
-              'Call out loudly across the room to get immediate attention',
-              'Do nothing and wait until the class ends'
-            ],
-            correctIndex: 1,
-            hint: 'There is a polite and effective way to get help. Which choice is respectful and smart?'
-          },
-          {
-            title: `Frustration Management: When Things Go Wrong`,
-            scenario: 'Your robot program does not work and your teammate says you did it wrong. How do you respond?',
-            options: [
-              'Shout angrily at your teammate and walk away',
-              'Listen calmly, check the code together, and fix the problem',
-              'Blame the robot and say the equipment is broken',
-              'Stop working and refuse to continue the project'
-            ],
-            correctIndex: 1,
-            hint: 'Working together and staying calm leads to the best solutions. Which choice shows teamwork?'
-          },
-          {
-            title: `Group Work Readiness: Sharing Resources`,
-            scenario: 'There is only one set of robot pieces for two students. Your partner took most of the pieces. What do you do?',
-            options: [
-              'Take all the pieces back because you saw them first',
-              'Suggest you both divide the pieces fairly and work together',
-              'Refuse to do the activity until you get more pieces',
-              'Tell the teacher immediately without trying to solve it yourself'
-            ],
-            correctIndex: 1,
-            hint: 'Being fair and working as a team makes the project better for everyone. What\'s the smartest move?'
-          },
-          {
-            title: `Task Transition: Switching Between Activities`,
-            scenario: 'The timer goes off and it is time to stop your game and move to math. You are almost at the top score. What do you do?',
-            options: [
-              'Ignore the timer and keep playing until you finish',
-              'Quickly save your progress if possible, then switch to math',
-              'Get very upset and refuse to do math work',
-              'Ask to skip math class just this one time'
-            ],
-            correctIndex: 1,
-            hint: 'Following class routines helps everyone. Which choice shows maturity and self-control?'
-          },
-          {
-            title: `Following Classroom Rules`,
-            scenario: 'The class rule is to work silently during the coding activity, but you want to tell your friend something exciting. What do you do?',
-            options: [
-              'Whisper very loudly to your friend right away',
-              'Pass a note to disturb them during the activity',
-              'Write it down and wait until the activity break to share',
-              'Ignore the rule because your news is very important'
-            ],
-            correctIndex: 2,
-            hint: 'Class rules help everyone focus and learn. Which choice follows the rules AND still lets you share your news?'
-          }
-        ];
-
-        const scenarioSet = behaviorScenarios[(questionIndex + randSeed) % behaviorScenarios.length];
-        return {
-          id,
-          domain: 'behavioral_readiness',
-          skill: 'adaptability',
-          title: `Behavioral Q${questionIndex}: ${scenarioSet.title}`,
-          instructions: scenarioSet.scenario,
-          difficulty,
-          expectedTimeMs: 20000,
-          type: 'pattern_matrix',
-          hintText: scenarioSet.hint,
-          payload: {
-            options: scenarioSet.options,
-            correctIndex: scenarioSet.correctIndex
-          }
-        };
-      }
-
-      case 'fine_motor_technology':
-      default: {
-        const targetCount = 3 + (randSeed % 4); // 3 to 6 targets dynamically
-        const speeds = [1.2, 1.5, 1.8, 2.2];
-        const selectedSpeed = speeds[randSeed % speeds.length];
-
-        return {
-          id,
-          domain: 'fine_motor_technology',
-          skill: 'mouse_control',
-          title: `Fine Motor Q${questionIndex}: Target Precision Pursuit (Variant ${randSeed})`,
-          instructions: `Click or tap ${targetCount} moving crosshair targets precisely to test fine motor speed and accuracy.`,
-          difficulty,
-          expectedTimeMs: 12000,
-          type: 'motor_target',
-          hintText: 'Click directly on the glowing center of each target.',
-          payload: {
-            targetsCount: targetCount,
-            movementSpeed: selectedSpeed
-          }
+        hintText = 'Choose the option that shows patience and self-control.';
+      } else {
+        payload = {
+          options: [
+            { label: 'Correct Solution Action 🌟', correct: true },
+            { label: 'Incorrect Action A ❌', correct: false },
+            { label: 'Incorrect Action B 🛑', correct: false }
+          ],
+          correctIndex: 0
         };
       }
     }
+
+    // Shuffle 3 options deterministically while tracking correctIndex
+    if (payload.options && Array.isArray(payload.options) && payload.options.length === 3) {
+      const correctItem = payload.options.find((o: any) => o.correct) || payload.options[0];
+      const shuffled = this.shuffleArray([...payload.options]);
+      payload.options = shuffled;
+      payload.correctIndex = shuffled.indexOf(correctItem);
+    }
+
+    return {
+      id,
+      slot: baseline.slot,
+      domain: baseline.domain,
+      skill: baseline.skill,
+      subSkill: baseline.subSkill,
+      title: `Q${baseline.slot}: ${baseline.title}`,
+      instructions,
+      difficulty: baseline.difficulty,
+      expectedTimeMs: 90000, // 1:30 fixed timer
+      maxPoints: baseline.maxPoints,
+      type: baseline.type,
+      payload,
+      hintText
+    };
   }
 
   private shuffleArray<T>(arr: T[]): T[] {
@@ -487,3 +303,4 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
     return copy;
   }
 }
+

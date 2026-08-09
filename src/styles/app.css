@@ -113,101 +113,161 @@ body.exam-mode {
   margin-bottom: 0.75rem;
 }
 
-.question-numbers-container {
+/* Lily Pads Frog Matrix Grid */
+.lily-pads-matrix {
   display: grid;
   grid-template-columns: repeat(20, 1fr);
-  gap: 0.4rem;
+  gap: 0.35rem;
+}
+
+@media (max-width: 1024px) {
+  .lily-pads-matrix {
+    grid-template-columns: repeat(15, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
-  .question-numbers-container {
+  .lily-pads-matrix {
     grid-template-columns: repeat(10, 1fr);
   }
 }
 
-.q-grid-pill {
-  background: rgba(255, 255, 255, 0.05);
+.lily-pad {
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  border-radius: 8px;
-  padding: 0.45rem 0;
-  font-size: 0.8rem;
+  border-radius: 50%;
+  aspect-ratio: 1;
+  font-size: 0.72rem;
   font-weight: 700;
-  cursor: pointer;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s ease;
   user-select: none;
 }
 
-.q-grid-pill:hover {
-  background: rgba(6, 182, 212, 0.15);
-  border-color: var(--accent-cyan);
-  color: var(--text-primary);
-}
-
-.q-grid-pill.active {
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+.lily-pad.active-pad {
+  background: radial-gradient(circle, #10b981 0%, #059669 100%);
   border-color: #ffffff;
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
-  transform: scale(1.08);
+  font-size: 1.1rem;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.8);
+  transform: scale(1.2);
+  animation: pulse 1.5s infinite ease-in-out;
 }
 
-.q-grid-pill.solved {
-  background: rgba(16, 185, 129, 0.2);
+.lily-pad.solved-pad {
+  background: rgba(16, 185, 129, 0.25);
   border-color: var(--accent-emerald);
   color: var(--accent-emerald);
 }
 
-.q-grid-pill.solved.active {
-  background: var(--accent-emerald);
-  color: #ffffff;
-  border-color: #ffffff;
+.lily-pad.timed-out-pad {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ef4444;
 }
 
-/* Domain Stepper Header */
-.domain-stepper {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
-}
-
-.step-pill {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  padding: 0.65rem;
-  border-radius: 12px;
-  text-align: center;
-  transition: all 0.3s ease;
-}
-
-.step-pill.active {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.25));
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
-}
-
-.step-pill.completed {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: var(--accent-emerald);
-  color: var(--accent-emerald);
-}
-
-.step-pill .step-num {
-  font-size: 0.75rem;
-  text-transform: uppercase;
+.lily-pad.past-pad {
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-secondary);
-  margin-bottom: 0.2rem;
 }
 
-.step-pill .step-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.lily-pad.locked-pad {
+  opacity: 0.35;
 }
+
+.step-pill.locked {
+  opacity: 0.4;
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* 3-Choice Options Grid */
+.options-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 750px;
+}
+
+@media (max-width: 640px) {
+  .options-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.option-btn-3 {
+  background: rgba(255, 255, 255, 0.07);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 1.4rem 1rem;
+  border-radius: 16px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  text-align: center;
+}
+
+.option-btn-3:hover {
+  background: rgba(6, 182, 212, 0.18);
+  border-color: var(--accent-cyan);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.3);
+}
+
+.option-btn-3.selected {
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  border-color: #ffffff;
+  color: #ffffff;
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.6);
+  transform: scale(1.03);
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1.15); }
+  50% { transform: scale(1.28); }
+}
+
+/* Frog Jump Animation — land on new pad */
+@keyframes frog-land {
+  0%   { transform: scale(0.4) translateY(-28px); opacity: 0.3; }
+  55%  { transform: scale(1.4) translateY(4px);   opacity: 1; }
+  75%  { transform: scale(0.95) translateY(-3px); }
+  90%  { transform: scale(1.15) translateY(1px); }
+  100% { transform: scale(1.2) translateY(0); opacity: 1; }
+}
+
+/* Frog just left this pad — ripple effect */
+@keyframes frog-launch {
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.7); transform: scale(1.2); }
+  50%  { box-shadow: 0 0 0 10px rgba(16,185,129,0); transform: scale(0.95); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); transform: scale(1); }
+}
+
+.lily-pad.frog-land {
+  animation: frog-land 0.55s cubic-bezier(0.23, 1, 0.32, 1) forwards, pulse 1.5s 0.55s infinite ease-in-out;
+}
+
+.lily-pad.just-left-pad {
+  animation: frog-launch 0.5s ease-out forwards;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
 
 /* Activity Interactive Container */
 .activity-card {

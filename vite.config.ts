@@ -28,6 +28,25 @@ export default defineConfig(({ command }) => {
 
   return {
     base: './',
+    plugins: [
+      {
+        name: 'rename-index1-to-index',
+        closeBundle() {
+          const oldPath = path.resolve(__dirname, 'dist/index1.html');
+          const newPath = path.resolve(__dirname, 'dist/index.html');
+          if (fs.existsSync(oldPath)) {
+            fs.renameSync(oldPath, newPath);
+          }
+        }
+      }
+    ],
+    build: {
+      rollupOptions: {
+        input: {
+          main: path.resolve(__dirname, 'index1.html'),
+        },
+      },
+    },
     define: {
       'import.meta.env.VITE_AZURE_ENDPOINT': JSON.stringify(envData.endpoint || 'https://ah30309142502238-8748-resource.services.ai.azure.com/openai/v1/responses'),
       'import.meta.env.VITE_AZURE_API_KEY': JSON.stringify(envData.apiKey ? Buffer.from(envData.apiKey).toString('base64') : '')

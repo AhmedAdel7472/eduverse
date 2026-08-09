@@ -1,61 +1,70 @@
-import { AssessmentDomain, ItemTelemetry, StudentSessionTelemetry } from '../engine/telemetrySchema';
-import { ActivityGenerator, ActivityItem } from '../ai/activityGenerator';
+import { AssessmentDomain, ItemTelemetry, StudentSessionTelemetry, QuestionTimeRecord, BreakEvent } from '../engine/telemetrySchema';
+import { ActivityGenerator, ActivityItem, QUESTION_BASELINES } from '../ai/activityGenerator';
 import { ScoringEngine, DOMAIN_CONFIG } from '../engine/scoringEngine';
 import { PlacementEngine, PlacementResult } from '../engine/placementEngine';
 import { QualitativeAnalyzer } from '../ai/qualitativeAnalyzer';
 import { renderReportDashboard } from './ReportDashboard';
 
-interface AssessmentQuestionPlan {
-  domain: AssessmentDomain;
-  questionIndex: number; // 1 to 20
-  questionIndexInDomain: number; // 1 to N
-  totalInDomain: number;
-}
-
-interface StoredUserAnswer {
+export interface StoredUserAnswer {
   selectedAnswerIndex: number | null;
   robotSequence: string[];
-  ruleShiftPhase: number;
   motorClicks: { x: number; y: number; dist: number }[];
   attemptsCount: number;
   hintsUsed: number;
   timeSpentMs: number;
   isSolved: boolean;
+  timedOut: boolean;
+  answeredAt: number | null;
+  responseLatencyMs: number | null;
+  remainingTimeWhenAnsweredMs: number | null;
+  breaksDuringQuestion: number;
 }
 
 export interface SavedAssessmentSession {
   studentName: string;
   currentQuestionIndex: number;
   totalTimerSeconds: number;
+  currentQuestionRemainingSeconds: number;
+  isPaused: boolean;
   cachedActivities: (ActivityItem | null)[];
   userAnswers: StoredUserAnswer[];
+  questionTimeRecords: QuestionTimeRecord[];
+  breakEvents: BreakEvent[];
   savedAt: number;
 }
 
 export class AssessmentRunner {
   public static STORAGE_KEY = 'cognix_active_assessment_session';
+  public static QUESTION_TIME_LIMIT_SEC = 90; // 1 minute 30 seconds
 
   private container: HTMLElement;
   private generator: ActivityGenerator;
   private analyzer: QualitativeAnalyzer;
   private studentName: string = 'Alex Rivers';
 
-  // 20-Question Plan & Cached Activities
-  private questionPlan: AssessmentQuestionPlan[] = [];
-  private cachedActivities: (ActivityItem | null)[] = new Array(20).fill(null);
+  // 60-Question Plan & State
+  private cachedActivities: (ActivityItem | null)[] = new Array(60).fill(null);
   private userAnswers: StoredUserAnswer[] = [];
-  private currentQuestionIndex: number = 0; // 0 to 19
+  private questionTimeRecords: QuestionTimeRecord[] = [];
+  private breakEvents: BreakEvent[] = [];
+  private currentQuestionIndex: number = 0; // 0 to 59
 
   // Timers & Active State
-  private itemStartTime: number = 0;
   private totalTimerSeconds: number = 0;
-  private timerInterval: any = null;
+  private questionTimerSecondsRemaining: number = AssessmentRunner.QUESTION_TIME_LIMIT_SEC;
+  private itemStartTimestamp: number = 0;
+  private itemFirstInteractionTimestamp: number | null = null;
+  private currentPauseStartTimestamp: number | null = null;
+  private pauseDurationForCurrentQuestionMs: number = 0;
+  private isPaused: boolean = false;
+
+  private globalTimerInterval: any = null;
+  private questionTimerInterval: any = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
     this.generator = new ActivityGenerator();
     this.analyzer = new QualitativeAnalyzer();
-    this.build20QuestionPlan();
     this.initUserAnswers();
   }
 
@@ -64,7 +73,7 @@ export class AssessmentRunner {
       const data = localStorage.getItem(AssessmentRunner.STORAGE_KEY);
       if (!data) return null;
       const parsed = JSON.parse(data) as SavedAssessmentSession;
-      if (parsed && Array.isArray(parsed.userAnswers) && parsed.userAnswers.length === 20) {
+      if (parsed && Array.isArray(parsed.userAnswers) && parsed.userAnswers.length === 60) {
         return parsed;
       }
       return null;
@@ -86,8 +95,12 @@ export class AssessmentRunner {
         studentName,
         currentQuestionIndex: this.currentQuestionIndex,
         totalTimerSeconds: this.totalTimerSeconds,
+        currentQuestionRemainingSeconds: this.questionTimerSecondsRemaining,
+        isPaused: this.isPaused,
         cachedActivities: this.cachedActivities,
         userAnswers: this.userAnswers,
+        questionTimeRecords: this.questionTimeRecords,
+        breakEvents: this.breakEvents,
         savedAt: Date.now()
       };
       localStorage.setItem(AssessmentRunner.STORAGE_KEY, JSON.stringify(sessionData));
@@ -107,43 +120,23 @@ export class AssessmentRunner {
     window.removeEventListener('beforeunload', this.beforeUnloadHandler);
   }
 
-  private build20QuestionPlan() {
-    this.questionPlan = [];
-    let qIdx = 1;
-
-    // 1. Cognitive (5 Qs: 1-5)
-    for (let i = 1; i <= 5; i++) {
-      this.questionPlan.push({ domain: 'cognitive_ability', questionIndex: qIdx++, questionIndexInDomain: i, totalInDomain: 5 });
-    }
-    // 2. Functional (5 Qs: 6-10)
-    for (let i = 1; i <= 5; i++) {
-      this.questionPlan.push({ domain: 'functional_skills', questionIndex: qIdx++, questionIndexInDomain: i, totalInDomain: 5 });
-    }
-    // 3. Communication (4 Qs: 11-14)
-    for (let i = 1; i <= 4; i++) {
-      this.questionPlan.push({ domain: 'communication_level', questionIndex: qIdx++, questionIndexInDomain: i, totalInDomain: 4 });
-    }
-    // 4. Behavioral (3 Qs: 15-17)
-    for (let i = 1; i <= 3; i++) {
-      this.questionPlan.push({ domain: 'behavioral_readiness', questionIndex: qIdx++, questionIndexInDomain: i, totalInDomain: 3 });
-    }
-    // 5. Fine Motor (3 Qs: 18-20)
-    for (let i = 1; i <= 3; i++) {
-      this.questionPlan.push({ domain: 'fine_motor_technology', questionIndex: qIdx++, questionIndexInDomain: i, totalInDomain: 3 });
-    }
-  }
-
   private initUserAnswers() {
-    this.userAnswers = new Array(20).fill(null).map(() => ({
+    this.userAnswers = new Array(60).fill(null).map(() => ({
       selectedAnswerIndex: null,
       robotSequence: [],
-      ruleShiftPhase: 1,
       motorClicks: [],
       attemptsCount: 0,
       hintsUsed: 0,
       timeSpentMs: 0,
-      isSolved: false
+      isSolved: false,
+      timedOut: false,
+      answeredAt: null,
+      responseLatencyMs: null,
+      remainingTimeWhenAnsweredMs: null,
+      breaksDuringQuestion: 0
     }));
+    this.questionTimeRecords = [];
+    this.breakEvents = [];
   }
 
   public async startSession(studentName: string = 'Alex Rivers', restoreIfAvailable: boolean = true) {
@@ -151,181 +144,369 @@ export class AssessmentRunner {
     const saved = restoreIfAvailable ? AssessmentRunner.getSavedSession() : null;
 
     if (saved) {
-      this.currentQuestionIndex = Math.max(0, Math.min(19, saved.currentQuestionIndex || 0));
-      this.cachedActivities = saved.cachedActivities || new Array(20).fill(null);
+      this.currentQuestionIndex = Math.max(0, Math.min(59, saved.currentQuestionIndex || 0));
+      this.cachedActivities = saved.cachedActivities || new Array(60).fill(null);
       this.userAnswers = saved.userAnswers;
+      this.questionTimeRecords = saved.questionTimeRecords || [];
+      this.breakEvents = saved.breakEvents || [];
       this.totalTimerSeconds = saved.totalTimerSeconds || 0;
+      this.questionTimerSecondsRemaining = saved.currentQuestionRemainingSeconds || AssessmentRunner.QUESTION_TIME_LIMIT_SEC;
+      this.isPaused = saved.isPaused || false;
+
       this.startGlobalTimer(this.totalTimerSeconds);
       this.attachBeforeUnload();
-      await this.loadQuestion(this.currentQuestionIndex);
+
+      if (this.isPaused) {
+        await this.loadQuestion(this.currentQuestionIndex, false);
+        this.pauseAssessment();
+      } else {
+        await this.loadQuestion(this.currentQuestionIndex, false);
+      }
     } else {
       this.currentQuestionIndex = 0;
-      this.cachedActivities = new Array(20).fill(null);
+      this.cachedActivities = new Array(60).fill(null);
       this.initUserAnswers();
       this.totalTimerSeconds = 0;
+      this.questionTimerSecondsRemaining = AssessmentRunner.QUESTION_TIME_LIMIT_SEC;
+      this.isPaused = false;
+
       this.startGlobalTimer(0);
       this.attachBeforeUnload();
       this.saveSession(studentName);
-      await this.loadQuestion(0);
+      await this.loadQuestion(0, true);
     }
   }
 
   private startGlobalTimer(initialSeconds: number = 0) {
     this.totalTimerSeconds = initialSeconds;
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    this.timerInterval = setInterval(() => {
-      this.totalTimerSeconds++;
-      if (this.totalTimerSeconds % 3 === 0) {
-        this.saveSession(this.studentName);
-      }
-      const timerEl = document.getElementById('global-timer');
-      if (timerEl) {
-        const mins = String(Math.floor(this.totalTimerSeconds / 60)).padStart(2, '0');
-        const secs = String(this.totalTimerSeconds % 60).padStart(2, '0');
-        timerEl.textContent = `${mins}:${secs}`;
+    if (this.globalTimerInterval) clearInterval(this.globalTimerInterval);
+    this.globalTimerInterval = setInterval(() => {
+      if (!this.isPaused) {
+        this.totalTimerSeconds++;
+        if (this.totalTimerSeconds % 3 === 0) {
+          this.saveSession(this.studentName);
+        }
+        const timerEl = document.getElementById('global-timer');
+        if (timerEl) {
+          const mins = String(Math.floor(this.totalTimerSeconds / 60)).padStart(2, '0');
+          const secs = String(this.totalTimerSeconds % 60).padStart(2, '0');
+          timerEl.textContent = `${mins}:${secs}`;
+        }
       }
     }, 1000);
   }
 
-  private async loadQuestion(targetIndex: number) {
-    if (targetIndex < 0 || targetIndex >= 20) return;
+  private startQuestionTimer() {
+    if (this.questionTimerInterval) clearInterval(this.questionTimerInterval);
+    this.questionTimerInterval = setInterval(() => {
+      if (!this.isPaused) {
+        this.questionTimerSecondsRemaining--;
+        this.updateQuestionTimerUI();
 
-    // Save time spent on current question before switching
-    if (this.itemStartTime > 0 && this.userAnswers[this.currentQuestionIndex]) {
-      this.userAnswers[this.currentQuestionIndex].timeSpentMs += (Date.now() - this.itemStartTime);
+        if (this.questionTimerSecondsRemaining <= 0) {
+          clearInterval(this.questionTimerInterval);
+          this.handleQuestionTimeout();
+        }
+      }
+    }, 1000);
+  }
+
+  private updateQuestionTimerUI() {
+    const qTimerEl = document.getElementById('question-timer-display');
+    const qRingEl = document.getElementById('question-timer-ring');
+    if (qTimerEl) {
+      const mins = Math.floor(this.questionTimerSecondsRemaining / 60);
+      const secs = String(this.questionTimerSecondsRemaining % 60).padStart(2, '0');
+      qTimerEl.textContent = `${mins}:${secs}`;
+
+      if (this.questionTimerSecondsRemaining <= 15) {
+        qTimerEl.style.color = '#ef4444'; // Warning red
+      } else {
+        qTimerEl.style.color = 'var(--accent-cyan)';
+      }
     }
+    if (qRingEl) {
+      const pct = (this.questionTimerSecondsRemaining / AssessmentRunner.QUESTION_TIME_LIMIT_SEC) * 100;
+      qRingEl.style.width = `${pct}%`;
+    }
+  }
+
+  private async loadQuestion(targetIndex: number, resetTimer: boolean = true) {
+    if (targetIndex < 0 || targetIndex >= 60) return;
 
     this.currentQuestionIndex = targetIndex;
-    const plan = this.questionPlan[targetIndex];
+    const baseline = QUESTION_BASELINES[targetIndex];
+
+    // Stop any running question timer while loading
+    if (this.questionTimerInterval) clearInterval(this.questionTimerInterval);
+
+    if (resetTimer) {
+      this.questionTimerSecondsRemaining = AssessmentRunner.QUESTION_TIME_LIMIT_SEC;
+    }
+
+    this.itemFirstInteractionTimestamp = null;
+    this.pauseDurationForCurrentQuestionMs = 0;
 
     // Render loading state if question is not yet cached
     if (!this.cachedActivities[targetIndex]) {
       this.renderLoadingState(targetIndex);
-      const difficulty = Math.min(5, Math.max(1, plan.questionIndexInDomain));
-      this.cachedActivities[targetIndex] = await this.generator.generateActivity(plan.domain, difficulty, plan.questionIndex);
+      this.cachedActivities[targetIndex] = await this.generator.generateActivity(baseline.slot);
     }
 
-    this.itemStartTime = Date.now();
+    // Start tracking active time ONLY after question is ready (not during AI loading delay)
+    this.itemStartTimestamp = Date.now();
+
     this.saveSession(this.studentName);
     this.render();
 
-    // Pre-fetch next question in background for instant transition
+    if (!this.isPaused) {
+      this.startQuestionTimer();
+    }
+
+    // Pre-fetch next question in background
     this.prefetchNextQuestion(targetIndex + 1);
   }
 
   private renderLoadingState(targetIndex: number) {
-    const plan = this.questionPlan[targetIndex];
-    const domainConfig = DOMAIN_CONFIG[plan.domain];
+    const baseline = QUESTION_BASELINES[targetIndex];
+    const domainConfig = DOMAIN_CONFIG[baseline.domain];
 
     const playground = this.container.querySelector('#playground-area');
     if (playground) {
       playground.innerHTML = `
         <div style="text-align: center; padding: 3rem 1rem; color: var(--accent-cyan);">
           <div style="font-size: 2.5rem; margin-bottom: 1rem; animation: pulse 1.2s infinite ease-in-out;">⚡</div>
-          <h3 style="font-size: 1.2rem; font-weight: 700;">Loading AI Question ${plan.questionIndex} of 20...</h3>
-          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">Generating custom ${domainConfig.name} activity...</p>
+          <h3 style="font-size: 1.2rem; font-weight: 700;">Preparing Question ${baseline.slot} of 60...</h3>
+          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">${domainConfig.name} • ${baseline.subSkill}</p>
         </div>
       `;
     }
   }
 
   private async prefetchNextQuestion(nextIndex: number) {
-    if (nextIndex >= 0 && nextIndex < 20 && !this.cachedActivities[nextIndex]) {
-      const plan = this.questionPlan[nextIndex];
-      const difficulty = Math.min(5, Math.max(1, plan.questionIndexInDomain));
-      this.generator.generateActivity(plan.domain, difficulty, plan.questionIndex).then(activity => {
+    if (nextIndex >= 0 && nextIndex < 60 && !this.cachedActivities[nextIndex]) {
+      const baseline = QUESTION_BASELINES[nextIndex];
+      this.generator.generateActivity(baseline.slot).then(activity => {
         this.cachedActivities[nextIndex] = activity;
       }).catch(() => {});
     }
+  }
+
+  public pauseAssessment() {
+    if (this.isPaused) return;
+    this.isPaused = true;
+    this.currentPauseStartTimestamp = Date.now();
+    const currentAns = this.userAnswers[this.currentQuestionIndex];
+    if (currentAns) {
+      currentAns.breaksDuringQuestion++;
+    }
+
+    const overlay = document.getElementById('pause-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    this.saveSession(this.studentName);
+  }
+
+  public resumeAssessment() {
+    if (!this.isPaused) return;
+    const now = Date.now();
+    if (this.currentPauseStartTimestamp) {
+      const breakDuration = now - this.currentPauseStartTimestamp;
+      this.pauseDurationForCurrentQuestionMs += breakDuration;
+
+      const baseline = QUESTION_BASELINES[this.currentQuestionIndex];
+      this.breakEvents.push({
+        breakIndex: this.breakEvents.length + 1,
+        questionSlotAtPause: this.currentQuestionIndex + 1,
+        domainAtPause: baseline.domain,
+        pauseStartTimestamp: this.currentPauseStartTimestamp,
+        resumeTimestamp: now,
+        breakDurationMs: breakDuration,
+        countdownRemainingAtPause: this.questionTimerSecondsRemaining
+      });
+    }
+
+    this.isPaused = false;
+    this.currentPauseStartTimestamp = null;
+
+    const overlay = document.getElementById('pause-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    this.startQuestionTimer();
+    this.saveSession(this.studentName);
+  }
+
+  private handleQuestionTimeout() {
+    const answerState = this.userAnswers[this.currentQuestionIndex];
+    answerState.timedOut = true;
+    answerState.isSolved = false;
+
+    this.recordQuestionTimeData(false);
+    this.advanceToNextQuestion();
+  }
+
+  private recordQuestionTimeData(wasAnswered: boolean) {
+    const endTimestamp = Date.now();
+    const answerState = this.userAnswers[this.currentQuestionIndex];
+    const baseline = QUESTION_BASELINES[this.currentQuestionIndex];
+    const activity = this.cachedActivities[this.currentQuestionIndex];
+
+    const totalDurationMs = endTimestamp - this.itemStartTimestamp;
+    const activeDurationMs = Math.max(1000, totalDurationMs - this.pauseDurationForCurrentQuestionMs);
+
+    answerState.timeSpentMs += activeDurationMs;
+
+    const record: QuestionTimeRecord = {
+      questionSlot: baseline.slot,
+      domain: baseline.domain,
+      subSkill: baseline.subSkill,
+      questionTitle: activity?.title || baseline.title,
+      questionStartTimestamp: this.itemStartTimestamp,
+      questionEndTimestamp: endTimestamp,
+      totalDurationMs,
+      pausedDurationMs: this.pauseDurationForCurrentQuestionMs,
+      activeDurationMs,
+      responseLatencyMs: answerState.responseLatencyMs,
+      answeredAt: answerState.answeredAt,
+      timedOut: answerState.timedOut,
+      wasAnswered,
+      remainingTimeWhenAnsweredMs: answerState.remainingTimeWhenAnsweredMs,
+      breaksDuringQuestion: answerState.breaksDuringQuestion,
+      earnedScore: 0, // Will be computed at submission
+      maxScore: baseline.maxPoints
+    };
+
+    this.questionTimeRecords[this.currentQuestionIndex] = record;
+  }
+
+  private advanceToNextQuestion() {
+    if (this.questionTimerInterval) clearInterval(this.questionTimerInterval);
+
+    if (this.currentQuestionIndex < 59) {
+      const currentDomain = QUESTION_BASELINES[this.currentQuestionIndex].domain;
+      const nextDomain = QUESTION_BASELINES[this.currentQuestionIndex + 1].domain;
+
+      if (currentDomain !== nextDomain) {
+        this.showDomainTransitionBanner(nextDomain, () => {
+          this.loadQuestion(this.currentQuestionIndex + 1, true);
+        });
+      } else {
+        this.loadQuestion(this.currentQuestionIndex + 1, true);
+      }
+    } else {
+      this.completeAssessment();
+    }
+  }
+
+  private showDomainTransitionBanner(nextDomain: AssessmentDomain, callback: () => void) {
+    const domainCfg = DOMAIN_CONFIG[nextDomain];
+    const playground = this.container.querySelector('#playground-area');
+    if (playground) {
+      playground.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--accent-cyan); animation: fadeIn 0.4s ease;">
+          <div style="font-size: 3.5rem; margin-bottom: 1rem;">🎉</div>
+          <h2 style="font-size: 1.6rem; font-weight: 800; color: #fff;">Domain Completed!</h2>
+          <p style="font-size: 1rem; color: var(--text-secondary); margin-top: 0.5rem; margin-bottom: 1.5rem;">
+            Great job! Moving to <strong>${domainCfg.name}</strong> (${domainCfg.questionCount} Questions)...
+          </p>
+          <div style="display:inline-block; padding: 0.6rem 1.5rem; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue)); color: #fff; font-weight: 700; border-radius: 12px;">
+            Starting Domain...
+          </div>
+        </div>
+      `;
+    }
+    setTimeout(callback, 2200);
   }
 
   private render() {
     const activity = this.cachedActivities[this.currentQuestionIndex];
     if (!activity) return;
 
-    const currentPlan = this.questionPlan[this.currentQuestionIndex];
-    const domainConfig = DOMAIN_CONFIG[currentPlan.domain];
+    const baseline = QUESTION_BASELINES[this.currentQuestionIndex];
+    const domainConfig = DOMAIN_CONFIG[baseline.domain];
     const answerState = this.userAnswers[this.currentQuestionIndex];
 
-    // 1. Render 5 Domain Header Stepper
-    const domainsList: AssessmentDomain[] = [
-      'cognitive_ability',
-      'functional_skills',
-      'communication_level',
-      'behavioral_readiness',
-      'fine_motor_technology'
-    ];
-
-    let stepperHtml = '<div class="domain-stepper">';
-    domainsList.forEach((d) => {
-      const cfg = DOMAIN_CONFIG[d];
-      let stateClass = '';
-      if (d === currentPlan.domain) {
-        stateClass = 'active';
-      } else {
-        const domainIndices = this.questionPlan.filter(p => p.domain === d).map(p => p.questionIndex - 1);
-        const solvedInDomain = domainIndices.filter(idx => this.userAnswers[idx].isSolved).length;
-        if (solvedInDomain === domainIndices.length) {
-          stateClass = 'completed';
-        }
-      }
-
-      stepperHtml += `
-        <div class="step-pill ${stateClass}">
-          <div class="step-num">${cfg.questionCount} Qs (${cfg.maxScore} Pts)</div>
-          <div class="step-name">${cfg.name}</div>
-        </div>
-      `;
-    });
-    stepperHtml += '</div>';
-
-    // 2. Render 20-Question Visual Interactive Number Grid
+    // --- Child-Friendly Frog Jump Matrix UI (Lily Pads) ---
+    // Track previous index for animation
+    const prevIndex = this.currentQuestionIndex > 0 ? this.currentQuestionIndex - 1 : -1;
     let questionGridHtml = `
       <div class="question-grid-bar">
         <div class="grid-header">
-          <span><strong>20-Question Assessment Grid</strong> • Select any question number to review or edit</span>
-          <span>Solved: <strong>${this.userAnswers.filter(a => a.isSolved).length}</strong> / 20</span>
+          <span><strong>🐸 Frog Jump Progress</strong> — Question <strong>${baseline.slot}</strong> of 60</span>
+          <span>Done: <strong>${this.userAnswers.filter(a => a.isSolved || a.timedOut).length}</strong> / 60</span>
         </div>
-        <div class="question-numbers-container">
+        <div class="lily-pads-matrix">
     `;
 
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 60; i++) {
       const isCurrent = i === this.currentQuestionIndex;
       const isSolved = this.userAnswers[i].isSolved;
-      let pillClass = '';
-      if (isCurrent) pillClass += ' active';
-      if (isSolved) pillClass += ' solved';
+      const isTimedOut = this.userAnswers[i].timedOut;
+      const isPast = i < this.currentQuestionIndex;
+      const isJustLeft = i === prevIndex;
 
-      const label = isSolved ? `✓ ${i + 1}` : `${i + 1}`;
+      let padClass = 'lily-pad';
+      if (isCurrent) padClass += ' active-pad frog-land';
+      else if (isSolved) padClass += ' solved-pad';
+      else if (isTimedOut) padClass += ' timed-out-pad';
+      else if (isJustLeft) padClass += ' just-left-pad';
+      else if (isPast) padClass += ' past-pad';
+      else padClass += ' locked-pad';
+
+      let padContent = `${i + 1}`;
+      if (isCurrent) padContent = `🐸`;
+      else if (isSolved) padContent = `✓`;
+      else if (isTimedOut) padContent = `⏰`;
+
       questionGridHtml += `
-        <button class="q-grid-pill ${pillClass}" data-qidx="${i}" title="Question ${i + 1} (${isSolved ? 'Solved' : 'Unanswered'})">
-          ${label}
-        </button>
+        <div class="${padClass}" title="Q${i + 1}">${padContent}</div>
       `;
     }
 
-    questionGridHtml += `
-        </div>
-      </div>
-    `;
-
-    // 3. Render Current Question Card
-    const isFirstQuestion = this.currentQuestionIndex === 0;
-    const isLastQuestion = this.currentQuestionIndex === 19;
-    const allSolved = this.userAnswers.every(a => a.isSolved);
+    questionGridHtml += `</div></div>`;
 
     this.container.innerHTML = `
-      ${stepperHtml}
       ${questionGridHtml}
+
+      <!-- Pause Overlay -->
+      <div id="pause-overlay" style="display:${this.isPaused ? 'flex' : 'none'}; position:fixed; inset:0; background:rgba(11,15,25,0.92); backdrop-filter:blur(12px); z-index:300; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
+        <div style="font-size:4rem; margin-bottom:1rem; animation:bounce 1.5s infinite;">⏸️</div>
+        <h2 style="font-size:2rem; font-weight:800; color:#fff; margin-bottom:0.5rem;">Assessment Paused</h2>
+        <p style="color:var(--text-secondary); max-width:400px; margin-bottom:2rem; font-size:1rem;">
+          Take a deep breath or a short sensory break! Your progress is safely saved.
+        </p>
+        <button id="resume-btn" class="btn btn-primary" style="font-size:1.1rem; padding:0.9rem 2.5rem;">
+          ▶️ Resume Assessment
+        </button>
+      </div>
 
       <div class="glass-card activity-card">
         <div class="activity-header">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span class="activity-domain-badge">${domainConfig.name}</span>
-            <span style="font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan);">
-              Question ${currentPlan.questionIndex} of 20 (Q${currentPlan.questionIndexInDomain}/${currentPlan.totalInDomain}) • 5.0 Pts
-            </span>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span class="activity-domain-badge">${domainConfig.name}</span>
+              <span style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); background:rgba(255,255,255,0.06); padding:0.25rem 0.6rem; border-radius:8px;">
+                ${baseline.subSkill} • ${baseline.maxPoints} Pt${baseline.maxPoints > 1 ? 's' : ''}
+              </span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+              <!-- ⏱️ Per-question countdown timer -->
+              <div style="display:flex; align-items:center; gap:0.5rem; background:rgba(15,23,42,0.8); border:1px solid var(--border-color); padding:0.4rem 0.9rem; border-radius:20px;">
+                <span style="font-size:0.95rem;">⏱️</span>
+                <span id="question-timer-display" style="font-family:monospace; font-size:1.1rem; font-weight:800; color:${this.questionTimerSecondsRemaining <= 15 ? '#ef4444' : 'var(--accent-cyan)'};">
+                  ${Math.floor(this.questionTimerSecondsRemaining / 60)}:${String(this.questionTimerSecondsRemaining % 60).padStart(2, '0')}
+                </span>
+                <div style="width:48px; height:5px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                  <div id="question-timer-ring" style="width:${(this.questionTimerSecondsRemaining / AssessmentRunner.QUESTION_TIME_LIMIT_SEC) * 100}%; height:100%; background:${this.questionTimerSecondsRemaining <= 15 ? '#ef4444' : 'var(--accent-cyan)'}; transition:width 0.9s linear;"></div>
+                </div>
+              </div>
+              <!-- Pause Button -->
+              <button id="pause-btn" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.85rem;" title="Pause Assessment">
+                ⏸️ Pause
+              </button>
+            </div>
           </div>
+
+
           <h2 class="activity-title">${activity.title}</h2>
           <p class="activity-instructions">${activity.instructions}</p>
         </div>
@@ -334,26 +515,10 @@ export class AssessmentRunner {
           ${this.renderPlaygroundContent(activity, answerState)}
         </div>
 
-        <div id="hint-box" style="display:${answerState.hintsUsed > 0 ? 'block' : 'none'}; background: rgba(6,182,212,0.1); border: 1px solid var(--accent-cyan); padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1rem; color: var(--accent-cyan);">
-          💡 <strong>Hint:</strong> ${activity.hintText}
-        </div>
-
         <div class="activity-footer">
-          <button class="btn btn-secondary" id="hint-btn">💡 Request Hint</button>
-
-          <div class="nav-buttons-group">
-            <button class="btn btn-secondary" id="prev-btn" ${isFirstQuestion ? 'disabled' : ''}>
-              ⏮️ Previous
-            </button>
-
-            ${!isLastQuestion ? `
-              <button class="btn btn-primary" id="next-btn">
-                Next Question ⏭️
-              </button>
-            ` : ''}
-
-            <button class="btn btn-primary" id="submit-assessment-btn" style="${allSolved || isLastQuestion ? 'background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan)); font-weight:800;' : ''}">
-              🏁 Finish & Submit Assessment
+          <div class="nav-buttons-group" style="width:100%;">
+            <button class="btn btn-primary" id="submit-answer-btn" style="background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue)); font-weight:700; width:100%; font-size:1.1rem; padding:0.9rem 2rem;">
+              Confirm &amp; Next ➔
             </button>
           </div>
         </div>
@@ -366,13 +531,13 @@ export class AssessmentRunner {
   private renderPlaygroundContent(activity: ActivityItem, answerState: StoredUserAnswer): string {
     const payload = activity.payload || {};
 
-    // 1. Robot Mission Blocks UI
+    // 1. Robot Mission UI
     if (activity.type === 'robot_mission' || Array.isArray(payload.availableBlocks)) {
-      const blocks: string[] = payload.availableBlocks || ['Move Forward', 'Turn Right', 'Pick Up Item'];
+      const blocks: string[] = payload.availableBlocks || ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'];
       return `
         <div class="robot-mission-container">
           <div>
-            <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">Available Blocks:</h4>
+            <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">Available Actions:</h4>
             <div class="blocks-palette">
               ${blocks.map((blk: string) => `
                 <button class="code-block" data-block="${blk}">+ ${blk}</button>
@@ -381,18 +546,18 @@ export class AssessmentRunner {
           </div>
           <div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-              <h4 style="font-size:0.9rem; color:var(--text-secondary); margin:0;">Program Sequence (${answerState.robotSequence.length} steps):</h4>
+              <h4 style="font-size:0.9rem; color:var(--text-secondary); margin:0;">Sequence (${answerState.robotSequence.length} steps):</h4>
               ${answerState.robotSequence.length > 0 ? `
-                <button id="clear-sequence-btn" style="font-size:0.75rem; color:var(--accent-amber); background:rgba(245,158,11,0.1); border:1px solid var(--accent-amber); padding:0.25rem 0.6rem; border-radius:6px; cursor:pointer;">🗑️ Clear All</button>
+                <button id="clear-sequence-btn" style="font-size:0.75rem; color:var(--accent-amber); background:rgba(245,158,11,0.1); border:1px solid var(--accent-amber); padding:0.25rem 0.6rem; border-radius:6px; cursor:pointer;">🗑️ Clear</button>
               ` : ''}
             </div>
             <div class="sequence-dropzone" id="sequence-box">
               ${answerState.robotSequence.length === 0
-                ? '<span style="color:var(--text-secondary); font-size:0.85rem;">Click blocks on the left to build your sequence...</span>'
+                ? '<span style="color:var(--text-secondary); font-size:0.85rem;">Click blocks on left to build sequence...</span>'
                 : answerState.robotSequence.map((blk, i) => `
                 <div class="sequence-step" style="background:var(--accent-blue); padding:0.4rem 0.8rem; border-radius:6px; font-size:0.85rem; font-weight:600; display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
                   <span>📌 ${i + 1}. ${blk}</span>
-                  <button class="remove-block-btn" data-idx="${i}" style="background:rgba(0,0,0,0.25); border:none; color:#fff; width:20px; height:20px; border-radius:50%; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;" title="Remove this step">×</button>
+                  <button class="remove-block-btn" data-idx="${i}" style="background:rgba(0,0,0,0.25); border:none; color:#fff; width:20px; height:20px; border-radius:50%; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">×</button>
                 </div>
               `).join('')
               }
@@ -402,25 +567,26 @@ export class AssessmentRunner {
       `;
     }
 
-    // 2. Picture Match Audio Prompt UI
-    if (activity.type === 'picture_match' || payload.audioPromptText || payload.audio) {
-      const audioPrompt = payload.audioPromptText || payload.audio || 'Select the matching item';
+    // 2. Picture Match UI
+    if (activity.type === 'picture_match' || payload.audioPromptText) {
+      const audioPrompt = payload.audioPromptText || 'Select the matching item';
       const options: any[] = payload.options || [
-        { label: 'Option A', emoji: '🛸' },
-        { label: 'Option B', emoji: '🚲' }
+        { label: 'Option A', emoji: '🤖' },
+        { label: 'Option B', emoji: '🍎' },
+        { label: 'Option C', emoji: '⚽' }
       ];
       return `
         <div style="margin-bottom: 1.25rem; font-size:1.1rem; color:var(--accent-cyan); font-weight:600; text-align:center;">
-          🔊 Audio Prompt: ${audioPrompt}
+          🔊 Prompt: "${audioPrompt}"
         </div>
-        <div class="options-grid">
-          ${options.map((opt: any, idx: number) => {
+        <div class="options-grid-3">
+          ${options.slice(0, 3).map((opt: any, idx: number) => {
             const label = typeof opt === 'string' ? opt : (opt.label || `Option ${idx + 1}`);
             const emoji = typeof opt === 'object' && opt.emoji ? opt.emoji : '🎯';
             return `
-              <button class="option-btn ${answerState.selectedAnswerIndex === idx ? 'selected' : ''}" data-opt="${idx}">
-                <span style="font-size: 2rem;">${emoji}</span>
-                <span style="font-size: 0.9rem;">${label}</span>
+              <button class="option-btn-3 ${answerState.selectedAnswerIndex === idx ? 'selected' : ''}" data-opt="${idx}">
+                <span style="font-size: 2.2rem;">${emoji}</span>
+                <span style="font-size: 0.95rem;">${label}</span>
               </button>
             `;
           }).join('')}
@@ -428,42 +594,23 @@ export class AssessmentRunner {
       `;
     }
 
-    // 3. Rule Shift UI
-    if (activity.type === 'rule_shift' || payload.initialRule || payload.shiftedRule) {
-      const initialRule = payload.initialRule || 'Rule 1: Sort by Category';
-      const shiftedRule = payload.shiftedRule || '⚡ Rule Shift! Sort by Priority';
-      const currentRuleText = answerState.ruleShiftPhase === 1 ? initialRule : shiftedRule;
-      const targetLabel = payload.itemsToSort?.[0]?.label || payload.targetItem || 'Target Item';
-
-      return `
-        <div style="width:100%; text-align:center;">
-          <div style="background: rgba(245, 158, 11, 0.2); border: 1px solid var(--accent-amber); padding: 0.75rem; border-radius: 10px; margin-bottom: 1.25rem; font-weight:700; color:var(--accent-amber);">
-            ⚡ Active Rule: ${currentRuleText}
-          </div>
-          <p style="margin-bottom: 1rem; color: var(--text-secondary);">Target Item to Sort: <strong>${targetLabel}</strong></p>
-          <div class="options-grid">
-            <button class="option-btn ${answerState.selectedAnswerIndex === 0 ? 'selected' : ''}" data-opt="0">Bucket A (Primary Category)</button>
-            <button class="option-btn ${answerState.selectedAnswerIndex === 1 ? 'selected' : ''}" data-opt="1">Bucket B (Secondary Category)</button>
-          </div>
-        </div>
-      `;
-    }
-
-    // 4. Fine Motor Canvas Target UI (only if domain is fine_motor_technology OR type is motor_target)
-    if (activity.domain === 'fine_motor_technology' || activity.type === 'motor_target') {
-      const targetsCount = payload.targetsCount || 4;
+    // 3. Fine Motor Canvas Target UI
+    if (activity.type === 'motor_target') {
+      const targetsCount = payload.targetsCount || 3;
       return `
         <div class="motor-canvas-container" id="motor-canvas">
           <div class="motor-target" id="target-element" style="top: 80px; left: 240px;"></div>
           <div style="position:absolute; bottom:10px; left:15px; font-size:0.85rem; color:var(--text-secondary);">
-            Target Clicks: ${answerState.motorClicks.length} / ${targetsCount}
+            Targets Clicked: ${answerState.motorClicks.length} / ${targetsCount}
           </div>
         </div>
       `;
     }
 
-    // 5. Pattern Matrix / Multiple Choice / Number Series / Options Grid (Default for Cognitive & General Questions)
-    const optionsList = Array.isArray(payload.options) ? payload.options : ['Option A', 'Option B', 'Option C', 'Option D'];
+    // 4. Default 3-Choice Multiple Choice Grid
+    const optionsList = Array.isArray(payload.options) ? payload.options.slice(0, 3) : [
+      { label: 'Choice A' }, { label: 'Choice B' }, { label: 'Choice C' }
+    ];
     const sequenceList = Array.isArray(payload.sequence) ? payload.sequence : null;
 
     return `
@@ -472,11 +619,11 @@ export class AssessmentRunner {
           ${sequenceList.map((item: string) => `<span>${item}</span>`).join('')}
         </div>
       ` : ''}
-      <div class="options-grid">
+      <div class="options-grid-3">
         ${optionsList.map((opt: any, idx: number) => {
           const labelText = typeof opt === 'string' ? opt : (opt.label || opt.text || JSON.stringify(opt));
           return `
-            <button class="option-btn ${answerState.selectedAnswerIndex === idx ? 'selected' : ''}" data-opt="${idx}">
+            <button class="option-btn-3 ${answerState.selectedAnswerIndex === idx ? 'selected' : ''}" data-opt="${idx}">
               <span>${labelText}</span>
             </button>
           `;
@@ -485,53 +632,54 @@ export class AssessmentRunner {
     `;
   }
 
+  private registerInteraction() {
+    if (!this.itemFirstInteractionTimestamp) {
+      this.itemFirstInteractionTimestamp = Date.now();
+      const answerState = this.userAnswers[this.currentQuestionIndex];
+      if (answerState) {
+        answerState.responseLatencyMs = Math.max(100, this.itemFirstInteractionTimestamp - this.itemStartTimestamp - this.pauseDurationForCurrentQuestionMs);
+      }
+    }
+  }
+
   private attachEventListeners() {
     const answerState = this.userAnswers[this.currentQuestionIndex];
 
-    // Jump to specific Question on Pill click
-    const qPills = this.container.querySelectorAll('.q-grid-pill');
-    qPills.forEach(pill => {
-      pill.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement;
-        const qIdx = parseInt(target.getAttribute('data-qidx') || '0', 10);
-        this.loadQuestion(qIdx);
-      });
-    });
-
-    // Options click
-    const optionBtns = this.container.querySelectorAll('.option-btn');
+    // Options click (3 choice grid)
+    const optionBtns = this.container.querySelectorAll('.option-btn-3');
     optionBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
+        this.registerInteraction();
         const target = e.currentTarget as HTMLElement;
         const optIdx = parseInt(target.getAttribute('data-opt') || '0', 10);
         answerState.selectedAnswerIndex = optIdx;
         answerState.isSolved = true;
+        answerState.answeredAt = Date.now();
+        answerState.remainingTimeWhenAnsweredMs = this.questionTimerSecondsRemaining * 1000;
         answerState.attemptsCount = Math.max(1, answerState.attemptsCount + 1);
-
-        if (this.cachedActivities[this.currentQuestionIndex]?.type === 'rule_shift' && answerState.ruleShiftPhase === 1) {
-          answerState.ruleShiftPhase = 2;
-        }
 
         this.render();
       });
     });
 
-    // Robot Mission Code block click (add to sequence)
+    // Code blocks click
     const blockBtns = this.container.querySelectorAll('.code-block');
     blockBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
+        this.registerInteraction();
         const target = e.currentTarget as HTMLElement;
         const blockName = target.getAttribute('data-block');
         if (blockName) {
           answerState.robotSequence.push(blockName);
           answerState.isSolved = answerState.robotSequence.length > 0;
+          answerState.answeredAt = Date.now();
           answerState.attemptsCount = Math.max(1, answerState.attemptsCount + 1);
           this.render();
         }
       });
     });
 
-    // Remove individual block from sequence
+    // Remove block
     const removeBtns = this.container.querySelectorAll('.remove-block-btn');
     removeBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -544,13 +692,12 @@ export class AssessmentRunner {
       });
     });
 
-    // Clear entire sequence
+    // Clear sequence
     const clearSeqBtn = this.container.querySelector('#clear-sequence-btn');
     if (clearSeqBtn) {
       clearSeqBtn.addEventListener('click', () => {
         answerState.robotSequence = [];
         answerState.isSolved = false;
-        answerState.attemptsCount = 0;
         this.render();
       });
     }
@@ -560,6 +707,7 @@ export class AssessmentRunner {
     const canvasEl = this.container.querySelector('#motor-canvas');
     if (targetEl && canvasEl) {
       targetEl.addEventListener('click', (e: any) => {
+        this.registerInteraction();
         const rect = targetEl.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const clickY = e.clientY - rect.top;
@@ -574,70 +722,55 @@ export class AssessmentRunner {
         (targetEl as HTMLElement).style.top = `${newTop}px`;
         (targetEl as HTMLElement).style.left = `${newLeft}px`;
 
-        const requiredCount = this.cachedActivities[this.currentQuestionIndex]?.payload?.targetsCount || 4;
+        const requiredCount = this.cachedActivities[this.currentQuestionIndex]?.payload?.targetsCount || 3;
         if (answerState.motorClicks.length >= requiredCount) {
           answerState.selectedAnswerIndex = 0;
           answerState.isSolved = true;
+          answerState.answeredAt = Date.now();
+          answerState.remainingTimeWhenAnsweredMs = this.questionTimerSecondsRemaining * 1000;
         }
         this.render();
       });
     }
 
-    // Hint request
-    const hintBtn = this.container.querySelector('#hint-btn');
-    if (hintBtn) {
-      hintBtn.addEventListener('click', () => {
-        answerState.hintsUsed++;
-        const hintBox = this.container.querySelector('#hint-box') as HTMLElement;
-        if (hintBox) hintBox.style.display = 'block';
-      });
+    // Hint request (removed — no hints in assessment)
+
+    // Pause & Resume buttons
+    const pauseBtn = this.container.querySelector('#pause-btn');
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', () => this.pauseAssessment());
     }
 
-    // Navigation: Previous
-    const prevBtn = this.container.querySelector('#prev-btn');
-    if (prevBtn) {
-      prevBtn.addEventListener('click', () => {
-        if (this.currentQuestionIndex > 0) {
-          this.loadQuestion(this.currentQuestionIndex - 1);
-        }
-      });
+    const resumeBtn = this.container.querySelector('#resume-btn');
+    if (resumeBtn) {
+      resumeBtn.addEventListener('click', () => this.resumeAssessment());
     }
 
-    // Navigation: Next
-    const nextBtn = this.container.querySelector('#next-btn');
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => {
-        if (this.currentQuestionIndex < 19) {
-          this.loadQuestion(this.currentQuestionIndex + 1);
-        }
-      });
-    }
-
-    // Final Submission
-    const submitAssessmentBtn = this.container.querySelector('#submit-assessment-btn');
-    if (submitAssessmentBtn) {
-      submitAssessmentBtn.addEventListener('click', () => {
-        this.completeAssessment();
+    // Confirm & Next Submit Button
+    const submitAnswerBtn = this.container.querySelector('#submit-answer-btn');
+    if (submitAnswerBtn) {
+      submitAnswerBtn.addEventListener('click', () => {
+        this.recordQuestionTimeData(answerState.isSolved);
+        this.advanceToNextQuestion();
       });
     }
   }
 
   private async completeAssessment() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
+    if (this.globalTimerInterval) clearInterval(this.globalTimerInterval);
+    if (this.questionTimerInterval) clearInterval(this.questionTimerInterval);
+
     this.detachBeforeUnload();
     AssessmentRunner.clearSavedSession();
 
-    // Save final spent time
-    if (this.itemStartTime > 0 && this.userAnswers[this.currentQuestionIndex]) {
-      this.userAnswers[this.currentQuestionIndex].timeSpentMs += (Date.now() - this.itemStartTime);
-    }
-
     const itemTelemetries: ItemTelemetry[] = [];
+    const itemMaxPtsMap: Record<string, number> = {};
 
-    // Compile telemetry for all 20 questions
-    for (let i = 0; i < 20; i++) {
+    // Compile telemetry across all 60 questions
+    for (let i = 0; i < 60; i++) {
       const activity = this.cachedActivities[i];
       const answerState = this.userAnswers[i];
+      const baseline = QUESTION_BASELINES[i];
       if (!activity) continue;
 
       let isCorrect = false;
@@ -651,20 +784,15 @@ export class AssessmentRunner {
         });
         accuracyScore = targetSeq.length > 0 ? matched / targetSeq.length : (answerState.robotSequence.length > 0 ? 1.0 : 0.0);
         isCorrect = accuracyScore >= 0.8;
-      } else if (activity.domain === 'fine_motor_technology' || activity.type === 'motor_target') {
+      } else if (activity.type === 'motor_target') {
         isCorrect = answerState.motorClicks.length > 0;
-        accuracyScore = Math.min(1.0, answerState.motorClicks.length / (activity.payload?.targetsCount || 4));
+        accuracyScore = Math.min(1.0, answerState.motorClicks.length / (activity.payload?.targetsCount || 3));
       } else {
-        // Options based questions: correct answer gives 1.0, incorrect gives 0.0
         isCorrect = (answerState.selectedAnswerIndex === (activity.payload?.correctIndex ?? 0));
         accuracyScore = isCorrect ? 1.0 : 0.0;
       }
 
-      const fineMotorMetrics = answerState.motorClicks.length > 0 ? {
-        drag_accuracy_pct: 94.5,
-        click_precision_px: Math.round(answerState.motorClicks.reduce((a, b) => a + b.dist, 0) / answerState.motorClicks.length),
-        path_smoothness_ratio: 0.93
-      } : undefined;
+      itemMaxPtsMap[activity.id] = baseline.maxPoints;
 
       itemTelemetries.push({
         item_id: activity.id,
@@ -673,39 +801,71 @@ export class AssessmentRunner {
         difficulty_level: activity.difficulty,
         is_correct: isCorrect,
         accuracy_score: accuracyScore,
-        response_time_ms: Math.max(2000, answerState.timeSpentMs),
-        expected_time_ms: activity.expectedTimeMs,
+        response_time_ms: Math.max(1000, answerState.timeSpentMs),
+        expected_time_ms: 90000,
         attempts_count: Math.max(1, answerState.attemptsCount),
-        hints_used: answerState.hintsUsed,
-        fine_motor: fineMotorMetrics,
-        behavioral: {
-          hesitation_time_ms: 1000,
-          recovery_after_rule_change: answerState.ruleShiftPhase === 2,
-          adaptation_speed_ms: Math.max(2000, answerState.timeSpentMs),
-          attempts_after_hint: answerState.hintsUsed > 0 ? 1 : 0
-        }
+        hints_used: answerState.hintsUsed
       });
+
+      if (this.questionTimeRecords[i]) {
+        this.questionTimeRecords[i].earnedScore = ScoringEngine.calculateItemScore(itemTelemetries[i], baseline.maxPoints);
+      }
     }
 
-    // Calculate domain scores & overall score
-    const domainScores = ScoringEngine.calculateDomainScores(itemTelemetries);
+    // Calculate domain & placement scores
+    const domainScores = ScoringEngine.calculateDomainScores(itemTelemetries, itemMaxPtsMap);
     const totalScore = ScoringEngine.calculateTotalScore(domainScores);
     const placement = PlacementEngine.evaluatePlacement(totalScore, domainScores, itemTelemetries);
 
+    // Calculate Domain Time Summaries
+    const domainsList: AssessmentDomain[] = [
+      'cognitive_ability', 'functional_skills', 'communication_level', 'behavioral_readiness', 'fine_motor_technology'
+    ];
+    const domainTimeSummary: Record<AssessmentDomain, any> = {} as any;
+
+    domainsList.forEach(d => {
+      const records = this.questionTimeRecords.filter(r => r && r.domain === d);
+      const totalActiveMs = records.reduce((acc, r) => acc + (r.activeDurationMs || 0), 0);
+      const totalPausedMs = records.reduce((acc, r) => acc + (r.pausedDurationMs || 0), 0);
+      const questionsTimedOut = records.filter(r => r.timedOut).length;
+      const validLatencies = records.map(r => r.responseLatencyMs).filter(l => l !== null) as number[];
+      const avgResponseLatencyMs = validLatencies.length > 0 ? Math.round(validLatencies.reduce((a, b) => a + b, 0) / validLatencies.length) : 0;
+
+      domainTimeSummary[d] = {
+        totalActiveMs,
+        totalPausedMs,
+        questionsTimedOut,
+        avgResponseLatencyMs
+      };
+    });
+
+    const totalActiveDurationMs = this.questionTimeRecords.reduce((acc, r) => acc + (r?.activeDurationMs || 0), 0);
+    const totalBreakDurationMs = this.breakEvents.reduce((acc, b) => acc + b.breakDurationMs, 0);
+
     const session: StudentSessionTelemetry = {
-      session_id: `sess_${Date.now()}`,
+      session_id: `sess_60_${Date.now()}`,
       student_name: this.studentName || 'Alex Rivers',
       age_group: '7-9',
-      start_time: new Date().toISOString(),
+      start_time: new Date(Date.now() - this.totalTimerSeconds * 1000).toISOString(),
+      end_time: new Date().toISOString(),
       item_telemetries: itemTelemetries,
       domain_scores: domainScores,
       total_score: totalScore,
       placed_track: placement.baseTrack,
       recommended_track: placement.recommendedTrack,
-      flags: placement.flags.map(f => f.id)
+      flags: placement.flags.map(f => f.id),
+
+      // CEO Time & Analytics
+      question_time_records: this.questionTimeRecords,
+      break_events: this.breakEvents,
+      total_breaks_count: this.breakEvents.length,
+      total_break_duration_ms: totalBreakDurationMs,
+      total_active_duration_ms: totalActiveDurationMs,
+      total_wall_clock_duration_ms: totalActiveDurationMs + totalBreakDurationMs,
+      domain_time_summary: domainTimeSummary
     };
 
-    // Generate AI Qualitative Summary
+    // Generate AI Summary
     const reportSummary = await this.analyzer.generateReportSummary(session, placement);
     session.qualitative_summary = reportSummary;
 
@@ -713,3 +873,4 @@ export class AssessmentRunner {
     renderReportDashboard(this.container, session, placement);
   }
 }
+
