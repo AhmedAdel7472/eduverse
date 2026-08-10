@@ -622,6 +622,21 @@ export class AssessmentRunner {
         </button>
       </div>
 
+      <!-- Exit Confirmation Overlay -->
+      <div id="exit-confirm-overlay" style="display:none; position:fixed; inset:0; background:rgba(11,15,25,0.94); backdrop-filter:blur(14px); z-index:400; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
+        <div style="font-size:3.5rem; margin-bottom:1rem;">⚠️</div>
+        <h2 style="font-size:1.8rem; font-weight:800; color:#fff; margin-bottom:0.5rem;">Exit &amp; Reset Assessment?</h2>
+        <p style="color:var(--text-secondary); max-width:420px; margin-bottom:2rem; font-size:0.95rem; line-height:1.5;">
+          Exiting will stop your current progress, clear all saved assessment cache, and restart the assessment from the beginning.
+        </p>
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center;">
+          <button id="cancel-exit-btn" class="btn btn-secondary" style="padding:0.75rem 1.5rem; font-weight:700;">Cancel</button>
+          <button id="confirm-exit-btn" class="btn btn-primary" style="background:#ef4444; border-color:#dc2626; padding:0.75rem 1.5rem; font-weight:700; box-shadow:0 4px 15px rgba(239,68,68,0.4);">
+            🚪 Yes, Exit &amp; Clear Cache
+          </button>
+        </div>
+      </div>
+
       <div class="glass-card activity-card">
         <div class="activity-header">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
@@ -648,6 +663,10 @@ export class AssessmentRunner {
               <!-- Pause Button -->
               <button id="pause-btn" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.85rem;" title="Pause Assessment">
                 ⏸️ Pause
+              </button>
+              <!-- Exit Exam Button -->
+              <button id="exit-exam-btn" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.85rem; background:rgba(239,68,68,0.15); border:1px solid #ef4444; color:#f87171;" title="Exit and Reset Exam">
+                🚪 Exit
               </button>
             </div>
           </div>
@@ -1042,6 +1061,31 @@ export class AssessmentRunner {
     const resumeBtn = this.container.querySelector('#resume-btn');
     if (resumeBtn) {
       resumeBtn.addEventListener('click', () => this.resumeAssessment());
+    }
+
+    // Exit Exam button and modal handlers
+    const exitBtn = this.container.querySelector('#exit-exam-btn');
+    const exitOverlay = this.container.querySelector('#exit-confirm-overlay') as HTMLElement;
+    const cancelExitBtn = this.container.querySelector('#cancel-exit-btn');
+    const confirmExitBtn = this.container.querySelector('#confirm-exit-btn');
+
+    if (exitBtn && exitOverlay) {
+      exitBtn.addEventListener('click', () => {
+        exitOverlay.style.display = 'flex';
+      });
+    }
+    if (cancelExitBtn && exitOverlay) {
+      cancelExitBtn.addEventListener('click', () => {
+        exitOverlay.style.display = 'none';
+      });
+    }
+    if (confirmExitBtn) {
+      confirmExitBtn.addEventListener('click', () => {
+        AssessmentRunner.clearSavedSession();
+        localStorage.removeItem('cognix_active_assessment_session');
+        localStorage.removeItem('cognix_assessment_session');
+        window.location.reload();
+      });
     }
 
     // Confirm & Next Submit Button

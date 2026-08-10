@@ -140,19 +140,19 @@ const COGNITIVE_SLOT_CONFIGS: Record<number, { instructions: string; sequence?: 
   1: {
     instructions: 'Look at the shape below. Which option matches it exactly?',
     sequence: ['🔴 Red Circle'],
-    options: [{ label: 'Red Circle', emoji: '🔴', correct: true }, { label: 'Blue Square', emoji: '🟦', correct: false }, { label: 'Yellow Triangle', emoji: '🟨', correct: false }],
+    options: [{ label: 'Red Circle', emoji: '🔴', correct: true }, { label: 'Blue Square', emoji: '🟦', correct: false }, { label: 'Yellow Triangle', emoji: '🔺', correct: false }],
     hint: 'Find the red circle!'
   },
   2: {
-    instructions: 'Look at the shapes. Which shape is different from the others?',
-    sequence: ['🔴 Red Circle', '🔴 Red Circle', '🟩 Green Square'],
-    options: [{ label: 'Green Square', emoji: '🟩', correct: true }, { label: 'Red Circle', emoji: '🔴', correct: false }, { label: 'Blue Circle', emoji: '🔵', correct: false }],
-    hint: 'Two are circles, one is a square!'
+    instructions: 'Look at the shapes: 🔴 Circle | 🔴 Circle | 🟩 Square. Which shape is DIFFERENT?',
+    sequence: ['🔴 Circle', '🔴 Circle', '🟩 Square (Different!)'],
+    options: [{ label: 'Green Square', emoji: '🟩', correct: true }, { label: 'Red Circle', emoji: '🔴', correct: false }, { label: 'Blue Triangle', emoji: '🔺', correct: false }],
+    hint: 'Two are red circles, one is a green square!'
   },
   3: {
     instructions: 'Look at the pattern: 🔺 🔷 🔺 🔷 ... What comes next?',
     sequence: ['🔺 Triangle', '🔷 Diamond', '🔺 Triangle', '🔷 Diamond', '❓'],
-    options: [{ label: 'Triangle', emoji: '🔺', correct: true }, { label: 'Diamond', emoji: '🔷', correct: false }, { label: 'Circle', emoji: '⭕', correct: false }],
+    options: [{ label: 'Triangle', emoji: '🔺', correct: true }, { label: 'Diamond', emoji: '🔷', correct: false }, { label: 'Star', emoji: '⭐', correct: false }],
     hint: 'Triangle and Diamond take turns!'
   },
   4: {
@@ -184,10 +184,10 @@ const COGNITIVE_SLOT_CONFIGS: Record<number, { instructions: string; sequence?: 
     hint: 'Seed grows into sprout, then flower!'
   },
   8: {
-    instructions: 'Look at the visual pattern: ⭐ ⭐ 🌙 ⭐ ⭐ ... What comes next?',
-    sequence: ['⭐ Star', '⭐ Star', '🌙 Moon', '⭐ Star', '⭐ Star', '❓'],
-    options: [{ label: 'Moon', emoji: '🌙', correct: true }, { label: 'Star', emoji: '⭐', correct: false }, { label: 'Sun', emoji: '☀️', correct: false }],
-    hint: 'Every third shape is a moon!'
+    instructions: 'Look at the color pattern: 🔴 🔵 🟨 🔴 🔵 __. Which shape comes next?',
+    sequence: ['🔴 Red', '🔵 Blue', '🟨 Yellow', '🔴 Red', '🔵 Blue', '❓'],
+    options: [{ label: 'Yellow Square', emoji: '🟨', correct: true }, { label: 'Blue Circle', emoji: '🔵', correct: false }, { label: 'Red Circle', emoji: '🔴', correct: false }],
+    hint: 'Red, Blue, Yellow repeat in order!'
   },
   9: {
     instructions: 'Look at the shapes in the grid. Which shape finishes the last row?',
@@ -200,10 +200,10 @@ const COGNITIVE_SLOT_CONFIGS: Record<number, { instructions: string; sequence?: 
     hint: 'Each row has a triangle, square, and circle!'
   },
   10: {
-    instructions: 'Look at the color pattern: 🟢 🟢 🟡 🟢 🟢 ... What comes next?',
-    sequence: ['🟢 Green', '🟢 Green', '🟡 Yellow', '🟢 Green', '🟢 Green', '❓'],
-    options: [{ label: 'Yellow', emoji: '🟡', correct: true }, { label: 'Green', emoji: '🟢', correct: false }, { label: 'Red', emoji: '🔴', correct: false }],
-    hint: 'Two greens, then one yellow!'
+    instructions: 'Look at the color block pattern: 🟦 🟦 🟨 🟦 🟦 ... What comes next?',
+    sequence: ['🟦 Blue', '🟦 Blue', '🟨 Yellow', '🟦 Blue', '🟦 Blue', '❓'],
+    options: [{ label: 'Yellow Square', emoji: '🟨', correct: true }, { label: 'Blue Square', emoji: '🟦', correct: false }, { label: 'Red Square', emoji: '🟥', correct: false }],
+    hint: 'Two blue squares, then one yellow square!'
   },
   11: {
     instructions: 'Look at the shape matrix. Which shape completes the pattern?',
@@ -441,32 +441,78 @@ Return ONLY valid JSON with no markdown:
       };
       hintText = cogCfg.hint;
 
-    } else {
-      const behaviorOptions = [
-        { options: [{ label: '😌 Stay calm and keep trying', correct: true }, { label: '😤 Get upset and quit', correct: false }, { label: '🚪 Leave the room', correct: false }], hint: 'Choose the patient option!' },
-        { options: [{ label: '🙋 Raise my hand politely', correct: true }, { label: '😴 Give up quietly', correct: false }, { label: '🗣️ Call out loudly', correct: false }], hint: 'Polite asking is best!' },
-        { options: [{ label: '⏸️ Stop and listen to teacher', correct: true }, { label: '🏃 Keep going', correct: false }, { label: '😶 Ignore instruction', correct: false }], hint: 'Always stop when teacher says STOP!' },
-      ];
-      const fineMotorOptions = [
-        { options: [{ label: '⬅️ Left Arrow key', correct: true }, { label: '⬆️ Up Arrow key', correct: false }, { label: '➡️ Right Arrow key', correct: false }], hint: 'Left arrow moves things left!' },
-        { options: [{ label: '🔄 Restart the device', correct: true }, { label: '📵 Throw tablet away', correct: false }, { label: '😴 Wait forever', correct: false }], hint: 'Restarting fixes most freezes!' },
-        { options: [{ label: '✅ Place in matching slot', correct: true }, { label: '❌ Drop it anywhere', correct: false }, { label: '🔄 Spin it around', correct: false }], hint: 'Match the shape to the correct slot!' },
-      ];
+    } else if (COGNITIVE_SLOT_CONFIGS[safeSlot]) {
+      const cogCfg = COGNITIVE_SLOT_CONFIGS[safeSlot];
+      instructions = cogCfg.instructions;
+      payload = {
+        sequence: cogCfg.sequence,
+        grid: cogCfg.grid,
+        options: [...cogCfg.options],
+        correctIndex: 0
+      };
+      hintText = cogCfg.hint;
 
-      if (baseline.domain === 'behavioral_readiness') {
-        const beh = behaviorOptions[Math.max(0, safeSlot - 41) % behaviorOptions.length];
-        payload = { options: beh.options, correctIndex: 0 };
-        hintText = beh.hint;
-      } else if (baseline.domain === 'fine_motor_technology') {
-        const fine = fineMotorOptions[Math.max(0, safeSlot - 53) % fineMotorOptions.length];
-        payload = { options: fine.options, correctIndex: 0 };
-        hintText = fine.hint;
+    } else {
+      const behavioralMap: Record<number, { options: any[]; hint: string }> = {
+        41: { options: [{ label: '😌 Stay calm & focus on puzzle', correct: true }, { label: '😤 Slam tablet down', correct: false }, { label: '🚪 Walk away', correct: false }], hint: 'Take a deep breath and stay focused!' },
+        42: { options: [{ label: '👀 Keep eyes on learning screen', correct: true }, { label: '🎈 Look at noise outside', correct: false }, { label: '😴 Fall asleep', correct: false }], hint: 'Maintain attention on your task!' },
+        43: { options: [{ label: '🛑 Stop when teacher gives stop signal', correct: true }, { label: '🏃 Keep running', correct: false }, { label: '😶 Ignore signal', correct: false }], hint: 'Always stop when given the stop signal!' },
+        44: { options: [{ label: '💡 Listen to hint and try again', correct: true }, { label: '😤 Get mad at feedback', correct: false }, { label: '🗑️ Delete activity', correct: false }], hint: 'Feedback helps you learn!' },
+        45: { options: [{ label: '🔄 Try a different block calmly', correct: true }, { label: '🗣️ Shout loudly', correct: false }, { label: '❌ Quit immediately', correct: false }], hint: 'If a step fails, try another approach!' },
+        46: { options: [{ label: '✅ Put tablet away gently when time is up', correct: true }, { label: '😭 Refuse to stop', correct: false }, { label: '🙈 Hide tablet', correct: false }], hint: 'Transition smoothly when time is up!' },
+        47: { options: [{ label: '✋ Wait patiently for my turn', correct: true }, { label: '🫱 Grab robot from friend', correct: false }, { label: '🗣️ Yell for turn', correct: false }], hint: 'Wait your turn politely!' },
+        48: { options: [{ label: '🌟 Eagerly try the new technology challenge', correct: true }, { label: '🙈 Say I cannot do it', correct: false }, { label: '😴 Ignore challenge', correct: false }], hint: 'Give new challenges a try!' },
+        49: { options: [{ label: '🤔 Think independently before asking', correct: true }, { label: '🙋 Ask help without trying', correct: false }, { label: '❌ Give up', correct: false }], hint: 'Try solving on your own first!' },
+        50: { options: [{ label: '🙋 Raise hand and ask politely: "Can you help?"', correct: true }, { label: '🗣️ Scream for help', correct: false }, { label: '😤 Cry loudly', correct: false }], hint: 'Polite help requests are best!' }
+      };
+
+      const fineMotorMap: Record<number, { options: any[]; hint: string }> = {
+        53: {
+          options: [
+            { label: '🗣️ Head ➔ 🦿 Body ➔ 🦾 Arms', emoji: '🤖', correct: true },
+            { label: '🦿 Body ➔ 🗣️ Head ➔ 🦾 Arms', emoji: '⚙️', correct: false },
+            { label: '🦾 Arms ➔ 🦿 Body ➔ 🗣️ Head', emoji: '🔧', correct: false }
+          ],
+          hint: 'Assemble Robo from head to body!'
+        },
+        55: {
+          options: [
+            { label: '⌨️ Long Spacebar Key', emoji: '⌨️', correct: true },
+            { label: '🔌 Power Cable', emoji: '🔌', correct: false },
+            { label: '🔊 Volume Button', emoji: '🔊', correct: false }
+          ],
+          hint: 'Spacebar is the long key at bottom!'
+        },
+        57: {
+          options: [
+            { label: '🧩 Drag block smoothly into matching slot', emoji: '✅', correct: true },
+            { label: '🔨 Tap screen with heavy object', emoji: '❌', correct: false },
+            { label: '✂️ Cut screen image', emoji: '❌', correct: false }
+          ],
+          hint: 'Drag gently into the matching slot!'
+        },
+        59: {
+          options: [
+            { label: '🔄 Refresh or Restart App', emoji: '🔄', correct: true },
+            { label: '📵 Throw tablet on floor', emoji: '🛑', correct: false },
+            { label: '⏳ Wait 10 hours', emoji: '⏳', correct: false }
+          ],
+          hint: 'Restarting fixes frozen screens!'
+        }
+      };
+
+      if (baseline.domain === 'behavioral_readiness' && behavioralMap[safeSlot]) {
+        payload = { options: behavioralMap[safeSlot].options, correctIndex: 0 };
+        hintText = behavioralMap[safeSlot].hint;
+      } else if (baseline.domain === 'fine_motor_technology' && fineMotorMap[safeSlot]) {
+        payload = { options: fineMotorMap[safeSlot].options, correctIndex: 0 };
+        hintText = fineMotorMap[safeSlot].hint;
       } else {
         payload = {
           options: [
             { label: '🌟 Correct Solution', correct: true },
-            { label: '❌ Incorrect Action A', correct: false },
-            { label: '🛑 Incorrect Action B', correct: false }
+            { label: '❌ Distractor Option A', correct: false },
+            { label: '🛑 Distractor Option B', correct: false }
           ],
           correctIndex: 0
         };

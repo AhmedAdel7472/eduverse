@@ -305,7 +305,7 @@ export function renderReportDashboard(
   const ceoBtn = container.querySelector('#ceo-dashboard-btn');
   if (ceoBtn) {
     ceoBtn.addEventListener('click', () => {
-      renderCEODashboard(container);
+      renderCEODashboard(container, session);
     });
   }
 }
@@ -320,7 +320,7 @@ export function saveSessionToCEODatabase(session: StudentSessionTelemetry) {
   } catch (e) {}
 }
 
-export function renderCEODashboard(container: HTMLElement) {
+export function renderCEODashboard(container: HTMLElement, activeSession?: StudentSessionTelemetry) {
   const existing = localStorage.getItem('cognix_all_sessions');
   const sessions: StudentSessionTelemetry[] = existing ? JSON.parse(existing) : [];
 
@@ -394,8 +394,8 @@ export function renderCEODashboard(container: HTMLElement) {
         </td>
         <td style="padding: 0.75rem 1rem; color: var(--text-secondary); font-size: 0.8rem;">${dateStr}</td>
         <td style="padding: 0.75rem 1rem; text-align: right;">
-          <button class="btn btn-secondary view-session-btn" data-id="${s.session_id}" style="padding: 0.3rem 0.7rem; font-size: 0.78rem;">
-            📄 Report
+          <button class="btn btn-secondary view-session-btn" data-id="${s.session_id}" style="padding: 0.35rem 0.8rem; font-size: 0.8rem; background:rgba(6,182,212,0.15); border:1px solid var(--accent-cyan); color:var(--accent-cyan); font-weight:700;">
+            📄 View Report
           </button>
         </td>
       </tr>
@@ -407,10 +407,15 @@ export function renderCEODashboard(container: HTMLElement) {
       
       <!-- Top Action Controls -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
-        <div>
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
           <span style="background: rgba(6,182,212,0.15); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 0.35rem 1rem; border-radius: 20px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">
             🏛️ Executive CEO Analytics Portal
           </span>
+          ${activeSession ? `
+            <button id="back-to-active-report-btn" class="btn btn-secondary" style="font-size: 0.85rem; background: rgba(16,185,129,0.15); border: 1px solid var(--accent-emerald); color: var(--accent-emerald); font-weight:700;">
+              ⬅️ Return to Active Student Report
+            </button>
+          ` : ''}
         </div>
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
           <button id="export-all-csv-btn" class="btn btn-primary" style="font-size: 0.85rem; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));">
@@ -509,8 +514,24 @@ export function renderCEODashboard(container: HTMLElement) {
     </div>
   `;
 
-  // Attach event listeners
-  const exportMasterCsvBtn = container.querySelector('#export-all-csv-btn');
+  const backToActiveReportBtn = container.querySelector('#back-to-active-report-btn');
+  if (backToActiveReportBtn && activeSession) {
+    backToActiveReportBtn.addEventListener('click', () => {
+      const dummyPlacement = {
+        totalScore: activeSession.total_score,
+        placedTrack: activeSession.placed_track || 'Level 1',
+        recommendedTrack: activeSession.recommended_track || 'Level 1',
+        flags: Array.isArray(activeSession.flags) ? activeSession.flags.map((f: any) => typeof f === 'string' ? { title: f, description: '', type: 'advisory' } : f) : [],
+        performanceIndicators: {
+          overallAccuracy: activeSession.total_score,
+          adaptabilityIndex: 0.85,
+          learningProgressVelocity: 'Steady',
+          hintDependencyRatio: 0.1
+        }
+      };
+      renderReportDashboard(container, activeSession, dummyPlacement as any);
+    });
+  }
   if (exportMasterCsvBtn) {
     exportMasterCsvBtn.addEventListener('click', () => exportMasterStudentsCSV(sessions));
   }
