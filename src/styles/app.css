@@ -191,11 +191,36 @@ body.exam-mode {
   gap: 1.25rem;
   width: 100%;
   max-width: 750px;
+  margin: 0 auto;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .options-grid-3 {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem;
+  }
+  
+  .activity-card {
+    padding: 1rem !important;
+    border-radius: 16px !important;
+  }
+  
+  .activity-title {
+    font-size: 1.25rem !important;
+  }
+  
+  .activity-instructions {
+    font-size: 0.9rem !important;
+  }
+  
+  .skill-ladder-bar {
+    padding: 0.75rem 0.85rem !important;
+    margin-bottom: 0.85rem !important;
+  }
+  
+  .robot-mission-container {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
   }
 }
 
@@ -215,6 +240,7 @@ body.exam-mode {
   justify-content: center;
   gap: 0.6rem;
   text-align: center;
+  min-height: 90px;
 }
 
 .option-btn-3:hover {
@@ -579,4 +605,8 @@ body.exam-mode {
   color: var(--text-primary);
   font-size: 1.1rem;
   margin: 1rem 0 0.5rem 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

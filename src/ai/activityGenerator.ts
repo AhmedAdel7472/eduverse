@@ -15,6 +15,7 @@ export interface ActivityItem {
   type: 'pattern_matrix' | 'robot_mission' | 'picture_match' | 'rule_shift' | 'motor_target';
   payload: any;
   hintText: string;
+  source?: 'azure_openai' | 'procedural';
 }
 
 export interface QuestionBaseline {
@@ -91,15 +92,154 @@ export const QUESTION_BASELINES: QuestionBaseline[] = [
   // --- DOMAIN 5: FINE MOTOR & TECHNOLOGY SKILLS (Q51 - Q60 | 15 Pts) ---
   { slot: 51, domain: 'fine_motor_technology', skill: 'touch_interaction', subSkill: 'Fine Motor Control', title: 'Object Precision', baselinePrompt: 'Tap or manipulate small digital targets with precision.', maxPoints: 2, difficulty: 2, type: 'motor_target' },
   { slot: 52, domain: 'fine_motor_technology', skill: 'mouse_control', subSkill: 'Hand-Eye Coordination', title: 'Accurate Movement', baselinePrompt: 'Move pointer accurately to the target element.', maxPoints: 1, difficulty: 1, type: 'motor_target' },
-  { slot: 53, domain: 'fine_motor_technology', skill: 'drag_and_drop', subSkill: 'Object Manipulation', title: 'Assemble Structure', baselinePrompt: 'Drag blocks to assemble a simple structure.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 53, domain: 'fine_motor_technology', skill: 'drag_and_drop', subSkill: 'Object Manipulation', title: 'Assemble Structure', baselinePrompt: 'Which set of steps correctly assembles Robo\'s body? Choose the right order.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
   { slot: 54, domain: 'fine_motor_technology', skill: 'mouse_control', subSkill: 'Mouse/Trackpad', title: 'Pointer Navigation', baselinePrompt: 'Control pointer speed and target alignment.', maxPoints: 2, difficulty: 2, type: 'motor_target' },
   { slot: 55, domain: 'fine_motor_technology', skill: 'keyboard_navigation', subSkill: 'Keyboard Skills', title: 'Key Identification', baselinePrompt: 'Locate and press key directional arrows or spacebar.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
   { slot: 56, domain: 'fine_motor_technology', skill: 'touch_interaction', subSkill: 'Touchscreen', title: 'Touch Target', baselinePrompt: 'Select the highlighted item cleanly on screen.', maxPoints: 1, difficulty: 1, type: 'motor_target' },
-  { slot: 57, domain: 'fine_motor_technology', skill: 'drag_and_drop', subSkill: 'Drag & Drop', title: 'Drag Block to Slot', baselinePrompt: 'Complete a digital drag-and-drop alignment.', maxPoints: 1, difficulty: 1, type: 'robot_mission' },
+  { slot: 57, domain: 'fine_motor_technology', skill: 'drag_and_drop', subSkill: 'Drag & Drop', title: 'Drag Block to Slot', baselinePrompt: 'Which image shows the correct way to place a block into its matching slot?', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
   { slot: 58, domain: 'fine_motor_technology', skill: 'basic_robot_control', subSkill: 'Digital Navigation', title: 'Select App Icon', baselinePrompt: 'Open or select the correct learning activity application.', maxPoints: 1, difficulty: 2, type: 'picture_match' },
   { slot: 59, domain: 'fine_motor_technology', skill: 'basic_robot_control', subSkill: 'Tech Problem Solving', title: 'Fix Screen Freeze', baselinePrompt: 'Identify what button to click if a digital task freezes.', maxPoints: 1, difficulty: 3, type: 'pattern_matrix' },
   { slot: 60, domain: 'fine_motor_technology', skill: 'basic_robot_control', subSkill: 'Technology Independence', title: 'Independent Navigation', baselinePrompt: 'Complete the basic technology startup sequence independently.', maxPoints: 2, difficulty: 3, type: 'robot_mission' }
 ];
+
+// Per-slot robot mission configurations: unique block sets and sequences per question
+const ROBOT_MISSION_CONFIGS: Record<number, { blocks: string[]; correctSequence: string[]; description: string }> = {
+  16: { blocks: ['Move Forward ⬆️', 'Turn Left ⬅️', 'Stop 🛑'], correctSequence: ['Move Forward ⬆️'], description: 'Robo needs to move forward ONCE to reach the star. Add just one block!' },
+  17: { blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'], correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'], description: 'Robo needs to find the shiny tooth! Walk forward, turn right to face the tooth, and grab it.' },
+  18: { blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾', 'Stop 🛑'], correctSequence: ['Turn Right ➡️', 'Move Forward ⬆️'], description: 'Turn right first, then move forward — 2 steps to reach the goal!' },
+  19: { blocks: ['Turn Left ⬅️', 'Move Forward ⬆️', 'Grab Item 🦾', 'Jump 🦸'], correctSequence: ['Turn Left ⬅️', 'Move Forward ⬆️'], description: 'Turn LEFT first, then walk forward — build the 2-step path!' },
+  20: { blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾', 'Turn Left ⬅️'], correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'], description: 'Move forward, turn right, then grab the gem — 3 steps in order!' },
+  21: { blocks: ['Jump 🦸', 'Turn Left ⬅️', 'Move Forward ⬆️', 'Drop Item 📦'], correctSequence: ['Turn Left ⬅️', 'Move Forward ⬆️', 'Drop Item 📦'], description: 'Turn left, walk forward, then drop the package — 3 steps!' },
+  22: { blocks: ['Open Door 🚪', 'Move Forward ⬆️', 'Grab Item 🦾', 'Return Home 🏠'], correctSequence: ['Open Door 🚪', 'Move Forward ⬆️', 'Grab Item 🦾', 'Return Home 🏠'], description: 'Full mission: Open door, move forward, grab item, return home — 4 steps!' },
+  23: { blocks: ['Move Forward ⬆️', 'Grab Item 🦾', 'Turn Right ➡️', 'Jump 🦸', 'Stop 🛑'], correctSequence: ['Move Forward ⬆️', 'Grab Item 🦾'], description: 'Only use what you need! 2 blocks — move forward and grab item.' },
+  24: { blocks: ['Turn Right ➡️', 'Move Forward ⬆️', 'Grab Item 🦾', 'Return Home 🏠'], correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'], description: 'Organize the blocks: Move forward first, turn right, then grab the item.' },
+  25: { blocks: ['Return Home 🏠', 'Stop 🛑', 'Turn Left ⬅️'], correctSequence: ['Return Home 🏠'], description: 'Robo finished the task! Add the RETURN HOME block to complete.' },
+  26: { blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾', 'Return Home 🏠'], correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾', 'Return Home 🏠'], description: 'Independent Mission: Walk forward, turn right to face the shiny treasure, grab it, and return home!' },
+  28: { blocks: ['Turn Right ➡️', 'Move Forward ⬆️', 'Turn Left ⬅️', 'Grab Item 🦾'], correctSequence: ['Turn Right ➡️', 'Move Forward ⬆️', 'Turn Left ⬅️', 'Grab Item 🦾'], description: 'Uh-oh! The usual straight path is blocked by a big rock! Turn right first, move forward around the rock, turn left, and grab the gem.' },
+  30: { blocks: ['Power On ⚡', 'Move Forward ⬆️', 'Start Task 🎯'], correctSequence: ['Power On ⚡', 'Start Task 🎯'], description: 'Turn Robo on, then start the task — simple 2-step startup!' },
+  60: { blocks: ['Power On ⚡', 'Connect 📡', 'Open App 📱', 'Start Learning 🎓'], correctSequence: ['Power On ⚡', 'Connect 📡', 'Open App 📱', 'Start Learning 🎓'], description: 'Full 4-step startup sequence — Power On, Connect, Open App, Start Learning!' },
+};
+
+// Rich picture_match configs: audioPromptText + emoji options per slot
+const PICTURE_MATCH_CONFIGS: Record<number, { audioPromptText: string; options: Array<{ label: string; emoji: string; correct: boolean }> }> = {
+  31: { audioPromptText: 'Tap the picture that shows a ROBOT', options: [{ label: 'Robot', emoji: '🤖', correct: true }, { label: 'Apple', emoji: '🍎', correct: false }, { label: 'Ball', emoji: '⚽', correct: false }] },
+  32: { audioPromptText: 'Which picture shows something that MOVES?', options: [{ label: 'Car', emoji: '🚗', correct: true }, { label: 'Book', emoji: '📚', correct: false }, { label: 'Chair', emoji: '🪑', correct: false }] },
+  33: { audioPromptText: 'What is this technology item called?', options: [{ label: 'Tablet', emoji: '📱', correct: true }, { label: 'Pencil', emoji: '✏️', correct: false }, { label: 'Hat', emoji: '🎩', correct: false }] },
+  34: { audioPromptText: 'Which tool should Robo use to GRAB the item?', options: [{ label: 'Robot Arm', emoji: '🦷', correct: true }, { label: 'Umbrella', emoji: '☂️', correct: false }, { label: 'Clock', emoji: '🕐', correct: false }] },
+  35: { audioPromptText: 'Tap what has WHEELS and can CARRY things', options: [{ label: 'Truck', emoji: '🚛', correct: true }, { label: 'Balloon', emoji: '🎈', correct: false }, { label: 'Flower', emoji: '🌸', correct: false }] },
+  36: { audioPromptText: 'Teacher says: Open the learning APP. Tap the correct one!', options: [{ label: 'App Icon', emoji: '📲', correct: true }, { label: 'Speaker', emoji: '🔊', correct: false }, { label: 'Battery', emoji: '🔋', correct: false }] },
+  37: { audioPromptText: 'Which icon means SAVE your work?', options: [{ label: 'Save Disk', emoji: '💾', correct: true }, { label: 'Delete', emoji: '❌', correct: false }, { label: 'Print', emoji: '🖨️', correct: false }] },
+  38: { audioPromptText: 'Which part helps Robo MOVE FORWARD?', options: [{ label: 'Gear/Motor', emoji: '⚙️', correct: true }, { label: 'Camera', emoji: '📷', correct: false }, { label: 'Microphone', emoji: '🎤', correct: false }] },
+  39: { audioPromptText: 'Which symbol means "I NEED HELP please!"?', options: [{ label: 'Help Hand', emoji: '🙋', correct: true }, { label: 'Stop Sign', emoji: '🛑', correct: false }, { label: 'Music Note', emoji: '🎵', correct: false }] },
+  40: { audioPromptText: 'Tap the picture that shows YOUR ANSWER to the team', options: [{ label: 'Thumbs Up', emoji: '👍', correct: true }, { label: 'Question Mark', emoji: '❓', correct: false }, { label: 'Sleeping', emoji: '😴', correct: false }] },
+  58: { audioPromptText: 'Which icon opens the ROBOT CODING activity?', options: [{ label: 'Code Robot', emoji: '🤖', correct: true }, { label: 'Music', emoji: '🎵', correct: false }, { label: 'Food', emoji: '🍕', correct: false }] },
+};
+
+// Per-slot cognitive configurations: 100% synchronized instructions, sequence/grid diagrams, and option choices per question (Q1-Q15)
+const COGNITIVE_SLOT_CONFIGS: Record<number, { instructions: string; sequence?: string[]; grid?: string[][]; options: Array<{ label: string; emoji?: string; correct: boolean }>; hint: string }> = {
+  1: {
+    instructions: 'Look at the shape below. Which option matches it exactly?',
+    sequence: ['🔴 Red Circle'],
+    options: [{ label: 'Red Circle', emoji: '🔴', correct: true }, { label: 'Blue Square', emoji: '🟦', correct: false }, { label: 'Yellow Triangle', emoji: '🟨', correct: false }],
+    hint: 'Find the red circle!'
+  },
+  2: {
+    instructions: 'Look at the shapes. Which shape is different from the others?',
+    sequence: ['🔴 Red Circle', '🔴 Red Circle', '🟩 Green Square'],
+    options: [{ label: 'Green Square', emoji: '🟩', correct: true }, { label: 'Red Circle', emoji: '🔴', correct: false }, { label: 'Blue Circle', emoji: '🔵', correct: false }],
+    hint: 'Two are circles, one is a square!'
+  },
+  3: {
+    instructions: 'Look at the pattern: 🔺 🔷 🔺 🔷 ... What comes next?',
+    sequence: ['🔺 Triangle', '🔷 Diamond', '🔺 Triangle', '🔷 Diamond', '❓'],
+    options: [{ label: 'Triangle', emoji: '🔺', correct: true }, { label: 'Diamond', emoji: '🔷', correct: false }, { label: 'Circle', emoji: '⭕', correct: false }],
+    hint: 'Triangle and Diamond take turns!'
+  },
+  4: {
+    instructions: 'Which objects belong together in the same group?',
+    sequence: ['🐶 Dog', '🐱 Cat', '🦁 Lion'],
+    options: [{ label: 'Animals Group', emoji: '🐶', correct: true }, { label: 'Vehicle Group', emoji: '🚗', correct: false }, { label: 'Fruit Group', emoji: '🍎', correct: false }],
+    hint: 'Dog, Cat, and Lion are all animals!'
+  },
+  5: {
+    instructions: 'Which item does NOT belong in this vehicle group?',
+    sequence: ['🚗 Car', '🚌 Bus', '✈️ Airplane', '🍎 Apple'],
+    options: [{ label: 'Apple', emoji: '🍎', correct: true }, { label: 'Car', emoji: '🚗', correct: false }, { label: 'Airplane', emoji: '✈️', correct: false }],
+    hint: 'Car, bus, and airplane are vehicles. Apple is food!'
+  },
+  6: {
+    instructions: 'Look at the number sequence: 1️⃣ ➔ 2️⃣ ➔ 3️⃣ ➔ 4️⃣ ... What comes next?',
+    sequence: ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '❓'],
+    options: [{ label: '5️⃣ Five', emoji: '5️⃣', correct: true }, { label: '6️⃣ Six', emoji: '6️⃣', correct: false }, { label: '3️⃣ Three', emoji: '3️⃣', correct: false }],
+    hint: 'Numbers count up: 1, 2, 3, 4, 5!'
+  },
+  7: {
+    instructions: "Let's help the seed grow into a flower! Pick the correct order:",
+    sequence: ['🌱 Seed', '➡️', '🌿 Sprout', '➡️', '🌸 Flower'],
+    options: [
+      { label: '🌱 Seed ➔ 🌿 Sprout ➔ 🌸 Flower', emoji: '🌸', correct: true },
+      { label: '🌸 Flower ➔ 🌱 Seed ➔ 🌿 Sprout', emoji: '🌱', correct: false },
+      { label: '🌿 Sprout ➔ 🌸 Flower ➔ 🌱 Seed', emoji: '🌿', correct: false }
+    ],
+    hint: 'Seed grows into sprout, then flower!'
+  },
+  8: {
+    instructions: 'Look at the visual pattern: ⭐ ⭐ 🌙 ⭐ ⭐ ... What comes next?',
+    sequence: ['⭐ Star', '⭐ Star', '🌙 Moon', '⭐ Star', '⭐ Star', '❓'],
+    options: [{ label: 'Moon', emoji: '🌙', correct: true }, { label: 'Star', emoji: '⭐', correct: false }, { label: 'Sun', emoji: '☀️', correct: false }],
+    hint: 'Every third shape is a moon!'
+  },
+  9: {
+    instructions: 'Look at the shapes in the grid. Which shape finishes the last row?',
+    grid: [
+      ['🔺 Triangle', '⬛ Square', '🔴 Circle'],
+      ['⬛ Square', '🔴 Circle', '🔺 Triangle'],
+      ['🔴 Circle', '🔺 Triangle', '❓']
+    ],
+    options: [{ label: 'Square', emoji: '⬛', correct: true }, { label: 'Circle', emoji: '🔴', correct: false }, { label: 'Triangle', emoji: '🔺', correct: false }],
+    hint: 'Each row has a triangle, square, and circle!'
+  },
+  10: {
+    instructions: 'Look at the color pattern: 🟢 🟢 🟡 🟢 🟢 ... What comes next?',
+    sequence: ['🟢 Green', '🟢 Green', '🟡 Yellow', '🟢 Green', '🟢 Green', '❓'],
+    options: [{ label: 'Yellow', emoji: '🟡', correct: true }, { label: 'Green', emoji: '🟢', correct: false }, { label: 'Red', emoji: '🔴', correct: false }],
+    hint: 'Two greens, then one yellow!'
+  },
+  11: {
+    instructions: 'Look at the shape matrix. Which shape completes the pattern?',
+    grid: [
+      ['⭕ Circle', '⬛ Square', '🔺 Triangle'],
+      ['⬛ Square', '🔺 Triangle', '⭕ Circle'],
+      ['🔺 Triangle', '⭕ Circle', '❓']
+    ],
+    options: [{ label: 'Square', emoji: '⬛', correct: true }, { label: 'Circle', emoji: '⭕', correct: false }, { label: 'Triangle', emoji: '🔺', correct: false }],
+    hint: 'Each row must contain circle, square, and triangle!'
+  },
+  12: {
+    instructions: 'Look at the day cycle: ☀️ Daytime ➔ 🌙 Nighttime ➔ ☀️ Daytime ... What comes next?',
+    sequence: ['☀️ Daytime ➔', '🌙 Nighttime ➔', '☀️ Daytime ➔', '❓'],
+    options: [{ label: 'Nighttime', emoji: '🌙', correct: true }, { label: 'Daytime', emoji: '☀️', correct: false }, { label: 'Rain', emoji: '🌧️', correct: false }],
+    hint: 'Day comes after night, night comes after day!'
+  },
+  13: {
+    instructions: 'It is raining outside! What should you bring before going out?',
+    sequence: ['🌧️ Rain Outside ➔ ❓ What do you bring?'],
+    options: [{ label: 'Umbrella', emoji: '☂️', correct: true }, { label: 'Sunglasses', emoji: '🕶️', correct: false }, { label: 'Ice Cream', emoji: '🍦', correct: false }],
+    hint: 'Umbrella keeps you dry in the rain!'
+  },
+  14: {
+    instructions: 'You put a key into a locked door and turn it. What happens next?',
+    sequence: ['🔑 Key ➔ 🚪 Door ➔ ❓ What happens?'],
+    options: [{ label: 'Door Unlocks', emoji: '🔓', correct: true }, { label: 'Door Locks', emoji: '🔒', correct: false }, { label: 'Lights Turn Off', emoji: '💡', correct: false }],
+    hint: 'A key turns to unlock the door!'
+  },
+  15: {
+    instructions: 'What will happen if a glass cup is dropped on a hard tile floor?',
+    sequence: ['🫗 Glass Dropped ➔ ❓ What happens next?'],
+    options: [{ label: 'Glass Shatters', emoji: '💥', correct: true }, { label: 'Floats in Air', emoji: '🎈', correct: false }, { label: 'Turns into Apple', emoji: '🍎', correct: false }],
+    hint: 'Glass breaks when dropped!'
+  }
+};
 
 export class ActivityGenerator {
   private client: AzureOpenAIClient;
@@ -115,27 +255,38 @@ export class ActivityGenerator {
   public async generateActivity(slot: number): Promise<ActivityItem> {
     const safeSlot = Math.max(1, Math.min(60, slot));
     const baseline = QUESTION_BASELINES[safeSlot - 1];
+    const missionConfig = ROBOT_MISSION_CONFIGS[safeSlot];
+    const pmConfig = PICTURE_MATCH_CONFIGS[safeSlot];
+
+    let typeSpecificInstructions = '';
+    if (baseline.type === 'robot_mission' && missionConfig) {
+      typeSpecificInstructions = `
+This is a robot coding question. Available blocks: [${missionConfig.blocks.join(', ')}]. Correct sequence: [${missionConfig.correctSequence.join(' → ')}]. Context: ${missionConfig.description}`;
+    } else if (baseline.type === 'picture_match' && pmConfig) {
+      typeSpecificInstructions = `
+This is a picture-matching/audio question. Audio prompt: "${pmConfig.audioPromptText}". Use these options: ${JSON.stringify(pmConfig.options)}`;
+    }
 
     const prompt = `You are generating Question #${baseline.slot} of 60 for the Cognix SEN Placement Assessment (aged 6-12).
-Baseline Competency: "${baseline.baselinePrompt}" (Domain: ${baseline.domain}, Sub-skill: ${baseline.subSkill}, Difficulty: ${baseline.difficulty}/3).
+Baseline: "${baseline.baselinePrompt}" (Domain: ${baseline.domain}, Sub-skill: ${baseline.subSkill}, Difficulty: ${baseline.difficulty}/3, Type: ${baseline.type}).${typeSpecificInstructions}
 
-CRITICAL REQUIREMENT:
-- Generate a child-friendly, engaging variation of this question.
-- MUST HAVE EXACTLY 3 ANSWER CHOICES (A, B, C).
+CRITICAL REQUIREMENTS:
+- Generate a child-friendly, engaging variation.
+- MUST HAVE EXACTLY 3 ANSWER CHOICES (Option A, Option B, Option C) with text labels and emojis.
 - 1 choice MUST be fully correct, 2 choices MUST be plausible wrong distractors.
-- Keep language simple, positive, encouraging, and easy to read.
+- Keep language simple, positive, encouraging.
 
-Return ONLY valid JSON with no markdown wrapping:
+Return ONLY valid JSON with no markdown:
 {
   "title": "${baseline.title}",
-  "instructions": "Clear simple question prompt for the child",
+  "instructions": "Child-friendly question prompt",
   "type": "${baseline.type}",
-  "hintText": "Step-by-step encouraging hint",
+  "hintText": "Encouraging hint",
   "payload": {
     "options": [
-      { "label": "Option A text or emoji", "correct": true },
-      { "label": "Option B text or emoji", "correct": false },
-      { "label": "Option C text or emoji", "correct": false }
+      { "label": "Choice A Label", "emoji": "🟢", "correct": true },
+      { "label": "Choice B Label", "emoji": "🔴", "correct": false },
+      { "label": "Choice C Label", "emoji": "🟡", "correct": false }
     ],
     "correctIndex": 0
   }
@@ -155,12 +306,42 @@ Return ONLY valid JSON with no markdown wrapping:
         if (lastBrace !== -1) cleanJson = cleanJson.substring(0, lastBrace + 1);
 
         const parsed = JSON.parse(cleanJson);
-        if (parsed.instructions && parsed.payload && Array.isArray(parsed.payload.options)) {
+        if (parsed.instructions && parsed.payload) {
+          // Force type to baseline type
+          parsed.type = baseline.type;
+
+          // For non-robot questions, explicitly strip any robot blocks
+          if (baseline.type !== 'robot_mission') {
+            delete parsed.payload.availableBlocks;
+            delete parsed.payload.correctSequence;
+          }
+
+          // Attach slot-matched cognitive sequence/grid if AI omitted it
+          const cogCfg = COGNITIVE_SLOT_CONFIGS[safeSlot];
+          if (cogCfg) {
+            if (!parsed.payload.sequence && cogCfg.sequence) parsed.payload.sequence = cogCfg.sequence;
+            if (!parsed.payload.grid && cogCfg.grid) parsed.payload.grid = cogCfg.grid;
+          }
+
           // Force exactly 3 options
-          if (parsed.payload.options.length > 3) {
+          if (Array.isArray(parsed.payload.options) && parsed.payload.options.length > 3) {
             parsed.payload.options = parsed.payload.options.slice(0, 3);
           }
-          
+          // Always enforce the correct robot mission blocks from our config
+          if (baseline.type === 'robot_mission' && missionConfig) {
+            parsed.payload.availableBlocks = missionConfig.blocks;
+            if (!parsed.payload.correctSequence || parsed.payload.correctSequence.length === 0) {
+              parsed.payload.correctSequence = missionConfig.correctSequence;
+            }
+          }
+          // Always enforce picture_match data from our config
+          if (baseline.type === 'picture_match' && pmConfig && !parsed.payload.audioPromptText) {
+            parsed.payload.audioPromptText = pmConfig.audioPromptText;
+          }
+          if (baseline.type === 'picture_match' && pmConfig && (!Array.isArray(parsed.payload.options) || parsed.payload.options.length === 0)) {
+            parsed.payload.options = pmConfig.options;
+          }
+
           return {
             id: `q_slot_${baseline.slot}_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
             slot: baseline.slot,
@@ -170,11 +351,12 @@ Return ONLY valid JSON with no markdown wrapping:
             title: parsed.title || baseline.title,
             instructions: parsed.instructions,
             difficulty: baseline.difficulty,
-            expectedTimeMs: 90000, // 1:30 fixed timer
+            expectedTimeMs: 90000,
             maxPoints: baseline.maxPoints,
             type: baseline.type,
             payload: parsed.payload,
-            hintText: parsed.hintText || 'Take your time and think carefully!'
+            hintText: parsed.hintText || 'Take your time and think carefully!',
+            source: 'azure_openai'
           };
         }
       }
@@ -197,79 +379,100 @@ Return ONLY valid JSON with no markdown wrapping:
     let instructions = baseline.baselinePrompt;
     let hintText = 'Look at all options carefully before picking.';
 
-    // Generate custom 3-choice payload based on baseline skill
     if (baseline.type === 'robot_mission') {
-      const blocks = ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'];
-      payload = {
-        availableBlocks: blocks,
+      const mCfg = ROBOT_MISSION_CONFIGS[safeSlot] || {
+        blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'],
         correctSequence: ['Move Forward ⬆️', 'Grab Item 🦾'],
+        description: 'Build the correct sequence to complete the mission!'
+      };
+      instructions = mCfg.description;
+      payload = {
+        availableBlocks: mCfg.blocks,
+        correctSequence: mCfg.correctSequence,
         options: [
-          { label: 'Move Forward ➔ Grab Item', correct: true },
-          { label: 'Turn Right ➔ Turn Right', correct: false },
-          { label: 'Grab Item ➔ Stop', correct: false }
+          { label: mCfg.correctSequence.join(' ➔ '), correct: true },
+          { label: [...mCfg.blocks].reverse().slice(0, 2).join(' ➔ '), correct: false },
+          { label: mCfg.blocks.slice(0, Math.min(2, mCfg.blocks.length)).reverse().join(' ➔ '), correct: false }
         ],
         correctIndex: 0
       };
-      hintText = 'Add the move block first, then grab the item!';
+      hintText = `Hint: ${mCfg.correctSequence.join(' → then ')}`;
+
     } else if (baseline.type === 'picture_match') {
-      payload = {
-        audioPromptText: `Select the item: ${baseline.title}`,
-        options: [
-          { label: 'Target Item 🎯', emoji: '🤖', correct: true },
-          { label: 'Other Item A', emoji: '🍎', correct: false },
-          { label: 'Other Item B', emoji: '⚽', correct: false }
-        ],
-        correctIndex: 0
-      };
-      hintText = 'Click the robot icon!';
+      const pmCfg = PICTURE_MATCH_CONFIGS[safeSlot];
+      if (pmCfg) {
+        payload = { ...pmCfg };
+        instructions = pmCfg.audioPromptText;
+        hintText = 'Listen carefully and tap the right picture!';
+      } else {
+        payload = {
+          audioPromptText: baseline.baselinePrompt,
+          options: [
+            { label: 'Robot', emoji: '🤖', correct: true },
+            { label: 'Apple', emoji: '🍎', correct: false },
+            { label: 'Ball', emoji: '⚽', correct: false }
+          ],
+          correctIndex: 0
+        };
+        hintText = 'Tap the correct picture!';
+      }
+
     } else if (baseline.type === 'motor_target') {
+      const targetsMap: Record<number, number> = { 51: 4, 52: 3, 54: 5, 56: 3 };
       payload = {
-        targetsCount: 3,
-        movementSpeed: 1.2,
+        targetsCount: targetsMap[safeSlot] || 3,
         options: [
-          { label: 'Target Center 🎯', correct: true },
-          { label: 'Side Corner 📐', correct: false },
-          { label: 'Outer Boundary ⭕', correct: false }
+          { label: 'Hit target 🎯', correct: true },
+          { label: 'Miss edge', correct: false },
+          { label: 'Click outside', correct: false }
         ],
         correctIndex: 0
       };
-      hintText = 'Click directly inside the glowing circle.';
+      hintText = 'Click directly inside the glowing circle!';
+
+    } else if (COGNITIVE_SLOT_CONFIGS[safeSlot]) {
+      const cogCfg = COGNITIVE_SLOT_CONFIGS[safeSlot];
+      instructions = cogCfg.instructions;
+      payload = {
+        sequence: cogCfg.sequence,
+        grid: cogCfg.grid,
+        options: [...cogCfg.options],
+        correctIndex: 0
+      };
+      hintText = cogCfg.hint;
+
     } else {
-      // General MCQ (exactly 3 choices)
-      if (baseline.domain === 'cognitive_ability') {
-        payload = {
-          sequence: ['🔵', '🔴', '🔵', '🔴', '?'],
-          options: [
-            { label: '🔵 Blue Circle', correct: true },
-            { label: '🟢 Green Circle', correct: false },
-            { label: '🟡 Yellow Star', correct: false }
-          ],
-          correctIndex: 0
-        };
-        hintText = 'Notice how Blue and Red repeat one after another.';
-      } else if (baseline.domain === 'behavioral_readiness') {
-        payload = {
-          options: [
-            { label: 'Stay calm, wait your turn, and try politely', correct: true },
-            { label: 'Get upset and stop working', correct: false },
-            { label: 'Leave the room immediately', correct: false }
-          ],
-          correctIndex: 0
-        };
-        hintText = 'Choose the option that shows patience and self-control.';
+      const behaviorOptions = [
+        { options: [{ label: '😌 Stay calm and keep trying', correct: true }, { label: '😤 Get upset and quit', correct: false }, { label: '🚪 Leave the room', correct: false }], hint: 'Choose the patient option!' },
+        { options: [{ label: '🙋 Raise my hand politely', correct: true }, { label: '😴 Give up quietly', correct: false }, { label: '🗣️ Call out loudly', correct: false }], hint: 'Polite asking is best!' },
+        { options: [{ label: '⏸️ Stop and listen to teacher', correct: true }, { label: '🏃 Keep going', correct: false }, { label: '😶 Ignore instruction', correct: false }], hint: 'Always stop when teacher says STOP!' },
+      ];
+      const fineMotorOptions = [
+        { options: [{ label: '⬅️ Left Arrow key', correct: true }, { label: '⬆️ Up Arrow key', correct: false }, { label: '➡️ Right Arrow key', correct: false }], hint: 'Left arrow moves things left!' },
+        { options: [{ label: '🔄 Restart the device', correct: true }, { label: '📵 Throw tablet away', correct: false }, { label: '😴 Wait forever', correct: false }], hint: 'Restarting fixes most freezes!' },
+        { options: [{ label: '✅ Place in matching slot', correct: true }, { label: '❌ Drop it anywhere', correct: false }, { label: '🔄 Spin it around', correct: false }], hint: 'Match the shape to the correct slot!' },
+      ];
+
+      if (baseline.domain === 'behavioral_readiness') {
+        const beh = behaviorOptions[Math.max(0, safeSlot - 41) % behaviorOptions.length];
+        payload = { options: beh.options, correctIndex: 0 };
+        hintText = beh.hint;
+      } else if (baseline.domain === 'fine_motor_technology') {
+        const fine = fineMotorOptions[Math.max(0, safeSlot - 53) % fineMotorOptions.length];
+        payload = { options: fine.options, correctIndex: 0 };
+        hintText = fine.hint;
       } else {
         payload = {
           options: [
-            { label: 'Correct Solution Action 🌟', correct: true },
-            { label: 'Incorrect Action A ❌', correct: false },
-            { label: 'Incorrect Action B 🛑', correct: false }
+            { label: '🌟 Correct Solution', correct: true },
+            { label: '❌ Incorrect Action A', correct: false },
+            { label: '🛑 Incorrect Action B', correct: false }
           ],
           correctIndex: 0
         };
       }
     }
 
-    // Shuffle 3 options deterministically while tracking correctIndex
     if (payload.options && Array.isArray(payload.options) && payload.options.length === 3) {
       const correctItem = payload.options.find((o: any) => o.correct) || payload.options[0];
       const shuffled = this.shuffleArray([...payload.options]);
@@ -283,16 +486,18 @@ Return ONLY valid JSON with no markdown wrapping:
       domain: baseline.domain,
       skill: baseline.skill,
       subSkill: baseline.subSkill,
-      title: `Q${baseline.slot}: ${baseline.title}`,
+      title: baseline.title,
       instructions,
       difficulty: baseline.difficulty,
-      expectedTimeMs: 90000, // 1:30 fixed timer
+      expectedTimeMs: 90000,
       maxPoints: baseline.maxPoints,
       type: baseline.type,
       payload,
-      hintText
+      hintText,
+      source: 'procedural'
     };
   }
+
 
   private shuffleArray<T>(arr: T[]): T[] {
     const copy = [...arr];
@@ -303,4 +508,5 @@ Return ONLY valid JSON with no markdown wrapping:
     return copy;
   }
 }
+
 

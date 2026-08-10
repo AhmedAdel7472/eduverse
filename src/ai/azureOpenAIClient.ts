@@ -28,8 +28,14 @@ export class AzureOpenAIClient {
       input: `${systemPrompt}\n\nUser Prompt: ${prompt}`
     };
 
-    // Try direct endpoint first, then proxy endpoint if direct fails
-    const endpointsToTry = [this.endpoint, '/api/openai-proxy'];
+    // In dev mode, try target endpoint + local Vite proxy.
+    // In production hosting (GitHub Pages), try target endpoint + CORS proxy wrapper.
+    const endpointsToTry = import.meta.env.DEV
+      ? [this.endpoint, '/api/openai-proxy']
+      : [
+          this.endpoint,
+          `https://corsproxy.io/?${encodeURIComponent(this.endpoint)}`
+        ];
 
     for (const url of endpointsToTry) {
       const requestId = `req_${Date.now()}_${Math.floor(Math.random() * 1000)}`;

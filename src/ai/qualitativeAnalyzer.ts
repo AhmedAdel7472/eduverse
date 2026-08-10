@@ -16,47 +16,96 @@ export class QualitativeAnalyzer {
     session: StudentSessionTelemetry,
     placement: PlacementResult
   ): Promise<string> {
-    const prompt = `Analyze this student assessment telemetry and provide a 3-paragraph diagnostic summary:
-Student: ${session.student_name}
-Total Score: ${placement.totalScore}/100
-Placed Track: ${placement.recommendedTrack}
-Overall Accuracy: ${placement.performanceIndicators.overallAccuracy}%
+    const domainSummaryStr = Object.values(session.domain_scores || {})
+      .map(d => `${d.domain_name}: ${d.earned_score}/${d.max_score} (${Math.round((d.earned_score/d.max_score)*100)}%)`)
+      .join(', ');
+
+    const prompt = `Analyze this student assessment telemetry and provide a detailed 4-paragraph diagnostic report:
+Student Name: ${session.student_name}
+Overall Score: ${placement.totalScore}/100
+Placed Level: ${placement.recommendedTrack}
+Accuracy: ${placement.performanceIndicators.overallAccuracy}%
 Adaptability Index: ${placement.performanceIndicators.adaptabilityIndex}
 Learning Velocity: ${placement.performanceIndicators.learningProgressVelocity}
-Flags: ${placement.flags.map(f => f.title).join(', ') || 'None'}
-`;
+Domain Scores: ${domainSummaryStr}
+Timeouts Count: ${session.question_time_records?.filter(r => r?.timedOut).length || 0}
+Total Active Time: ${Math.round((session.total_active_duration_ms || 0)/60000)} mins
+Flags: ${placement.flags.map(f => `${f.title}: ${f.description}`).join(' | ') || 'None'}
 
-    const aiText = await this.client.generateCompletion(prompt, false);
-    if (aiText) {
+Include:
+1. Executive Diagnostic Summary
+2. Domain-by-Domain Performance Analysis (mentioning specific weak/strong domains)
+3. Behavioral & Motor Skills Observations (latency, timeouts, hesitation)
+4. Specific SEN Accommodations & Action Plan for Educator/Parent.`;
+
+    const aiText = await this.client.generateCompletion(
+      prompt,
+      'You are an expert educational psychologist and SEN assessment specialist. Provide detailed, compassionate, highly specific diagnostic reports.'
+    );
+
+    if (aiText && aiText.length > 200) {
       return aiText;
     }
 
-    // High quality deterministic evaluation report
+    // Dynamic, data-driven diagnostic report
     return this.getBuiltInReport(session, placement);
   }
 
   private getBuiltInReport(session: StudentSessionTelemetry, placement: PlacementResult): string {
     const { totalScore, recommendedTrack, performanceIndicators, flags } = placement;
 
-    let summary = `### Executive Assessment Summary\n`;
-    summary += `**${session.student_name}** completed the AI Digital Placement Assessment, achieving a **Technology Readiness Score of ${totalScore}/100**, placing into the **${recommendedTrack}** track.\n\n`;
+    const domainScores = Object.values(session.domain_scores || {});
+    const sortedDomains = [...domainScores].sort((a, b) => {
+      const pctA = a.max_score > 0 ? a.earned_score / a.max_score : 0;
+      const pctB = b.max_score > 0 ? b.earned_score / b.max_score : 0;
+      return pctB - pctA;
+    });
 
-    summary += `### Cognitive & Problem-Solving Approach\n`;
-    if (performanceIndicators.overallAccuracy >= 80) {
-      summary += `The student demonstrated high analytical accuracy (${performanceIndicators.overallAccuracy}%) with strong working memory and spatial pattern recognition. Tasks were completed with minimal reliance on hints (${performanceIndicators.hintDependencyRatio} hints/item).\n\n`;
+    const topDomain = sortedDomains[0];
+    const lowestDomain = sortedDomains[sortedDomains.length - 1];
+
+    const topPct = topDomain && topDomain.max_score > 0 ? Math.round((topDomain.earned_score / topDomain.max_score) * 100) : 0;
+    const lowPct = lowestDomain && lowestDomain.max_score > 0 ? Math.round((lowestDomain.earned_score / lowestDomain.max_score) * 100) : 0;
+
+    const timeRecords = session.question_time_records || [];
+    const timedOutCount = timeRecords.filter(r => r?.timedOut).length;
+    const avgLatencySec = timeRecords.length > 0
+      ? (timeRecords.reduce((acc, r) => acc + (r?.responseLatencyMs || 0), 0) / timeRecords.length / 1000).toFixed(1)
+      : '0';
+
+    let summary = `### Executive Diagnostic Summary\n`;
+    summary += `**${session.student_name}** has completed the 60-question Cognix SEN Assessment, achieving an overall **Readiness Score of ${totalScore}/100**. Based on comprehensive telemetry, the student is placed into **${recommendedTrack}**.\n\n`;
+
+    summary += `### Domain-by-Domain Analysis\n`;
+    summary += `- **Primary Strength**: **${topDomain?.domain_name || 'Cognitive Skills'}** (${topPct}% mastery). Demonstrates confident grasp of these core concepts.\n`;
+    summary += `- **Primary Growth Area**: **${lowestDomain?.domain_name || 'Fine Motor'}** (${lowPct}% mastery). Benefits from targeted support and scaffolded practice in this area.\n\n`;
+
+    summary += `### Behavioral & Cognitive Telemetry Observations\n`;
+    summary += `Across the 60 assessment items, average initial response latency was **${avgLatencySec} seconds**. `;
+
+    if (timedOutCount > 0) {
+      summary += `The student experienced **${timedOutCount} countdown timeouts**, suggesting potential processing fatigue or hesitation during multi-step tasks. `;
     } else {
-      summary += `The student displayed promising problem-solving initiative with an overall accuracy of ${performanceIndicators.overallAccuracy}%. Performance was boosted by scaffolded hints and trial-and-error feedback.\n\n`;
+      summary += `The student maintained active pacing with **0 timeouts**, showing sustained attention throughout the assessment. `;
     }
 
-    summary += `### Adaptability & Tech Readiness\n`;
-    summary += `During the dynamic rule-switch challenges, the student achieved an Adaptability Index of **${performanceIndicators.adaptabilityIndex}**, displaying a **${performanceIndicators.learningProgressVelocity}** learning progress velocity across progressive difficulty levels. `;
+    summary += `Adaptability Index recorded at **${performanceIndicators.adaptabilityIndex}** with a **${performanceIndicators.learningProgressVelocity}** velocity.\n\n`;
+
+    summary += `### Recommended Educational Accommodations & Action Plan\n`;
+    if (lowPct < 60) {
+      summary += `1. **Scaffolded Learning**: Break complex multi-step instructions into single 1-step visual prompts.\n`;
+      summary += `2. **Sensory & Pace Support**: Allow 10-second processing buffers before prompting for responses.\n`;
+    } else {
+      summary += `1. **Accelerated Challenges**: Provide multi-step logic and independent coding challenges.\n`;
+    }
 
     if (flags.length > 0) {
-      summary += `\n\n> [!NOTE]\n> **Targeted Support Areas Identified**: ${flags.map(f => f.title).join(' • ')}. Targeted practice modules are recommended to solidify these core competencies.`;
+      summary += `\n> [!WARNING]\n> **Identified Support Flags**: ${flags.map(f => f.title).join(' • ')}.`;
     } else {
-      summary += `\n\n> [!TIP]\n> **Strengths Spotlight**: Well-rounded mastery observed across all five competency domains. Prepared for direct engagement with advanced robotics and interactive programming modules.`;
+      summary += `\n> [!TIP]\n> **Exceptional Performance**: Student displayed balanced competence across all 5 evaluation domains.`;
     }
 
     return summary;
   }
 }
+
