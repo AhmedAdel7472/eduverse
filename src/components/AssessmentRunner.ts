@@ -814,6 +814,76 @@ export class AssessmentRunner {
         </div>
       </div>
 
+      <!-- Skill Ladder Domain Progress Strip (CodeRa Frontend) -->
+      <div style="background: rgba(15,23,42,0.75); border: 1px solid var(--border-color); border-radius: 20px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <div style="width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg, #10b981, #059669); display:flex; align-items:center; justify-content:center; font-size:1.2rem; box-shadow:0 4px 10px rgba(16,185,129,0.3);">
+              🐸
+            </div>
+            <div>
+              <div style="font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--accent-emerald);">
+                ${domainConfig.name}
+              </div>
+              <div style="font-size:1rem; font-weight:800; color:#fff;">
+                ${baseline.subSkill}
+              </div>
+            </div>
+          </div>
+          <div style="background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); color:#fbbf24; padding:0.35rem 0.8rem; border-radius:12px; font-weight:800; font-size:0.82rem; display:flex; align-items:center; gap:0.4rem;">
+            ⭐ <span>${this.userAnswers.length} of 50 Completed</span>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.6rem;">
+          ${[
+            { id: 'cognitive', name: 'Cognitive Logic', icon: '🧠', range: [0, 11], total: 12 },
+            { id: 'functional', name: 'Robot Missions', icon: '🤖', range: [12, 23], total: 12 },
+            { id: 'communication', name: 'Communication', icon: '💬', range: [24, 33], total: 10 },
+            { id: 'behavioral', name: 'Behavioral Prep', icon: '🌟', range: [34, 41], total: 8 },
+            { id: 'motor', name: 'Tech & Motors', icon: '🦾', range: [42, 49], total: 8 }
+          ].map(d => {
+            const isCurrentDomain = this.currentQuestionIndex >= d.range[0] && this.currentQuestionIndex <= d.range[1];
+            const isCompletedDomain = this.currentQuestionIndex > d.range[1];
+            const answeredInDomain = this.userAnswers.filter(a => a.questionIndex >= d.range[0] && a.questionIndex <= d.range[1]).length;
+            const pct = Math.min(100, Math.round((answeredInDomain / d.total) * 100));
+
+            let cardBg = 'rgba(255,255,255,0.03)';
+            let borderColor = 'rgba(255,255,255,0.08)';
+            let textColor = 'var(--text-secondary)';
+            let barBg = 'rgba(255,255,255,0.2)';
+
+            if (isCompletedDomain) {
+              cardBg = 'rgba(16,185,129,0.08)';
+              borderColor = 'rgba(16,185,129,0.3)';
+              textColor = 'var(--accent-emerald)';
+              barBg = 'var(--accent-emerald)';
+            } else if (isCurrentDomain) {
+              cardBg = 'rgba(6,182,212,0.12)';
+              borderColor = 'var(--accent-cyan)';
+              textColor = '#fff';
+              barBg = 'linear-gradient(90deg, var(--accent-cyan), var(--accent-blue))';
+            }
+
+            return `
+              <div style="background:${cardBg}; border:1px solid ${borderColor}; border-radius:12px; padding:0.6rem 0.75rem; display:flex; flex-direction:column; justify-content:space-between;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                  <span style="font-size:0.75rem; font-weight:700; color:${textColor};">${d.icon} ${d.name}</span>
+                  ${isCompletedDomain ? '<span style="font-size:0.75rem; color:var(--accent-emerald); font-weight:900;">✓</span>' : ''}
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.3rem;">
+                  <span>${answeredInDomain}/${d.total} Qs</span>
+                  <span style="font-weight:700; color:${textColor};">${pct}%</span>
+                </div>
+                <div style="width:100%; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
+                  <div style="width:${pct}%; height:100%; background:${barBg}; transition:width 0.3s ease;"></div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
       <div class="glass-card activity-card">
         <div class="activity-header">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 
 <head>
@@ -7,7 +7,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>CodeRa  The Inclusive Tech Ecosystem</title>
+    <title>CodeRa The Inclusive Tech Ecosystem</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,9 +38,37 @@
         }
     </script>
     <style>
+        html {
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
         body {
             background-color: #f8fafc;
             color: #0f172a;
+            overflow-x: hidden;
+        }
+
+        body.exam-mode {
+            overflow: hidden !important;
+        }
+
+        /* Sleek single scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f8fafc;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
 
         .pyramid-container {
@@ -150,12 +178,60 @@
             overflow-y: auto;
             display: none;
         }
+
         #childTestPage.exam-active {
             display: flex;
             flex-direction: column;
         }
+
+        @keyframes floatStep {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-7px);
+            }
+        }
+
+        .journey-animated-step {
+            animation: floatStep 3.2s ease-in-out infinite;
+            display: inline-block;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .step-anim-1 {
+            animation-delay: 0s;
+        }
+
+        .step-anim-2 {
+            animation-delay: 0.4s;
+        }
+
+        .step-anim-3 {
+            animation-delay: 0.8s;
+        }
+
+        .step-anim-4 {
+            animation-delay: 1.2s;
+        }
+
+        .step-anim-5 {
+            animation-delay: 1.6s;
+        }
+
+        .step-anim-6 {
+            animation-delay: 2.0s;
+        }
+
+        .step-anim-7 {
+            animation-delay: 2.4s;
+        }
     </style>
-</head>
+    <link rel="stylesheet" href="/src/styles/app.css">`n</head>
 
 <body class="antialiased selection:bg-primary selection:text-white bg-darkBg text-textMain transition-all duration-300"
     dir="ltr">
@@ -165,12 +241,10 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-20">
 
-                <div class="flex-shrink-0 flex items-center gap-3 cursor-pointer">
-                    <div
-                        class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center shadow-md shadow-primary/20">
-                        <i class="fa-solid fa-brain text-white text-xl"></i>
-                    </div>
-                    <span class="font-bold text-2xl tracking-tight text-slate-900">CodeRa</span>
+                <div class="flex-shrink-0 flex items-center cursor-pointer"
+                    onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                    <img src="/logo.svg" alt="CodeRa Logo"
+                        class="h-14 w-auto object-contain filter drop-shadow-sm hover:scale-105 transition-all duration-300">
                 </div>
 
                 <div class="hidden md:flex items-center space-x-6 space-x-reverse">
@@ -212,7 +286,7 @@
     <div id="modalOverlay"
         class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center opacity-0 transition-opacity duration-300">
 
-        
+
         <div id="signUpModal"
             class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 hidden transform scale-95 transition-transform duration-300 relative max-h-[90vh] overflow-y-auto">
             <button class="closeModal absolute top-4 end-4 text-slate-400 hover:text-slate-600 transition-colors">
@@ -274,14 +348,14 @@
             </div>
         </div>
 
-        
+
         <div id="signInModal"
             class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 hidden transform scale-95 transition-transform duration-300 relative">
             <button class="closeModal absolute top-4 end-4 text-slate-400 hover:text-slate-600 transition-colors">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
             <h2 data-i18n="signInTitle" class="text-2xl font-bold text-slate-900 mb-6 text-center">Welcome Back</h2>
-            <form onsubmit="event.preventDefault();" class="space-y-4">
+            <form id="signInForm" class="space-y-4">
                 <div>
                     <label data-i18n="emailLabel" class="block text-sm font-medium text-slate-700 mb-1">Email
                         Address</label>
@@ -309,7 +383,7 @@
             </div>
         </div>
 
-        
+
         <div id="trackModal"
             class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden hidden transform scale-95 transition-transform duration-300 relative">
             <button
@@ -317,21 +391,23 @@
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
 
-            
-            <div id="trackModalHeader" class="pt-8 pb-6 px-6 text-center text-white relative">
-                <div class="absolute inset-0 bg-gradient-to-br opacity-90" id="trackModalBg"></div>
+
+            <div id="trackModalHeader"
+                class="pt-8 pb-6 px-6 text-center text-slate-900 relative border-b border-indigo-100 overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-indigo-100 via-purple-50 to-amber-50 opacity-100"
+                    id="trackModalBg"></div>
                 <div class="relative z-10">
                     <div id="trackModalIcon"
-                        class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 text-3xl shadow-inner backdrop-blur-sm">
+                        class="w-16 h-16 rounded-full bg-white flex items-center justify-center mx-auto mb-3 text-3xl shadow-md border-2 border-indigo-200 text-indigo-700">
                         <i class="fa-solid fa-star"></i>
                     </div>
-                    <h2 id="trackModalTitle" class="text-2xl font-bold tracking-wide">Track Title</h2>
+                    <h2 id="trackModalTitle" class="text-2xl font-black text-indigo-950 tracking-tight">Track Title</h2>
                 </div>
             </div>
 
             <!-- Modal Content -->
             <div class="p-6">
-                
+
                 <div class="grid grid-cols-2 gap-4 mb-6">
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-start gap-3">
                         <i class="fa-solid fa-clock text-primary mt-1"></i>
@@ -364,7 +440,7 @@
 
                 <hr class="border-slate-100 my-4">
 
-                
+
                 <div class="mb-6">
                     <h3 data-i18n="promoTitle" class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
                         <i class="fa-solid fa-arrow-up-right-dots text-emerald-500"></i> Promotion System
@@ -391,16 +467,16 @@
                     </ul>
                 </div>
 
-                
+
                 <button type="button" id="joinTrackBtn"
-                    class="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary hover:to-primary text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300 flex justify-center items-center gap-2">
-                    <span data-i18n="joinNow">Join Now</span>
-                    <i class="fa-solid fa-arrow-right rtl-flip text-sm"></i>
+                    class="w-full bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-400 hover:from-amber-400 hover:to-yellow-500 text-amber-950 font-black py-4 rounded-2xl transition-all shadow-lg shadow-amber-300/40 hover:shadow-xl transform hover:-translate-y-0.5 duration-300 flex justify-center items-center gap-3 text-base border-2 border-amber-400 cursor-pointer">
+                    <span data-i18n="joinNow" class="font-black text-amber-950">انضم الآن فوراً 🚀</span>
+                    <i class="fa-solid fa-arrow-right rtl-flip text-sm text-amber-950"></i>
                 </button>
             </div>
         </div>
 
-        
+
         <div id="roleSelectionModal"
             class="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-8 hidden transform scale-95 transition-transform duration-300 relative">
             <button class="closeModal absolute top-4 end-4 text-slate-400 hover:text-slate-600 transition-colors">
@@ -455,7 +531,7 @@
             </div>
         </div>
 
-        
+
         <div id="parentFormModal"
             class="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 hidden transform scale-95 transition-transform duration-300 relative max-h-[90vh] flex flex-col">
 
@@ -476,7 +552,7 @@
             <div class="p-6 overflow-y-auto">
                 <form onsubmit="event.preventDefault();" class="space-y-8">
 
-                    
+
                     <div>
                         <div class="flex items-center gap-2 mb-4">
                             <span class="bg-primary text-white text-xs font-bold px-2 py-1 rounded">1</span>
@@ -540,7 +616,7 @@
 
                     <hr class="border-slate-100">
 
-                    
+
                     <div>
                         <div class="flex items-center gap-2 mb-4">
                             <span class="bg-secondary text-white text-xs font-bold px-2 py-1 rounded">2</span>
@@ -549,7 +625,7 @@
                                 Parent Questionnaire</h3>
                         </div>
 
-                        
+
                         <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-6">
                             <h4 data-i18n="secDailyLiving"
                                 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -594,7 +670,7 @@
                             </div>
                         </div>
 
-                        
+
                         <div>
                             <h4 data-i18n="secInterests" class="font-bold text-slate-800 mb-2 flex items-center gap-2">
                                 <i class="fa-solid fa-heart text-red-500"></i> Interests
@@ -684,18 +760,21 @@
             </div>
         </div>
 
-        
+
         <div id="childWithYouModal"
             class="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-8 hidden transform scale-95 transition-transform duration-300 relative">
             <button class="closeModal absolute top-4 end-4 text-slate-400 hover:text-slate-600 transition-colors">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
             <div class="text-center">
-                <div class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4 text-green-500 text-2xl">
+                <div
+                    class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4 text-green-500 text-2xl">
                     <i class="fa-solid fa-child-reaching"></i>
                 </div>
-                <h2 data-i18n="childWithYouTitle" class="text-xl font-bold text-slate-900 mb-2">Application Submitted! </h2>
-                <p data-i18n="childWithYouDesc" class="text-slate-500 text-sm mb-6">Is your child with you right now? We can start the placement assessment immediately.</p>
+                <h2 data-i18n="childWithYouTitle" class="text-xl font-bold text-slate-900 mb-2">Application Submitted!
+                </h2>
+                <p data-i18n="childWithYouDesc" class="text-slate-500 text-sm mb-6">Is your child with you right now? We
+                    can start the placement assessment immediately.</p>
                 <div class="space-y-3">
                     <button type="button" onclick="startChildTest()" data-i18n="childWithYouYes"
                         class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300 flex items-center justify-center gap-2">
@@ -710,7 +789,7 @@
             </div>
         </div>
 
-        
+
         <div id="childConfirmModal"
             class="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-8 hidden transform scale-95 transition-transform duration-300 relative">
             <button class="closeModal absolute top-4 end-4 text-slate-400 hover:text-slate-600 transition-colors">
@@ -730,7 +809,7 @@
             </div>
         </div>
 
-        
+
         <div id="institutionFormModal"
             class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-8 hidden transform scale-95 transition-transform duration-300 relative">
             <button class="closeModal absolute top-4 end-4 text-slate-400 hover:text-slate-600 transition-colors">
@@ -739,7 +818,8 @@
             <h2 data-i18n="instFormTitle" class="text-2xl font-bold text-slate-900 mb-6 text-center">How can we serve
                 you?</h2>
             <form onsubmit="event.preventDefault();" class="space-y-4">
-                <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-center flex items-center justify-center gap-2">
+                <div
+                    class="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-center flex items-center justify-center gap-2">
                     <i class="fa-solid fa-phone text-primary"></i>
                     <span class="text-sm font-medium text-slate-700" data-i18n="instContact">For support, call: </span>
                     <a href="tel:01115489561" class="text-primary font-bold text-sm" dir="ltr">01115489561</a>
@@ -762,36 +842,45 @@
 
     <main class="pt-32 pb-20">
 
-        <section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-24">
-            
+        <section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-20">
+
             <div class="flex justify-center mb-6">
-                <span class="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 px-5 py-2 rounded-full text-sm font-bold shadow-sm">
-                    Designed for Every Learner &mdash; Parents, Children &amp; SEN Students Welcome
+                <span
+                    class="inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-50 via-indigo-50 to-emerald-50 border-2 border-indigo-200/80 text-indigo-700 px-6 py-2.5 rounded-full text-sm font-extrabold shadow-md shadow-indigo-100/50 transform hover:scale-105 transition-all">
+                    <span>🎮</span>
+                    <span>Designed for Every Learner &mdash; Parents, Children &amp; SEN Students Welcome</span>
+                    <span>⭐️</span>
                 </span>
             </div>
             <h1 data-i18n="whoWeAre"
-                class="text-5xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-primary mb-6 drop-shadow-sm">
+                class="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 mb-6 drop-shadow-sm tracking-tight">
                 Welcome To CodeRa
             </h1>
-            <p data-i18n="subtitle" class="text-xl md:text-2xl text-slate-500 font-medium mb-6">
+            <p data-i18n="subtitle" class="text-xl md:text-2xl text-slate-600 font-bold mb-8">
                 Discover the vision behind CodeRa and how we are transforming education.
             </p>
-            
-            <div class="flex flex-col sm:flex-row justify-center gap-4 mb-4 text-center">
-                <div class="flex-1 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-                    <div class="text-3xl mb-2">&#x1F3AF;</div>
-                    <div class="font-bold text-slate-800 mb-1">Assess</div>
-                    <div class="text-sm text-slate-500">Discover unique strengths with our smart 50-question assessment</div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6 text-center">
+                <div
+                    class="bg-gradient-to-br from-amber-50/80 to-orange-50/50 border-2 border-amber-200/80 rounded-3xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
+                    <div class="text-4xl mb-3 animate-bounce">🎯</div>
+                    <div class="font-black text-slate-800 text-lg mb-1">Assess</div>
+                    <div class="text-xs font-bold text-slate-500 leading-relaxed">Discover unique strengths with our
+                        smart 50-question assessment</div>
                 </div>
-                <div class="flex-1 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-                    <div class="text-3xl mb-2">&#x1F4BB;</div>
-                    <div class="font-bold text-slate-800 mb-1">Code &amp; Build</div>
-                    <div class="text-sm text-slate-500">Hands-on projects tailored to every learner</div>
+                <div
+                    class="bg-gradient-to-br from-indigo-50/80 to-blue-50/50 border-2 border-indigo-200/80 rounded-3xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
+                    <div class="text-4xl mb-3">💻</div>
+                    <div class="font-black text-slate-800 text-lg mb-1">Code &amp; Build</div>
+                    <div class="text-xs font-bold text-slate-500 leading-relaxed">Hands-on projects tailored to every
+                        learner</div>
                 </div>
-                <div class="flex-1 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-                    <div class="text-3xl mb-2">&#x1F680;</div>
-                    <div class="font-bold text-slate-800 mb-1">Specialize &amp; Work</div>
-                    <div class="text-sm text-slate-500">A clear pathway from student to confident digital creator</div>
+                <div
+                    class="bg-gradient-to-br from-emerald-50/80 to-teal-50/50 border-2 border-emerald-200/80 rounded-3xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
+                    <div class="text-4xl mb-3">🚀</div>
+                    <div class="font-black text-slate-800 text-lg mb-1">Specialize &amp; Work</div>
+                    <div class="text-xs font-bold text-slate-500 leading-relaxed">A clear pathway from student to
+                        confident digital creator</div>
                 </div>
             </div>
         </section>
@@ -806,80 +895,154 @@
                     <div class="w-24 h-1 bg-primary mx-auto rounded-full opacity-50"></div>
                 </div>
 
-                <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 mb-12">
-                    <h2 data-i18n="aboutHeading"
-                        class="text-3xl font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4 inline-block">Who
-                        We Are</h2>
-                    <p data-i18n="aboutP1" class="mb-6">
-                        CodeRa is the first inclusive technology ecosystem dedicated to empowering students with special
-                        educational needs through future-focused digital education.
-                    </p>
-                    <p data-i18n="aboutP2" class="mb-6">
-                        We combine digital assessment, adaptive learning, robotics, coding, artificial intelligence, and
-                        personalized learning pathways into one connected ecosystem that enables every learner to
-                        discover their strengths, develop future-ready skills, and thrive in an increasingly digital
-                        world.
-                    </p>
-                    <p data-i18n="aboutP3" class="mb-6">
-                        Our approach goes beyond teaching technology. We create individualized learning experiences that
-                        recognize each student's unique abilities, provide measurable progress, and build confidence
-                        through hands-on innovation.
-                    </p>
-                    <p data-i18n="aboutP4">
-                        By bringing together education, technology, accessibility, and data-driven learning, we are
-                        redefining how students with diverse learning profiles access STEM education across Egypt, the
-                        GCC, and the Middle East.
-                    </p>
-                </div>
+                <!-- Collapsible Dropdown Accordion for Who We Are, Vision, Mission -->
+                <div class="space-y-6 mb-12">
 
-                <div class="grid md:grid-cols-2 gap-8 mb-12">
+                    <!-- Accordion Item 1: Who We Are -->
                     <div
-                        class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:border-primary/40 transition-colors">
-                        <div class="flex items-center gap-4 mb-4">
-                            <div
-                                class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                <i class="fa-solid fa-eye text-xl"></i>
+                        class="bg-white rounded-3xl border-2 border-indigo-200 hover:border-indigo-400 transition-all duration-300 shadow-lg overflow-hidden group">
+                        <button type="button" onclick="toggleAccordion('who-we-are-content', 'who-we-are-icon')"
+                            class="w-full flex items-center justify-between p-6 md:p-7 bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/50 hover:from-indigo-100/80 hover:to-purple-100/60 transition-all text-start cursor-pointer">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-2xl font-bold shadow-md shadow-indigo-200">
+                                    <i class="fa-solid fa-users"></i>
+                                </div>
+                                <div>
+                                    <h2 data-i18n="aboutHeading"
+                                        class="text-2xl md:text-3xl font-black text-slate-900 m-0">Who We Are</h2>
+                                    <span
+                                        class="inline-block text-xs font-extrabold text-indigo-600 bg-indigo-100 px-3 py-1 rounded-full mt-1">انقر
+                                        للفتح / الإغلاق 🔽</span>
+                                </div>
                             </div>
-                            <h2 data-i18n="vision" class="text-2xl font-bold text-slate-900 m-0">Vision</h2>
+                            <div class="w-12 h-12 rounded-2xl bg-white border-2 border-indigo-200 flex items-center justify-center text-indigo-600 transition-transform duration-300 shadow-sm group-hover:scale-110"
+                                id="who-we-are-icon">
+                                <i class="fa-solid fa-chevron-down text-lg"></i>
+                            </div>
+                        </button>
+                        <div id="who-we-are-content"
+                            class="px-8 py-7 border-t border-indigo-100 bg-white text-slate-700 leading-relaxed">
+                            <p data-i18n="aboutP1"
+                                class="mb-5 text-lg font-medium text-slate-800 border-s-4 border-indigo-500 ps-4 py-1 bg-indigo-50/50 rounded-e-xl">
+                                CodeRa is the first inclusive technology ecosystem dedicated to empowering students with
+                                special
+                                educational needs through future-focused digital education.
+                            </p>
+                            <p data-i18n="aboutP2" class="mb-4">
+                                We combine digital assessment, adaptive learning, robotics, coding, artificial
+                                intelligence, and
+                                personalized learning pathways into one connected ecosystem that enables every learner
+                                to
+                                discover their strengths, develop future-ready skills, and thrive in an increasingly
+                                digital
+                                world.
+                            </p>
+                            <p data-i18n="aboutP3" class="mb-4">
+                                Our approach goes beyond teaching technology. We create individualized learning
+                                experiences that
+                                recognize each student's unique abilities, provide measurable progress, and build
+                                confidence
+                                through hands-on innovation.
+                            </p>
+                            <p data-i18n="aboutP4">
+                                By bringing together education, technology, accessibility, and data-driven learning, we
+                                are
+                                redefining how students with diverse learning profiles access STEM education across
+                                Egypt, the
+                                GCC, and the Middle East.
+                            </p>
                         </div>
-                        <p data-i18n="visionP1" class="text-base text-slate-600 mb-4">
-                            To become the Middle East's leading inclusive technology ecosystem, transforming how
-                            students with special educational needs are assessed, taught, empowered, and prepared for
-                            the future through accessible digital education, adaptive learning, and emerging
-                            technologies.
-                        </p>
-                        <p data-i18n="visionP2" class="text-base text-slate-600">
-                            We envision a future where every learnerregardless of abilityhas equal access to
-                            innovation, meaningful learning opportunities, and the skills needed to participate
-                            confidently in the digital economy.
-                        </p>
                     </div>
 
+                    <!-- Accordion Item 2: Vision -->
                     <div
-                        class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm hover:border-secondary/40 transition-colors">
-                        <div class="flex items-center gap-4 mb-4">
-                            <div
-                                class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                                <i class="fa-solid fa-rocket text-xl"></i>
+                        class="bg-white rounded-3xl border-2 border-amber-200 hover:border-amber-400 transition-all duration-300 shadow-lg overflow-hidden group">
+                        <button type="button" onclick="toggleAccordion('vision-content', 'vision-icon')"
+                            class="w-full flex items-center justify-between p-6 md:p-7 bg-gradient-to-r from-amber-50/80 via-white to-yellow-50/50 hover:from-amber-100/80 hover:to-yellow-100/60 transition-all text-start cursor-pointer">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-2xl font-bold shadow-md shadow-amber-200">
+                                    <i class="fa-solid fa-eye"></i>
+                                </div>
+                                <div>
+                                    <h2 data-i18n="vision" class="text-2xl md:text-3xl font-black text-slate-900 m-0">
+                                        Vision</h2>
+                                    <span
+                                        class="inline-block text-xs font-extrabold text-amber-700 bg-amber-100 px-3 py-1 rounded-full mt-1">انقر
+                                        للفتح / الإغلاق 🔽</span>
+                                </div>
                             </div>
-                            <h2 data-i18n="mission" class="text-2xl font-bold text-slate-900 m-0">Mission</h2>
+                            <div class="w-12 h-12 rounded-2xl bg-white border-2 border-amber-200 flex items-center justify-center text-amber-600 transition-transform duration-300 shadow-sm group-hover:scale-110"
+                                id="vision-icon">
+                                <i class="fa-solid fa-chevron-down text-lg"></i>
+                            </div>
+                        </button>
+                        <div id="vision-content"
+                            class="hidden px-8 py-7 border-t border-amber-100 bg-white text-slate-700 leading-relaxed">
+                            <p data-i18n="visionP1"
+                                class="mb-5 text-lg font-medium text-slate-800 border-s-4 border-amber-500 ps-4 py-1 bg-amber-50/50 rounded-e-xl">
+                                To become the Middle East's leading inclusive technology ecosystem, transforming how
+                                students with special educational needs are assessed, taught, empowered, and prepared
+                                for
+                                the future through accessible digital education, adaptive learning, and emerging
+                                technologies.
+                            </p>
+                            <p data-i18n="visionP2">
+                                We envision a future where every learnerregardless of abilityhas equal access to
+                                innovation, meaningful learning opportunities, and the skills needed to participate
+                                confidently in the digital economy.
+                            </p>
                         </div>
-                        <p data-i18n="missionP1" class="text-base text-slate-600 mb-4">
-                            Our mission is to empower students with special educational needs through a connected
-                            ecosystem that combines digital assessment, adaptive learning pathways, robotics, coding,
-                            artificial intelligence, engineering, and project-based education.
-                        </p>
-                        <p data-i18n="missionP2" class="text-base text-slate-600 mb-4">
-                            We design personalized learning journeys that help every student build technical skills,
-                            strengthen cognitive and problem-solving abilities, develop independence and confidence, and
-                            create real-world projects that prepare them for lifelong learning and future careers.
-                        </p>
-                        <p data-i18n="missionP3" class="text-base text-slate-600">
-                            Through collaboration with families, educators, schools, and technology partners, we aim to
-                            make inclusive technology education accessible, measurable, engaging, and impactful for
-                            every learner.
-                        </p>
                     </div>
+
+                    <!-- Accordion Item 3: Mission -->
+                    <div
+                        class="bg-white rounded-3xl border-2 border-emerald-200 hover:border-emerald-400 transition-all duration-300 shadow-lg overflow-hidden group">
+                        <button type="button" onclick="toggleAccordion('mission-content', 'mission-icon')"
+                            class="w-full flex items-center justify-between p-6 md:p-7 bg-gradient-to-r from-emerald-50/80 via-white to-teal-50/50 hover:from-emerald-100/80 hover:to-teal-100/60 transition-all text-start cursor-pointer">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-2xl font-bold shadow-md shadow-emerald-200">
+                                    <i class="fa-solid fa-rocket"></i>
+                                </div>
+                                <div>
+                                    <h2 data-i18n="mission" class="text-2xl md:text-3xl font-black text-slate-900 m-0">
+                                        Mission</h2>
+                                    <span
+                                        class="inline-block text-xs font-extrabold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full mt-1">انقر
+                                        للفتح / الإغلاق 🔽</span>
+                                </div>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-white border-2 border-emerald-200 flex items-center justify-center text-emerald-600 transition-transform duration-300 shadow-sm group-hover:scale-110"
+                                id="mission-icon">
+                                <i class="fa-solid fa-chevron-down text-lg"></i>
+                            </div>
+                        </button>
+                        <div id="mission-content"
+                            class="hidden px-8 py-7 border-t border-emerald-100 bg-white text-slate-700 leading-relaxed">
+                            <p data-i18n="missionP1"
+                                class="mb-5 text-lg font-medium text-slate-800 border-s-4 border-emerald-500 ps-4 py-1 bg-emerald-50/50 rounded-e-xl">
+                                Our mission is to empower students with special educational needs through a connected
+                                ecosystem that combines digital assessment, adaptive learning pathways, robotics,
+                                coding,
+                                artificial intelligence, engineering, and project-based education.
+                            </p>
+                            <p data-i18n="missionP2" class="mb-4">
+                                We design personalized learning journeys that help every student build technical skills,
+                                strengthen cognitive and problem-solving abilities, develop independence and confidence,
+                                and
+                                create real-world projects that prepare them for lifelong learning and future careers.
+                            </p>
+                            <p data-i18n="missionP3">
+                                Through collaboration with families, educators, schools, and technology partners, we aim
+                                to
+                                make inclusive technology education accessible, measurable, engaging, and impactful for
+                                every learner.
+                            </p>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="space-y-8 mb-12">
@@ -954,58 +1117,84 @@
                 </div>
 
                 <div class="bg-indigo-50/80 p-8 rounded-2xl border border-indigo-100">
-                    <h2 data-i18n="journey" class="text-3xl font-bold text-slate-900 mb-8 text-center">Our Learning
-                        Journey</h2>
+                    <h2 data-i18n="journey"
+                        class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-600 mb-8 text-center animate-pulse drop-shadow-sm">
+                        Our Learning Journey</h2>
 
-                    
+                    <!-- Visual Timeline Steps Pyramid Structure -->
                     <div class="relative w-fit mx-auto mb-16 mt-8 px-4 md:px-8 overflow-visible">
                         <div class="flex flex-col relative z-10 text-sm md:text-base font-bold">
-                            
-                            
+
+                            <!-- Step 7: Prepare for the Future -->
                             <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[9rem] md:ms-[24rem]">
-                                
-                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
-                                <span data-i18n="journey7" onclick="openModal(roleSelectionModal)" class="bg-primary text-white px-4 md:px-8 py-3 rounded-xl shadow-lg shadow-primary/40 transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap cursor-pointer">Prepare for the Future</span>
+                                <div
+                                    class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-indigo-400/40 rounded-ss-xl -z-10">
+                                </div>
+                                <span data-i18n="journey7"
+                                    class="journey-animated-step step-anim-7 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-950 font-black border-2 border-indigo-400 px-5 md:px-8 py-3.5 rounded-2xl shadow-lg z-10 whitespace-nowrap">الاستعداد
+                                    للمستقبل 🚀</span>
                             </div>
 
-                            <!-- Step 6 -->
+                            <!-- Step 6: Compete -->
                             <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[7.5rem] md:ms-[20rem]">
-                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
-                                <span data-i18n="journey6" onclick="openModal(roleSelectionModal)" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap cursor-pointer">Compete</span>
+                                <div
+                                    class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-purple-400/40 rounded-ss-xl -z-10">
+                                </div>
+                                <span data-i18n="journey6"
+                                    class="journey-animated-step step-anim-6 bg-purple-50 text-purple-950 font-extrabold border-2 border-purple-300 px-5 md:px-8 py-3 rounded-xl shadow-md z-10 whitespace-nowrap">منافسات
+                                    وتحديات 🏆</span>
                             </div>
 
-                            <!-- Step 5 -->
+                            <!-- Step 5: Certify -->
                             <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[6rem] md:ms-[16rem]">
-                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
-                                <span data-i18n="journey5" onclick="openModal(roleSelectionModal)" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap cursor-pointer">Certify</span>
+                                <div
+                                    class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-sky-400/40 rounded-ss-xl -z-10">
+                                </div>
+                                <span data-i18n="journey5"
+                                    class="journey-animated-step step-anim-5 bg-sky-50 text-sky-950 font-extrabold border-2 border-sky-300 px-5 md:px-8 py-3 rounded-xl shadow-md z-10 whitespace-nowrap">شهادات
+                                    واعتماد ⭐️</span>
                             </div>
 
-                            <!-- Step 4 -->
+                            <!-- Step 4: Track -->
                             <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[4.5rem] md:ms-[12rem]">
-                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
-                                <span data-i18n="journey4" onclick="openModal(roleSelectionModal)" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap cursor-pointer">Track</span>
+                                <div
+                                    class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-emerald-400/40 rounded-ss-xl -z-10">
+                                </div>
+                                <span data-i18n="journey4"
+                                    class="journey-animated-step step-anim-4 bg-emerald-50 text-emerald-950 font-extrabold border-2 border-emerald-300 px-5 md:px-8 py-3 rounded-xl shadow-md z-10 whitespace-nowrap">متابعة
+                                    وإرشاد 🧩</span>
                             </div>
 
-                            <!-- Step 3 -->
+                            <!-- Step 3: Learn -->
                             <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[3rem] md:ms-[8rem]">
-                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
-                                <span data-i18n="journey3" onclick="openModal(roleSelectionModal)" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap cursor-pointer">Learn</span>
+                                <div
+                                    class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-amber-400/40 rounded-ss-xl -z-10">
+                                </div>
+                                <span data-i18n="journey3"
+                                    class="journey-animated-step step-anim-3 bg-amber-50 text-amber-950 font-extrabold border-2 border-amber-300 px-5 md:px-8 py-3 rounded-xl shadow-md z-10 whitespace-nowrap">تعلم
+                                    تفاعلي 💻</span>
                             </div>
 
-                            <!-- Step 2 -->
+                            <!-- Step 2: Place -->
                             <div class="flex items-center relative h-14 md:h-16 mb-6 md:mb-8 ms-[1.5rem] md:ms-[4rem]">
-                                <div class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-primary/40 rounded-ss-xl -z-10"></div>
-                                <span data-i18n="journey2" onclick="openModal(roleSelectionModal)" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap cursor-pointer">Place</span>
+                                <div
+                                    class="absolute top-1/2 end-[100%] w-[1.5rem] md:w-[4rem] h-[calc(100%+1.5rem)] md:h-[calc(100%+2rem)] border-t-4 border-s-4 border-rose-400/40 rounded-ss-xl -z-10">
+                                </div>
+                                <span data-i18n="journey2"
+                                    class="journey-animated-step step-anim-2 bg-rose-50 text-rose-950 font-extrabold border-2 border-rose-300 px-5 md:px-8 py-3 rounded-xl shadow-md z-10 whitespace-nowrap">تسكين
+                                    مخصص 🎯</span>
                             </div>
 
-                            
+                            <!-- Step 1: Assess -->
                             <div class="flex items-center relative h-14 md:h-16 ms-0">
-                                <span data-i18n="journey1" onclick="openModal(roleSelectionModal)" class="bg-white text-primary px-4 md:px-8 py-3 rounded-xl border border-slate-200 shadow-md transform transition-transform hover:-translate-y-1 z-10 whitespace-nowrap cursor-pointer font-extrabold ring-2 ring-primary/50">Assess </span>
+                                <span data-i18n="journey1"
+                                    class="journey-animated-step step-anim-1 bg-indigo-50 text-indigo-950 font-black border-2 border-indigo-500 px-5 md:px-8 py-3.5 rounded-2xl shadow-lg z-10 whitespace-nowrap ring-4 ring-indigo-200">تقييم
+                                    ذكي 🤖</span>
                             </div>
 
                         </div>
                     </div>
-                    
+
 
                     <p data-i18n="journeyQuote" class="text-center text-slate-600 italic max-w-2xl mx-auto font-medium">
                         "Every child's journey starts with curiosity. CodeRa turns that curiosity into coding skills,
@@ -1077,12 +1266,10 @@
             <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
 
                 <div class="md:col-span-6 lg:col-span-7 space-y-6">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center">
-                            <i class="fa-solid fa-brain text-white text-sm"></i>
-                        </div>
-                        <span class="font-bold text-2xl tracking-tight text-white uppercase">CodeRa</span>
+                    <div class="flex items-center cursor-pointer"
+                        onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                        <img src="/logo.svg" alt="CodeRa Logo"
+                            class="h-16 w-auto object-contain filter drop-shadow-md hover:scale-105 transition-all duration-300">
                     </div>
                     <p data-i18n="footerDesc" class="text-slate-400 text-sm max-w-sm leading-relaxed">
                         The inclusive technology ecosystem dedicated to empowering students with special educational
@@ -1138,7 +1325,8 @@
                         Team</span>
                 </div>
                 <div class="flex items-center space-x-6 space-x-reverse text-xs text-slate-500">
-                    <button type="button" onclick="openCEODashboard()" class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors flex items-center gap-1.5 cursor-pointer">
+                    <button type="button" onclick="openCEODashboard()"
+                        class="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-chart-line"></i>
                         <span data-i18n="ceoDashboard">CEO Dashboard</span>
                     </button>
@@ -1150,28 +1338,9 @@
         </div>
     </footer>
 
-    
-    <div id="childTestPage" class="bg-[#0b0f19] text-slate-100">
-        <!-- Exam Header -->
-        <header class="app-header">
-            <div class="brand-title">
-                <span style="font-size: 1.5rem;"></span>
-                <span data-i18n="examTitle">CodeRa AI Placement Assessment</span>
-            </div>
-            <div class="session-info">
-                <span data-i18n="studentLabel">Student: <strong>Alex Rivers</strong></span>
-                <div class="timer-badge" style="display: none;">
-                    <span id="global-timer">00:00</span>
-                </div>
-                <button type="button" onclick="exitChildTest()" class="text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3.5 py-1.5 rounded-lg border border-slate-700 transition-colors flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                    <i class="fa-solid fa-arrow-left"></i>
-                    <span data-i18n="exitTest">Exit</span>
-                </button>
-            </div>
-        </header>
 
-        
-        <main class="main-container">
+    <div id="childTestPage" class="bg-[#0b0f19] text-slate-100 hidden">
+        <main class="main-container h-full w-full">
             <div id="app"></div>
         </main>
     </div>
@@ -1210,7 +1379,9 @@
         const btnRoleChild = document.getElementById('btnRoleChild');
         const btnRoleInstitution = document.getElementById('btnRoleInstitution');
 
-        function openModal(modal) {
+        window.openModal = function (modal) {
+            if (typeof modal === 'string') modal = document.getElementById(modal);
+            if (!modal) return;
             modalOverlay.classList.remove('hidden');
             setTimeout(() => {
                 modalOverlay.classList.remove('opacity-0');
@@ -1219,53 +1390,124 @@
                     modal.classList.remove('scale-95');
                 }, 10);
             }, 10);
-        }
+        };
 
-        function closeModal() {
+        window.closeModal = function () {
             modalOverlay.classList.add('opacity-0');
             const allModals = [signUpModal, signInModal, trackModal, roleSelectionModal, parentFormModal, childConfirmModal, institutionFormModal, childWithYouModal];
-            allModals.forEach(m => m.classList.add('scale-95'));
+            allModals.forEach(m => m && m.classList.add('scale-95'));
 
             setTimeout(() => {
                 modalOverlay.classList.add('hidden');
-                allModals.forEach(m => m.classList.add('hidden'));
+                allModals.forEach(m => m && m.classList.add('hidden'));
             }, 300);
-        }
+        };
 
-        function switchModal(hideModal, showModal) {
-            hideModal.classList.add('hidden', 'scale-95');
-            showModal.classList.remove('hidden');
-            setTimeout(() => {
-                showModal.classList.remove('scale-95');
-            }, 10);
-        }
+        window.switchModal = function (hideModal, showModal) {
+            if (typeof hideModal === 'string') hideModal = document.getElementById(hideModal);
+            if (typeof showModal === 'string') showModal = document.getElementById(showModal);
+            if (hideModal) hideModal.classList.add('hidden', 'scale-95');
+            if (showModal) {
+                showModal.classList.remove('hidden');
+                setTimeout(() => {
+                    showModal.classList.remove('scale-95');
+                }, 10);
+            }
+        };
 
-        navSignInBtn.addEventListener('click', () => openModal(signInModal));
-        navSignUpBtn.addEventListener('click', () => openModal(signUpModal));
+        window.openRoleSelectionModal = function () {
+            openModal(roleSelectionModal);
+        };
+
+        window.openCEODashboard = function () {
+            const ceoModal = document.getElementById('ceoDashboardModal');
+            if (ceoModal) openModal(ceoModal);
+        };
+
+        if (navSignInBtn) navSignInBtn.addEventListener('click', () => openModal(signInModal));
+        if (navSignUpBtn) navSignUpBtn.addEventListener('click', () => openModal(signUpModal));
         closeBtns.forEach(btn => btn.addEventListener('click', closeModal));
-        modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) closeModal();
-        });
+        if (modalOverlay) {
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) closeModal();
+            });
+        }
 
-        switchToSignIn.addEventListener('click', () => switchModal(signUpModal, signInModal));
-        switchToSignUp.addEventListener('click', () => switchModal(signInModal, signUpModal));
+        if (switchToSignIn) switchToSignIn.addEventListener('click', () => switchModal(signUpModal, signInModal));
+        if (switchToSignUp) switchToSignUp.addEventListener('click', () => switchModal(signInModal, signUpModal));
 
-        // Join Now & Role Selection Logic
-        joinTrackBtn.addEventListener('click', () => {
-            switchModal(trackModal, roleSelectionModal);
-        });
+        // Toast Notification Helper
+        function showNotification(message, type = 'success') {
+            let toast = document.getElementById('toast-notification');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast-notification';
+                document.body.appendChild(toast);
+            }
+            toast.className = `fixed top-24 end-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl transition-all duration-300 text-white font-semibold text-sm ${type === 'success' ? 'bg-emerald-600' : 'bg-primary'
+                }`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-info'} text-lg"></i> <span>${message}</span>`;
 
-        btnRoleParent.addEventListener('click', () => {
-            switchModal(roleSelectionModal, parentFormModal);
-        });
+            toast.classList.remove('translate-y-[-20px]', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-[-20px]', 'opacity-0');
+            }, 3500);
+        }
 
-        btnRoleChild.addEventListener('click', () => {
-            switchModal(roleSelectionModal, childConfirmModal);
-        });
+        // Sign In Form Submission -> Direct to Placement Assessment
+        const signInForm = document.getElementById('signInForm');
+        if (signInForm) {
+            signInForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                closeModal();
+                showNotification(
+                    currentLang === 'ar' ? 'تم تسجيل الدخول بنجاح! جاري بدء اختبار التقييم...' : 'Signed in successfully! Starting your assessment...',
+                    'success'
+                );
+                setTimeout(() => {
+                    startChildTest();
+                }, 600);
+            });
+        }
 
-        btnRoleInstitution.addEventListener('click', () => {
-            switchModal(roleSelectionModal, institutionFormModal);
-        });
+        // Join Now button -> Opens Role Selection Modal ("Who are you?")
+        if (joinTrackBtn) {
+            joinTrackBtn.addEventListener('click', () => {
+                switchModal(trackModal, roleSelectionModal);
+            });
+        }
+
+        if (btnRoleChild) {
+            btnRoleChild.addEventListener('click', () => {
+                closeModal();
+                showNotification(
+                    currentLang === 'ar' ? '🎉 مرحباً بك! جاري بدء اختبار التقييم التفاعلي...' : '🎉 Welcome! Launching your Placement Test...',
+                    'success'
+                );
+                setTimeout(() => {
+                    startChildTest();
+                }, 500);
+            });
+        }
+
+        if (btnRoleParent) {
+            btnRoleParent.addEventListener('click', () => {
+                closeModal();
+                showNotification(
+                    currentLang === 'ar' ? '🎯 جاري توجيهك لاختبار تحديد المستوى والتسكين...' : '🎯 Directing to Placement Assessment...',
+                    'success'
+                );
+                setTimeout(() => {
+                    startChildTest();
+                }, 500);
+            });
+        }
+
+        if (btnRoleInstitution) {
+            btnRoleInstitution.addEventListener('click', () => {
+                switchModal(roleSelectionModal, institutionFormModal);
+            });
+        }
 
         // --- Tracks Data & Logic ---
 
@@ -1278,18 +1520,18 @@
                 future: { title: "Future Engineer Track", duration: "9 Months", sessions: "72 Sessions (2h)", project: "Capstone project presented in a showcase, with a digital portfolio." }
             },
             ar: {
-                explorer: { title: " ", duration: "4 ", sessions: "32  (90)", project: " Bee-Bot   ." },
-                builder: { title: " ", duration: "5 ", sessions: "40  (90)", project: "   LEGO   ." },
-                creator: { title: " ", duration: "6 ", sessions: "48  (90)", project: "       Scratch, LEGO SPIKE,  micro:bit." },
-                innovator: { title: " ", duration: "8 ", sessions: "64  ()", project: "         ." },
-                future: { title: "  ", duration: "9 ", sessions: "72  ()", project: "          (Portfolio)." }
+                explorer: { title: "مسار المستكشف", duration: "4 أشهر", sessions: "32 جلسة (90 دقيقة)", project: "برمجة روبوت Bee-Bot لإكمال مهمة بصرية تفاعلية." },
+                builder: { title: "مسار البناء", duration: "5 أشهر", sessions: "40 جلسة (90 دقيقة)", project: "بناء وبرمجة روبوت LEGO لحل تحديات برمجية بسيطة." },
+                creator: { title: "مسار المبدع", duration: "6 أشهر", sessions: "48 جلسة (90 دقيقة)", project: "تصميم لعبة تفاعلية أو روبوت ذكي باستخدام Scratch و LEGO SPIKE و micro:bit." },
+                innovator: { title: "مسار المبتكر", duration: "8 أشهر", sessions: "64 جلسة (ساعتان)", project: "تطوير مشروع هندسي حقيقي باستخدام Python و Arduino وأساسيات الذكاء الاصطناعي." },
+                future: { title: "مسار مهندس المستقبل", duration: "9 أشهر", sessions: "72 جلسة (ساعتان)", project: "مشروع تخرج متكامل يتم عرضه في معرض التكنولوجيا مع معرض أعمال رقمي (Portfolio)." }
             },
             styles: {
-                explorer: { icon: 'fa-compass', color: 'from-teal-400 to-teal-600' },
-                builder: { icon: 'fa-hammer', color: 'from-gray-400 to-gray-600' },
-                creator: { icon: 'fa-wand-magic-sparkles', color: 'from-purple-400 to-purple-600' },
-                innovator: { icon: 'fa-lightbulb', color: 'from-orange-400 to-orange-600' },
-                future: { icon: 'fa-star', color: 'from-emerald-400 to-emerald-600' }
+                explorer: { icon: 'fa-compass text-teal-600', color: 'from-teal-100 via-teal-50 to-emerald-100' },
+                builder: { icon: 'fa-hammer text-amber-600', color: 'from-amber-100 via-amber-50 to-orange-100' },
+                creator: { icon: 'fa-wand-magic-sparkles text-purple-600', color: 'from-purple-100 via-purple-50 to-indigo-100' },
+                innovator: { icon: 'fa-lightbulb text-orange-600', color: 'from-orange-100 via-orange-50 to-yellow-100' },
+                future: { icon: 'fa-star text-emerald-600', color: 'from-emerald-100 via-emerald-50 to-teal-100' }
             }
         };
 
@@ -1301,7 +1543,7 @@
 
             const style = trackDetails.styles[trackId];
             document.getElementById('trackModalIcon').innerHTML = `<i class="fa-solid ${style.icon}"></i>`;
-            document.getElementById('trackModalBg').className = `absolute inset-0 bg-gradient-to-br opacity-90 ${style.color}`;
+            document.getElementById('trackModalBg').className = `absolute inset-0 bg-gradient-to-br opacity-100 ${style.color}`;
 
             openModal(trackModal);
         };
@@ -1368,96 +1610,141 @@
                 childWithYouYes: "Yes, start the assessment now",
                 childWithYouNo: "Not right now, go back home",
 
-                // Exam Page
+                // Exam Page & CEO Dashboard
                 exitTest: "Exit", examTitle: "CodeRa AI Placement Assessment", studentLabel: "Student: Alex Rivers",
-                ceoDashboard: "CEO Dashboard"
+                ceoDashboard: "CEO Dashboard",
+                ceoTitle: "CodeRa CEO Executive Command Center 👑",
+                ceoSubtitle: "Real-Time Inclusive Tech Ecosystem Performance & AI Analytics",
+                kpi1Label: "Total Active Students",
+                kpi2Label: "AI Placement Exams",
+                kpi3Label: "Goal Success Rate",
+                kpi4Label: "Partner Institutions",
+                trackDistributionTitle: "Track Enrollment & Age Distribution",
+                recentActivityTitle: "Recent Assessment & Placement Activity",
+                ceoFooterNote: "CodeRa AI Intelligence System • Confidential Executive Access"
             },
             ar: {
-                langBtn: "English", signIn: "تسجيل الدخول", signUp: "إنشاء حساب",
-                ceoDashboard: "لوحة الإدارة",
-                whoWeAre: "   Cognix", subtitle: "   Cognix        .",
-                aboutTitle: "Cognix -    ", aboutHeading: " ",
-                aboutP1: "Cognix                   .",
-                aboutP2: "                                  .",
-                aboutP3: "    .                    .",
-                aboutP4: "                       STEM          .",
-                vision: "", visionP1: "                              .",
-                visionP2: "      -     -               .",
-                mission: "", missionP1: "                            .",
-                missionP2: "                            .",
-                missionP3: "                     .",
-                purpose: "", purposeDesc: "            .",
-                promise: "", promiseDesc: "       .",
-                philosophy: "", phil1: "        .", phil2: "                .", phil3: "      -        .                      .",
-                impact: "", impactSubtitle: "   :", impact1: "     .", impact2: "      .", impact3: "    .", impact4: "     .", impact5: "   STEM  .", impact6: "       .",
-                journey: "  ", journey1: "", journey2: "", journey3: "", journey4: "", journey5: "", journey6: "", journey7: " ",
-                journeyQuote: "\"                  .\"",
-                tracks: "", tracksDesc: "         .", track5: "  ", track5Desc: "  ", track4: " ", track3: " ", track2: " ", track1: " ",
-                foundationToFuture: "   ", footerDesc: "                .",
-                contact: " ", cairoEgypt: " ", helpText: "  !", rights: "COGNIX.   .", devBy: "  ", privacyPolicy: " ", termsOfService: " ",
+                langBtn: "English", signIn: "تسجيل الدخول", signUp: "إنشاء حساب جديد",
+                ceoDashboard: "لوحة قيادة الرئيس التنفيذي 👑",
+                ceoTitle: "مركز القيادة التنفيذية لـ CodeRa 👑",
+                ceoSubtitle: "التحليلات والمؤشرات اللحظية للنظام التكنولوجي الشامل بالذكاء الاصطناعي",
+                kpi1Label: "إجمالي الطلاب النشطين",
+                kpi2Label: "اختبارات التسكين بالذكاء الاصطناعي",
+                kpi3Label: "نسبة تحقيق أهداف التعلم",
+                kpi4Label: "المؤسسات الشريكة للتربية الخاصة",
+                trackDistributionTitle: "توزيع الطلاب حسب المسارات والأعمار",
+                recentActivityTitle: "أحدث نشاطات التقييم والتسكين اللحظية",
+                ceoFooterNote: "نظام الذكاء الاصطناعي لـ CodeRa • وصول تنفيذي مشفر وخاص",
+                whoWeAre: "أهلاً بك في CodeRa", subtitle: "اكتشف مسار طفلك البرمجي المبتكر واكتشف قدراته في الذكاء الاصطناعي والتكنولوجيا.",
+                aboutTitle: "CodeRa - المنظومة التكنولوجية الشاملة للأطفال والناشئين", aboutHeading: "من نحن",
+                aboutP1: "CodeRa هي أول منظومة تكنولوجية تعليمية شاملة مخصصة لتمكين الأطفال والطلاب واكتشاف مهاراتهم الرقمية والهندسية لمستقبل واعد.",
+                aboutP2: "نحن نجمع بين التقييم الذكي بالذكاء الاصطناعي، والتعلم التكيفي الممتع، والروبوتات، والبرمجة، والذكاء الاصطناعي في بيئة تفاعلية مشجعة تمنح كل طفل ثقة وشغفاً للإبداع.",
+                aboutP3: "نهجنا يدمج المتعة بالتعليم المخصص، حيث نراعي قدرات كل طالب ونوفر مسارات تعلم مرنة تحقق تقدماً ملموساً خطوة بخطوة.",
+                aboutP4: "من خلال الجمع بين التعليم العملي والتكنولوجيا الشاملة، نمهد الطريق للأجيال القادمة لاكتشاف علوم STEM والتميز في الاقتصاد الرقمي.",
+                vision: "رؤيتنا", visionP1: "أن نكون المنظومة التكنولوجية الرائدة في الشرق الأوسط التي تحول تجربة تعلم الأطفال والناشئين للتكنولوجيا والروبوتات والذكاء الاصطناعي.",
+                visionP2: "نطمح لمستقبل يمتلك فيه كل متعلم فرصاً متساوية للابتكار والتألق والمشاركة بثقة في صناعة المستقبل الرقمي.",
+                mission: "مهمتنا", missionP1: "تمكين الطلاب والأطفال من خلال مسارات تعلم متصلة تجمع بين التقييم الرقمي التفاعلي، البرمجة، الروبوتات، والذكاء الاصطناعي.",
+                missionP2: "تصميم رحلات تعليمية مخصصة تساعد كل طالب على بناء مهاراته التقنية، وتطوير التفكير النقدي وحل المشكلات، وبناء الاستقلالية والثقة.",
+                missionP3: "التعاون الفعال مع أولياء الأمور والمعلمين لتقديم تعليم تكنولوجي ممتع، متاح، وذو أثر حقيقي ومقاس.",
+                purpose: "هدفنا", purposeDesc: "إطلاق العنان لإمكانيات كل طفل من خلال جعل تعليم التكنولوجيا متاحاً، ممتعاً، ومخصصاً لمستقبله.",
+                promise: "وعدنا", promiseDesc: "يستحق كل متعلم الفرصة للاكتشاف، والابتكار، وإنشاء مشاريعه الخاصة والانتماء لمجتمع المبدعين.",
+                philosophy: "فلسفتنا", phil1: "نؤمن بأن شغف التعلم والقدرة لا حدود لهما.", phil2: "كل طفل يتعلم بطريقة فريدة ويمتلك نقاط قوة مزدهرة في البيئة التشجيعية المناسبة.", phil3: "التكنولوجيا ليست مجرد مادة تُدرّس - بل هي أداة سحرية للتعبير والإبداع، وتطوير التفكير الهندي، وبناء المستقبل.",
+                impact: "تأثيرنا", impactSubtitle: "نحن نعد طفلك لـ:", impact1: "التفكير النقدي وحل المشكلات بأسلوب إبداعي ممتع.", impact2: "بناء الثقة بالنفس من خلال تجارب برمجية وروبوتية عملية.", impact3: "تطوير التفكير المحوسب والمهارات الهندسية القوية.", impact4: "إنشاء مشاريع برمجية وروبوتية تفاعلية حقيقية.", impact5: "المشاركة في المسابقات التكنولوجية وتحديات الابتكار.", impact6: "بناء محفظة إنجازات رقمية (Portfolio) تدعم مستقبله التعليمي والمهني.",
+                journey: "رحلة التعلم الممتعة", journey1: "تقييم ذكي", journey2: "تسكين مخصص", journey3: "تعلم تفاعلي", journey4: "متابعة وإرشاد", journey5: "شهادات واعتماد", journey6: "منافسات وتحديات", journey7: "الاستعداد للمستقبل",
+                journeyQuote: "\"تبدأ رحلة كل طفل بالفضول، وتحول CodeRa ذلك الفضول إلى مهارات برمجة وثقة ومستقبل واعد - خطوة بخطوة.\"",
+                tracks: "مساراتنا التعليمية", tracksDesc: "مسار منظم نحو الإتقان مصمم لكل مرحلة عمرية وتعليمية.", track5: "مسار مهندس المستقبل", track5Desc: "الإتقان الاحترافي والجاهزية", track4: "مسار المبتكر", track3: "مسار المبدع", track2: "مسار البناء", track1: "مسار المستكشف",
+                foundationToFuture: "من الأساسيات إلى المستقبل الرقمي", footerDesc: "المنظومة التكنولوجية الشاملة المخصصة لتمكين الأطفال والطلاب من خلال التعليم الرقمي الموجه للمستقبل.",
+                contact: "تواصل معنا", cairoEgypt: "القاهرة، مصر", helpText: "فريق الدعم هنا لمساعدتك دائماً!", rights: "CodeRa. جميع الحقوق محفوظة.", devBy: "تم التطوير بواسطة فريق CodeRa", privacyPolicy: "سياسة الخصوصية", termsOfService: "شروط الخدمة",
 
                 // Modals
-                createAccTitle: "  ", fName: " ", fNamePlace: " ", lName: " ", lNamePlace: " ",
-                emailLabel: " ", emailPlace: "@.com", phoneLabel: " ", phonePlace: "+20 100 000 0000",
-                passLabel: " ", passPlace: "", confPassLabel: "  ", confPassPlace: "",
-                signUpBtnText: " ", alreadyHave: "  ", signInTitle: " ", forgotPass: "  ",
-                loginBtn: " ", dontHave: "  ", durationLabel: "", sessionsLabel: "",
-                finalProjectLabel: " ", promoTitle: " ", promoDesc: "          :",
-                promoReq1: " 8085%   .", promoReq2: "  .", promoReq3: "    .", promoReq4: " .",
-                joinNow: " ", selectRoleTitle: " ", selectRoleDesc: "     .",
-                roleParent: " ", roleChild: "", roleInstitution: "",
-                childConfirmTitle: "        ", confirmBtn: "",
-                instFormTitle: " ", instFormLabel: " ", instFormPlace: "     ...",
-                instContact: " : ",
+                createAccTitle: "إنشاء حساب جديد", fName: "الاسم الأول", fNamePlace: "الاسم الأول", lName: "الاسم الأخير", lNamePlace: "الاسم الأخير",
+                emailLabel: "البريد الإلكتروني", emailPlace: "you@example.com", phoneLabel: "رقم الهاتف", phonePlace: "+20 100 000 0000",
+                passLabel: "كلمة المرور", passPlace: "", confPassLabel: "تأكيد كلمة المرور", confPassPlace: "",
+                signUpBtnText: "إنشاء الحساب", alreadyHave: "لديك حساب بالفعل؟", signInTitle: "مرحباً بعودتك", forgotPass: "نسيت كلمة المرور؟",
+                loginBtn: "تسجيل الدخول", dontHave: "ليس لديك حساب؟", durationLabel: "المدة", sessionsLabel: "الجلسات",
+                finalProjectLabel: "المشروع النهائي", promoTitle: "نظام الترقية والتنقل", promoDesc: "الانتقال بين المسارات يعتمد على التميز وتحقيق المعايير التالية:",
+                promoReq1: "تحقيق 80-85% من أهداف التعلم.", promoReq2: "إتمام المشروع النهائي التفاعلي.", promoReq3: "اجتياز تقييم الجاهزية التقنية.", promoReq4: "توصية المدرب المباشر.",
+                joinNow: "انضم الآن فوراً 🚀", selectRoleTitle: "من أنت؟", selectRoleDesc: "اختر نوع حسابك لبدء التجربة التفاعلية.",
+                roleParent: "ولي أمر 👨‍👩‍👧", roleChild: "طفل / طالب 👧‍💻", roleInstitution: "مؤسسة / مدرسة 🏫",
+                childConfirmTitle: "هل أنت جاهز لبدء التقييم التفاعلي الممتع؟", confirmBtn: "نعم، ابدأ التقييم الآن! 🚀",
+                instFormTitle: "كيف يمكننا خدمتك؟", instFormLabel: "تفاصيل الطلب", instFormPlace: "اكتب تفاصيل طلبك أو استفسارك هنا...",
+                instContact: "للدعم المباشر اتصل على: ",
 
                 // Parent Form Modal
-                parentFormMainTitle: "   ", stage1Time: " : 5 ",
-                stage1Title: " :   ", lblChildName: " ", lblAge: "", lblDiagnosis: " ( )",
-                lblLang: "", lblSchool: "", lblGrade: "", lblDevices: " ", lblTechExp: "   ",
-                stage2Title: " :   ", secDailyLiving: " ", qTablet: "  ", qComputer: "  ",
-                qMouse: "   ", qInstructions: "   ", qIndependent: "  ",
-                secInterests: "", qLikes: "  (   )", btnSubmitApp: " ",
+                parentFormMainTitle: "تسجيل ولي الأمر والملف الشخصي", stage1Time: "الوقت المقدر: 5 دقائق",
+                stage1Title: "المرحلة الأولى: بيانات ولي الأمر والطفل", lblChildName: "اسم الطفل", lblAge: "العمر", lblDiagnosis: "التشخيص (إن وجد)",
+                lblLang: "اللغة المفضل تعلمها", lblSchool: "المدرسة", lblGrade: "الصف الدراسي", lblDevices: "الأجهزة المستخدمة", lblTechExp: "الخبرة التقنية السابقة",
+                stage2Title: "المرحلة الثانية: استبيان اهتمامات طفلك", secDailyLiving: "المهارات اليومية", qTablet: "هل يستخدم الجهاز اللوحي (التابلت)؟", qComputer: "هل يستخدم الكمبيوتر؟",
+                qMouse: "هل يمكنه استخدام الماوس بسهولة؟", qInstructions: "هل يمكنه اتباع التعليمات المركبة؟", qIndependent: "هل يعمل بشكل مستقل؟",
+                secInterests: "الاهتمامات والشغف", qLikes: "ما الذي يحبه طفلك؟ (اختر كل ما ينطبق)", btnSubmitApp: "تقديم الطلب وبدء التقييم 🚀",
 
                 // Child With You Modal
-                childWithYouTitle: "  ! ",
-                childWithYouDesc: "         .",
-                childWithYouYes: "   ",
-                childWithYouNo: "   ",
+                childWithYouTitle: "تم تسجيل الطلب بنجاح! 🎉",
+                childWithYouDesc: "هل طفلك معك الآن؟ يمكننا البدء في اختبار التسكين والتقييم التفاعلي فوراً.",
+                childWithYouYes: "نعم، ابدأ التقييم الآن 🚀",
+                childWithYouNo: "ليس الآن، العودة للرئيسية",
 
                 // Exam Page
-                exitTest: "", examTitle: "    - ", studentLabel: ":  "
+                exitTest: "خروج ✕", examTitle: "تقييم التسكين بالذكاء الاصطناعي - CodeRa 🤖", studentLabel: "الطالب: أليكس ريفرز"
             }
         };
 
-        let currentLang = 'en';
+        let currentLang = 'ar';
         const langToggleBtn = document.getElementById('langToggleBtn');
         const langToggleText = document.getElementById('langToggleText');
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            document.documentElement.lang = currentLang;
+            if (langToggleText) {
+                langToggleText.textContent = translations[currentLang].langBtn;
+            }
+            updateTranslations();
+        }
 
         function updateTranslations() {
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
-                if (translations[currentLang][key]) {
+                if (translations[currentLang] && translations[currentLang][key]) {
                     el.textContent = translations[currentLang][key];
                 }
             });
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
                 const key = el.getAttribute('data-i18n-placeholder');
-                if (translations[currentLang][key]) {
+                if (translations[currentLang] && translations[currentLang][key]) {
                     el.placeholder = translations[currentLang][key];
                 }
             });
             updateTrackModalContent();
         }
 
-        langToggleBtn.addEventListener('click', () => {
-            currentLang = currentLang === 'en' ? 'ar' : 'en';
+        if (langToggleBtn) {
+            langToggleBtn.addEventListener('click', () => {
+                setLanguage(currentLang === 'en' ? 'ar' : 'en');
+            });
+        }
 
-            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-            document.documentElement.lang = currentLang;
-            langToggleText.textContent = translations[currentLang].langBtn;
-
-            updateTranslations();
+        // Initialize Arabic on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setLanguage('ar');
         });
+
+        // --- Accordion Toggle Logic ---
+        window.toggleAccordion = function (contentId, iconId) {
+            const content = document.getElementById(contentId);
+            const icon = document.getElementById(iconId);
+            if (!content) return;
+
+            const isHidden = content.classList.contains('hidden');
+            if (isHidden) {
+                content.classList.remove('hidden');
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            } else {
+                content.classList.add('hidden');
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            }
+        };
 
         function startChildTest() {
             closeModal();
@@ -1509,8 +1796,7 @@
             }
         });
     </script>
-    <script type="module" src="/src/main.ts">
-
-</script>
+    <script type="module" src="/src/main.ts"></script>
 </body>
+
 </html>
