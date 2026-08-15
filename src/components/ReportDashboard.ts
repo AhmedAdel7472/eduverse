@@ -1,5 +1,5 @@
 import { StudentSessionTelemetry, QuestionTimeRecord, BreakEvent } from '../engine/telemetrySchema';
-import { PlacementResult } from '../engine/placementEngine';
+import { PlacementEngine, PlacementResult } from '../engine/placementEngine';
 import confetti from 'canvas-confetti';
 
 export function renderReportDashboard(
@@ -16,6 +16,7 @@ export function renderReportDashboard(
   } catch (e) {}
 
   const { totalScore, recommendedTrack, flags, performanceIndicators } = placement;
+  const isV2Schema = session.schema_version === '2.0';
 
   // Flags HTML
   let flagsHtml = '';
@@ -32,7 +33,7 @@ export function renderReportDashboard(
   }
 
   // Domain progress bars
-  const domainBarsHtml = Object.values(session.domain_scores).map(ds => {
+  const domainBarsHtml = Object.values(session.domain_scores || {}).map(ds => {
     const pct = Math.round((ds.earned_score / ds.max_score) * 100);
     return `
       <div class="domain-progress-bar">
@@ -47,7 +48,25 @@ export function renderReportDashboard(
     `;
   }).join('');
 
-  // --- SECTION A: 60-Row Per-Question Time Analysis Table ---
+  // Format progress bars (Schema B dimension)
+  let formatBarsHtml = '';
+  if (session.format_scores) {
+    formatBarsHtml = Object.values(session.format_scores).map(fs => {
+      return `
+        <div style="background:rgba(15,23,42,0.6); border:1px solid var(--border-color); padding:0.85rem 1rem; border-radius:10px; margin-bottom:0.6rem;">
+          <div style="display:flex; justify-content:space-between; font-size:0.88rem; margin-bottom:0.4rem;">
+            <span><strong>${fs.format.toUpperCase()}</strong> (${fs.weight_pct}% Weight • ${fs.question_count} Qs)</span>
+            <span style="color:var(--accent-cyan); font-weight:700;">${fs.raw_accuracy_pct}% Accuracy (+${fs.earned_contribution} pts)</span>
+          </div>
+          <div class="progress-track" style="height:6px;">
+            <div class="progress-fill" style="width: ${fs.raw_accuracy_pct}%; background: linear-gradient(90deg, #a855f7, var(--accent-cyan));"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Per-Question Time Analysis Table
   const timeRecords = session.question_time_records || [];
   const timeTableRows = timeRecords.map(r => {
     if (!r) return '';
@@ -69,6 +88,7 @@ export function renderReportDashboard(
     return `
       <tr style="${rowBg} border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.85rem;">
         <td style="padding:0.6rem 0.8rem; font-weight:700; text-align:center;">Q${r.questionSlot}</td>
+        <td style="padding:0.6rem 0.8rem; text-align:center; font-size:0.75rem; font-weight:700; color:#a5b4fc;">P${r.part || 1}</td>
         <td style="padding:0.6rem 0.8rem;">
           <span style="font-size:0.75rem; background:rgba(6,182,212,0.15); color:var(--accent-cyan); padding:0.25rem 0.5rem; border-radius:6px;">
             ${r.domain.replace('_', ' ')}
@@ -85,18 +105,33 @@ export function renderReportDashboard(
     `;
   }).join('');
 
-  // --- SECTION C: Break History Log ---
+  // Break History Log
   const breakEvents = session.break_events || [];
   let breakLogHtml = '';
-  if (breakEvents.length > 0) {
-    breakLogHtml = breakEvents.map(b => {
+  if (breakEvents.length > 0 || session.part_break_record) {
+    let partBreakHtml = '';
+    if (session.part_break_record) {
+      const pDurationMin = Math.round((session.part_break_record.breakDurationMs || 0) / 60000);
+      partBreakHtml = `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(16,185,129,0.1); border:1px solid var(--accent-emerald); padding:0.75rem 1rem; border-radius:10px; margin-bottom:0.5rem; font-size:0.88rem;">
+          <div>
+            <strong>☕ Part 1 Mandatory 5-Min Break</strong> • Between Part 1 &amp; Part 2
+          </div>
+          <div style="color:var(--accent-emerald); font-weight:700;">
+            Duration: ${pDurationMin} min ${session.part_break_record.studentInitiatedEarly ? '(Resumed Early)' : '(Full Break)'}
+          </div>
+        </div>
+      `;
+    }
+
+    const itemBreaksHtml = breakEvents.map(b => {
       const durMins = Math.floor(b.breakDurationMs / 60000);
       const durSecs = Math.round((b.breakDurationMs % 60000) / 1000);
       const remSecs = Math.round(b.countdownRemainingAtPause);
       return `
         <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid var(--border-color); padding:0.75rem 1rem; border-radius:10px; margin-bottom:0.5rem; font-size:0.88rem;">
           <div>
-            <strong>Break #${b.breakIndex}</strong> • During <strong>Q${b.questionSlotAtPause}</strong> (${b.domainAtPause.replace('_', ' ')})
+            <strong>Pause #${b.breakIndex}</strong> • During <strong>Q${b.questionSlotAtPause}</strong> (${b.domainAtPause.replace('_', ' ')})
           </div>
           <div style="color:var(--accent-amber); font-weight:700;">
             Duration: ${durMins > 0 ? `${durMins}m ` : ''}${durSecs}s (Timer left: ${remSecs}s)
@@ -104,21 +139,22 @@ export function renderReportDashboard(
         </div>
       `;
     }).join('');
+
+    breakLogHtml = partBreakHtml + itemBreaksHtml;
   } else {
     breakLogHtml = `
       <div style="background:rgba(16,185,129,0.1); border:1px solid var(--accent-emerald); color:var(--accent-emerald); padding:1rem; border-radius:10px; font-weight:600; text-align:center;">
-        ✅ No breaks taken — Student completed all 60 questions continuously without pausing.
+        ✅ Continuous Completion — Student completed all questions without extra sensory pauses.
       </div>
     `;
   }
 
-  // --- SECTION D & E: CEO Summary Numbers ---
+  // Summary Metrics
   const totalActiveMins = Math.round((session.total_active_duration_ms || 0) / 60000);
   const totalBreakMins = Math.round((session.total_break_duration_ms || 0) / 60000);
   const totalWallMins = Math.round((session.total_wall_clock_duration_ms || 0) / 60000);
   const totalTimedOutCount = timeRecords.filter(r => r?.timedOut).length;
 
-  // Automatically store session in CEO Database array (localStorage)
   saveSessionToCEODatabase(session);
 
   container.innerHTML = `
@@ -127,7 +163,7 @@ export function renderReportDashboard(
       <!-- Top Action Controls -->
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--border-color); padding-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
         <span style="background: rgba(16,185,129,0.15); border: 1px solid var(--accent-emerald); color: var(--accent-emerald); padding: 0.35rem 1rem; border-radius: 20px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">
-          ✅ 60-Question SEN Assessment Complete
+          ✅ CodeRa 50-Question Assessment Complete (v${session.schema_version || '2.0'})
         </span>
         <div style="display:flex; gap:0.75rem; flex-wrap:wrap;" class="report-action-btns">
           <button id="ceo-dashboard-btn" class="btn btn-secondary" style="font-size:0.85rem; background:rgba(6,182,212,0.15); border:1px solid var(--accent-cyan); color:var(--accent-cyan);">
@@ -148,15 +184,15 @@ export function renderReportDashboard(
       <!-- Header -->
       <div style="text-align: center; margin-bottom: 2rem;">
         <h1 style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-          AI Digital Technology Placement Report
+          CodeRa Placement Assessment Report
         </h1>
         <p style="color: var(--text-secondary); font-size: 1rem; margin-top: 0.25rem;">
-          Student: <strong>${session.student_name}</strong> • Age Group: ${session.age_group} • 60 Items Assessed
+          Student: <strong>${session.student_name}</strong> • Age Group: ${session.age_group || '13-16'} • 50 Items Assessed
         </p>
       </div>
 
       <div class="report-grid" style="grid-template-columns: 320px 1fr;">
-        <!-- Placement & Gauge Card -->
+        <!-- Placement Badge Card -->
         <div class="placement-badge-card">
           <div style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary);">
             Technology Readiness Score
@@ -166,41 +202,107 @@ export function renderReportDashboard(
             <span class="score-text">${totalScore}</span>
           </div>
 
-          <div style="font-size: 0.85rem; color: var(--text-secondary);">Recommended Level & Track</div>
-          <div class="track-title">${recommendedTrack}</div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary);">Recommended CodeRa Level</div>
+          <div class="track-title" style="color:var(--accent-cyan); font-weight:800; font-size:1.3rem;">${recommendedTrack}</div>
 
-          <div style="margin-top: 1.5rem; width: 100%; border-top: 1px solid var(--border-color); padding-top: 1rem; text-align: left; font-size: 0.85rem; color: var(--text-secondary);">
+          <!-- Coding Readiness Sub-Score Card -->
+          <div style="margin-top: 1.25rem; background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); border-radius:12px; padding:0.85rem; text-align:center;">
+            <div style="font-size:0.75rem; font-weight:800; color:var(--accent-cyan); text-transform:uppercase;">
+              💻 Coding Readiness Score
+            </div>
+            <div style="font-size:1.6rem; font-weight:900; color:#fff; margin-top:0.2rem;">
+              ${session.coding_readiness_score ?? Math.round(performanceIndicators.overallAccuracy)}%
+            </div>
+            <div style="font-size:0.72rem; color:var(--text-secondary); margin-top:0.2rem;">
+              Algorithmic logic, sequencing &amp; loops
+            </div>
+          </div>
+
+          <div style="margin-top: 1.25rem; width: 100%; border-top: 1px solid var(--border-color); padding-top: 1rem; text-align: left; font-size: 0.85rem; color: var(--text-secondary);">
             <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
-              <span>Accuracy:</span> <strong>${performanceIndicators.overallAccuracy}%</strong>
+              <span>Overall Accuracy:</span> <strong>${performanceIndicators.overallAccuracy}%</strong>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
-              <span>Total Active Time:</span> <strong>${totalActiveMins} min</strong>
+              <span>Active Thinking Time:</span> <strong>${totalActiveMins} min</strong>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
               <span>Total Breaks Taken:</span> <strong>${session.total_breaks_count || 0} (${totalBreakMins} min)</strong>
             </div>
             <div style="display:flex; justify-content:space-between;">
-              <span>Questions Timed Out:</span> <strong style="color:${totalTimedOutCount > 0 ? '#ef4444' : 'inherit'};">${totalTimedOutCount} / 60</strong>
+              <span>Questions Timed Out:</span> <strong style="color:${totalTimedOutCount > 0 ? '#ef4444' : 'inherit'};">${totalTimedOutCount} / 50</strong>
             </div>
           </div>
         </div>
 
-        <!-- Domain Breakdown -->
+        <!-- Domain & Format Breakdown -->
         <div>
-          <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--text-primary);">
-            Competency Domain Performance (60 Questions)
+          <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">
+            Competency Domain Performance (50 Questions)
           </h3>
-          
           ${domainBarsHtml}
+
+          ${formatBarsHtml ? `
+            <h4 style="font-size: 1.05rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem; color: var(--text-primary);">
+              Format-Weighted Breakdown (Schema B Matrix)
+            </h4>
+            ${formatBarsHtml}
+          ` : ''}
 
           ${flagsHtml}
         </div>
       </div>
 
-      <!-- CEO Executive Analytics Grid -->
+      <!-- Coding Challenge Result (L3/L4 only) -->
+      ${session.coding_challenge_result ? (() => {
+        const ccr = session.coding_challenge_result!;
+        const verificationColors: Record<string, string> = {
+          'Strong': '#10b981',
+          'Confirmed': '#06b6d4',
+          'Borderline': '#f59e0b',
+          'Not Attempted': '#94a3b8',
+        };
+        const vColor = verificationColors[ccr.placement_verification] || '#94a3b8';
+        const timeTakenMin = (ccr.time_taken_ms / 60000).toFixed(1);
+        return `
+          <div style="margin-top:2rem; border-top:1px solid var(--border-color); padding-top:1.75rem;">
+            <h3 style="font-size:1.3rem; font-weight:800; margin-bottom:1.25rem; color:#a855f7; display:flex; align-items:center; gap:0.5rem;">
+              💻 Coding Challenge Results (Placement Verification)
+            </h3>
+            <div style="display:grid; grid-template-columns:auto 1fr; gap:1.5rem; align-items:start;">
+              <div style="background:rgba(168,85,247,0.1); border:2px solid ${vColor}; border-radius:16px; padding:1.25rem 2rem; text-align:center; min-width:180px;">
+                <div style="font-size:0.8rem; text-transform:uppercase; font-weight:700; color:var(--text-secondary); margin-bottom:0.35rem;">Verification</div>
+                <div style="font-size:1.4rem; font-weight:900; color:${vColor};">${ccr.placement_verification}</div>
+                <div style="font-size:2rem; font-weight:900; color:#fff; margin-top:0.5rem;">${ccr.accuracy_pct}%</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary);">${ccr.completed_challenges}/${ccr.total_challenges} solved • ${timeTakenMin}m</div>
+              </div>
+              <div>
+                ${ccr.attempted ? `
+                  <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.85rem;">
+                    ${(ccr.skills_demonstrated || []).map((s: string) => `
+                      <span style="background:rgba(16,185,129,0.15); border:1px solid var(--accent-emerald); color:var(--accent-emerald); padding:0.3rem 0.75rem; border-radius:12px; font-size:0.82rem; font-weight:700;">✅ ${s}</span>
+                    `).join('')}
+                  </div>
+                  <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.55;">
+                    The student completed the supplementary coding challenge module demonstrating
+                    <strong style="color:#fff;">${ccr.completed_challenges} out of ${ccr.total_challenges}</strong> challenges
+                    with <strong style="color:${vColor};">${ccr.accuracy_pct}% accuracy</strong>.
+                    Placement verification: <strong style="color:${vColor};">${ccr.placement_verification}</strong>.
+                  </p>
+                ` : `
+                  <p style="font-size:0.88rem; color:var(--text-secondary);">
+                    The student skipped the supplementary coding challenge. The base assessment placement stands without additional verification.
+                  </p>
+                `}
+              </div>
+            </div>
+          </div>
+        `;
+      })() : ''}
+
+      <!-- Executive Analytics Grid -->
       <div style="margin-top: 2.5rem; border-top: 1px solid var(--border-color); padding-top: 2rem;">
         <h3 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 1.25rem; color: var(--accent-cyan); display:flex; align-items:center; gap:0.5rem;">
-          📈 Executive Time & Attention Analytics (CEO Report)
+          📈 Executive Time &amp; Attention Analytics (CEO View)
         </h3>
 
         <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:1rem; margin-bottom:2rem;">
@@ -231,21 +333,22 @@ export function renderReportDashboard(
         <!-- Section C: Break Log -->
         <div style="margin-bottom:2.5rem;">
           <h4 style="font-size:1.1rem; font-weight:700; color:var(--text-primary); margin-bottom:1rem;">
-            ⏸️ Break & Pause Log
+            ⏸️ Break &amp; Pause Log
           </h4>
           ${breakLogHtml}
         </div>
 
-        <!-- Section A: 60-Row Per-Question Time Table -->
+        <!-- Per-Question Time Table -->
         <div>
           <h4 style="font-size:1.1rem; font-weight:700; color:var(--text-primary); margin-bottom:1rem;">
-            📋 Detailed Per-Question Time Breakdown (60 Items)
+            📋 Detailed Per-Question Time Breakdown (50 Items)
           </h4>
           <div style="max-height:420px; overflow-y:auto; border:1px solid var(--border-color); border-radius:12px; background:rgba(15,23,42,0.6);">
             <table style="width:100%; border-collapse:collapse; text-align:left;">
               <thead style="position:sticky; top:0; background:rgba(30,41,59,0.95); z-index:10; font-size:0.8rem; text-transform:uppercase; color:var(--text-secondary);">
                 <tr>
                   <th style="padding:0.75rem 0.8rem; text-align:center;">#</th>
+                  <th style="padding:0.75rem 0.8rem; text-align:center;">Part</th>
                   <th style="padding:0.75rem 0.8rem;">Domain</th>
                   <th style="padding:0.75rem 0.8rem;">Sub-Skill</th>
                   <th style="padding:0.75rem 0.8rem; text-align:center;">Active Time</th>
@@ -263,6 +366,71 @@ export function renderReportDashboard(
           </div>
         </div>
 
+        <!-- Next Steps: Live Screening & Video Introduction Module -->
+        <div style="margin-top: 2rem; background: linear-gradient(135deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)); border: 1px solid rgba(6,182,212,0.3); border-radius: 16px; padding: 1.75rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.25rem;">
+            <div>
+              <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--accent-cyan); background:rgba(6,182,212,0.12); padding:0.25rem 0.65rem; border-radius:8px; border:1px solid rgba(6,182,212,0.25);">
+                🚀 Placement Next Steps
+              </span>
+              <h3 style="font-size:1.3rem; font-weight:800; color:#fff; margin-top:0.4rem;">
+                Candidate Onboarding &amp; Introduction Screening
+              </h3>
+            </div>
+            <span style="font-size:0.8rem; color:var(--text-secondary);">
+              Required for final track confirmation
+            </span>
+          </div>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+            
+            <!-- Option A: Live Screening -->
+            <div style="background: rgba(15,23,42,0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.6rem;">
+                  <span style="font-size:1.6rem;">🎥</span>
+                  <div>
+                    <h4 style="font-size:1.05rem; font-weight:700; color:#fff;">Live 1-on-1 Screening</h4>
+                    <span style="font-size:0.75rem; color:var(--accent-cyan); font-weight:600;">With Admission Specialist</span>
+                  </div>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5; margin-bottom:1rem;">
+                  Schedule an interactive 10-minute live meeting with a CodeRa specialist to review strengths, answer questions, and discuss track placement.
+                </p>
+              </div>
+              <button id="btn-live-screening" class="btn btn-secondary" style="width:100%; font-size:0.85rem; font-weight:700; background:rgba(59,130,246,0.15); border:1px solid #3b82f6; color:#60a5fa;">
+                📅 Schedule Live Screening
+              </button>
+            </div>
+
+            <!-- Option B: 1-Minute Video Introduction -->
+            <div style="background: rgba(15,23,42,0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.6rem;">
+                  <span style="font-size:1.6rem;">📹</span>
+                  <div>
+                    <h4 style="font-size:1.05rem; font-weight:700; color:#fff;">1-Minute Video Introduction</h4>
+                    <span style="font-size:0.75rem; color:var(--accent-emerald); font-weight:600;">Self-Paced Screening</span>
+                  </div>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5; margin-bottom:1rem;">
+                  Record or upload a 60-second video introducing the student, their technology goals, and why they want to join CodeRa.
+                </p>
+              </div>
+              <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <button id="btn-record-video" class="btn btn-secondary" style="flex:1; min-width:130px; font-size:0.85rem; font-weight:700; background:rgba(236,72,153,0.15); border:1px solid #ec4899; color:#f472b6;">
+                  🔴 Record (1 Min)
+                </button>
+                <label id="lbl-upload-video" class="btn btn-secondary" style="flex:1; min-width:130px; font-size:0.85rem; font-weight:700; background:rgba(16,185,129,0.15); border:1px solid var(--accent-emerald); color:var(--accent-emerald); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                  📤 Upload Video
+                  <input type="file" id="input-video-file" accept="video/*" style="display:none;" />
+                </label>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
         <!-- Qualitative AI Summary -->
         <div style="margin-top: 2rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem;" class="summary-md">
           ${session.qualitative_summary ? formatMarkdown(session.qualitative_summary) : ''}
@@ -271,18 +439,16 @@ export function renderReportDashboard(
 
       <div style="margin-top: 2.5rem; text-align: center; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
         <button class="btn btn-primary" id="restart-btn" style="margin: 0 auto;">
-          🔄 Retake Placement Assessment
+          🔄 Retake CodeRa Assessment
         </button>
       </div>
     </div>
   `;
 
-  // Attach Export/Print/Retake listeners
+  // Attach Listeners
   const restartBtn = container.querySelector('#restart-btn');
   if (restartBtn) {
-    restartBtn.addEventListener('click', () => {
-      window.location.reload();
-    });
+    restartBtn.addEventListener('click', () => window.location.reload());
   }
 
   const printBtn = container.querySelector('#print-report-btn');
@@ -297,31 +463,89 @@ export function renderReportDashboard(
 
   const csvBtn = container.querySelector('#download-csv-btn');
   if (csvBtn) {
-    csvBtn.addEventListener('click', () => {
-      exportTimeRecordsCSV(session);
-    });
+    csvBtn.addEventListener('click', () => exportTimeRecordsCSV(session));
   }
 
   const ceoBtn = container.querySelector('#ceo-dashboard-btn');
   if (ceoBtn) {
-    ceoBtn.addEventListener('click', () => {
-      renderCEODashboard(container, session);
+    ceoBtn.addEventListener('click', () => renderCEODashboard(container, session, placement));
+  }
+
+  // Next steps screening handlers (preview mock)
+  const liveScreeningBtn = container.querySelector('#btn-live-screening');
+  if (liveScreeningBtn) {
+    liveScreeningBtn.addEventListener('click', () => {
+      alert('🎥 Live 1-on-1 Screening Booking: Calendar integration opened. Meeting link will be emailed to candidate.');
+    });
+  }
+
+  const recordVideoBtn = container.querySelector('#btn-record-video');
+  if (recordVideoBtn) {
+    recordVideoBtn.addEventListener('click', () => {
+      alert('📹 Video Recording Studio: Camera initialized. 60-second introduction timer ready.');
+    });
+  }
+
+  const videoFileInput = container.querySelector('#input-video-file') as HTMLInputElement;
+  if (videoFileInput) {
+    videoFileInput.addEventListener('change', () => {
+      if (videoFileInput.files && videoFileInput.files[0]) {
+        alert(`✅ Video "${videoFileInput.files[0].name}" uploaded successfully for candidate review.`);
+      }
     });
   }
 }
 
+function formatMarkdown(md: string): string {
+  return md
+    .replace(/^### (.*$)/gim, '<h3 style="font-size:1.15rem; font-weight:800; color:var(--accent-cyan); margin-top:1.2rem; margin-bottom:0.5rem;">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 style="font-size:1.3rem; font-weight:800; color:#fff; margin-top:1.4rem; margin-bottom:0.6rem;">$1</h2>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.*$)/gim, '<li style="margin-left:1.25rem; margin-bottom:0.3rem;">$1</li>')
+    .replace(/\n\n/g, '<br/>');
+}
+
 export function saveSessionToCEODatabase(session: StudentSessionTelemetry) {
   try {
-    const existing = localStorage.getItem('cognix_all_sessions');
+    const existing = localStorage.getItem('codera_all_sessions') || localStorage.getItem('cognix_all_sessions');
     let sessions: StudentSessionTelemetry[] = existing ? JSON.parse(existing) : [];
     sessions = sessions.filter(s => s.session_id !== session.session_id);
     sessions.unshift(session);
-    localStorage.setItem('cognix_all_sessions', JSON.stringify(sessions));
+    localStorage.setItem('codera_all_sessions', JSON.stringify(sessions));
   } catch (e) {}
 }
 
-export function renderCEODashboard(container: HTMLElement, activeSession?: StudentSessionTelemetry) {
-  const existing = localStorage.getItem('cognix_all_sessions');
+export function downloadReportAsPDF(session: StudentSessionTelemetry) {
+  window.print();
+}
+
+export function exportTimeRecordsCSV(session: StudentSessionTelemetry) {
+  const records = session.question_time_records || [];
+  let csv = 'Slot,Part,Domain,SubSkill,Title,ActiveTimeSec,FirstReactionSec,TimerLeftSec,TimedOut,EarnedScore,MaxScore\n';
+
+  records.forEach(r => {
+    if (!r) return;
+    const activeSec = (r.activeDurationMs / 1000).toFixed(1);
+    const latencySec = r.responseLatencyMs ? (r.responseLatencyMs / 1000).toFixed(1) : '0';
+    const remSec = r.remainingTimeWhenAnsweredMs ? (r.remainingTimeWhenAnsweredMs / 1000).toFixed(1) : '0';
+    csv += `${r.questionSlot},${r.part || 1},"${r.domain}","${r.subSkill}","${r.questionTitle.replace(/"/g, '""')}",${activeSec},${latencySec},${remSec},${r.timedOut ? 'YES' : 'NO'},${r.earnedScore},${r.maxScore}\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `CodeRa_Report_${session.student_name.replace(/\s+/g, '_')}_${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function renderCEODashboard(
+  container: HTMLElement,
+  activeSession?: StudentSessionTelemetry,
+  activePlacement?: PlacementResult
+) {
+  const existing = localStorage.getItem('codera_all_sessions') || localStorage.getItem('cognix_all_sessions');
   const sessions: StudentSessionTelemetry[] = existing ? JSON.parse(existing) : [];
 
   if (sessions.length === 0) {
@@ -330,7 +554,7 @@ export function renderCEODashboard(container: HTMLElement, activeSession?: Stude
         <div style="font-size: 4rem; margin-bottom: 1rem;">🏛️</div>
         <h2 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: 0.75rem;">CEO Executive Dashboard</h2>
         <p style="color: var(--text-secondary); margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
-          No completed student assessments found in local database yet. Run an assessment to generate CEO analytics.
+          No completed student assessments found in database. Run an assessment to generate CEO analytics.
         </p>
         <button id="ceo-new-test-btn" class="btn btn-primary" style="font-size: 1rem; padding: 0.8rem 2rem;">
           🚀 Start New Student Assessment
@@ -344,33 +568,9 @@ export function renderCEODashboard(container: HTMLElement, activeSession?: Stude
     return;
   }
 
-  // Aggregate Metrics
   const totalStudents = sessions.length;
   const avgTotalScore = Math.round(sessions.reduce((acc, s) => acc + (s.total_score || 0), 0) / totalStudents);
   const avgActiveMins = (sessions.reduce((acc, s) => acc + ((s.total_active_duration_ms || 0) / 60000), 0) / totalStudents).toFixed(1);
-  const totalFlaggedStudents = sessions.filter(s => Array.isArray(s.flags) && s.flags.length > 0).length;
-
-  const domains = [
-    { key: 'cognitive_ability', name: 'Cognitive Ability' },
-    { key: 'functional_skills', name: 'Functional Skills' },
-    { key: 'communication_level', name: 'Communication Level' },
-    { key: 'behavioral_readiness', name: 'Behavioral Readiness' },
-    { key: 'fine_motor_technology', name: 'Fine Motor & Tech' }
-  ];
-
-  const domainAverages = domains.map(d => {
-    let sumEarned = 0;
-    let sumMax = 0;
-    sessions.forEach(s => {
-      if (s.domain_scores && s.domain_scores[d.key as keyof typeof s.domain_scores]) {
-        const ds = s.domain_scores[d.key as keyof typeof s.domain_scores];
-        sumEarned += ds.earned_score;
-        sumMax += ds.max_score;
-      }
-    });
-    const pct = sumMax > 0 ? Math.round((sumEarned / sumMax) * 100) : 0;
-    return { name: d.name, pct };
-  });
 
   let studentRowsHtml = sessions.map((s, idx) => {
     const activeMins = Math.round((s.total_active_duration_ms || 0) / 60000);
@@ -381,11 +581,11 @@ export function renderCEODashboard(container: HTMLElement, activeSession?: Stude
       <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.88rem;">
         <td style="padding: 0.75rem 1rem; font-weight: 700;">#${idx + 1}</td>
         <td style="padding: 0.75rem 1rem; font-weight: 700; color: #fff;">${s.student_name}</td>
-        <td style="padding: 0.75rem 1rem; color: var(--text-secondary);">${s.age_group || '7-9'}</td>
+        <td style="padding: 0.75rem 1rem; color: var(--text-secondary);">${s.age_group || '13-16'}</td>
         <td style="padding: 0.75rem 1rem; font-weight: 800; color: var(--accent-cyan);">${s.total_score}/100</td>
         <td style="padding: 0.75rem 1rem;">
           <span style="background: rgba(59,130,246,0.15); border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 0.25rem 0.6rem; border-radius: 8px; font-weight: 600; font-size: 0.8rem;">
-            ${s.placed_track || s.recommended_track || 'Level 1'}
+            ${s.placed_track || s.recommended_track || 'L1 Coder'}
           </span>
         </td>
         <td style="padding: 0.75rem 1rem; text-align: center;">${activeMins}m</td>
@@ -393,319 +593,74 @@ export function renderCEODashboard(container: HTMLElement, activeSession?: Stude
           ${flagsCount > 0 ? `<span style="color:#ef4444; font-weight:700;">⚠️ ${flagsCount} Flag${flagsCount > 1 ? 's' : ''}</span>` : '<span style="color:#10b981; font-weight:700;">✅ Clean</span>'}
         </td>
         <td style="padding: 0.75rem 1rem; color: var(--text-secondary); font-size: 0.8rem;">${dateStr}</td>
-        <td style="padding: 0.75rem 1rem; text-align: right;">
-          <button class="btn btn-secondary view-session-btn" data-id="${s.session_id}" style="padding: 0.35rem 0.8rem; font-size: 0.8rem; background:rgba(6,182,212,0.15); border:1px solid var(--accent-cyan); color:var(--accent-cyan); font-weight:700;">
-            📄 View Report
-          </button>
-        </td>
       </tr>
     `;
   }).join('');
 
   container.innerHTML = `
-    <div class="glass-card" style="padding: 2.5rem; max-width: 1200px; margin: 0 auto;">
-      
-      <!-- Top Action Controls -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
-        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-          <span style="background: rgba(6,182,212,0.15); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 0.35rem 1rem; border-radius: 20px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">
-            🏛️ Executive CEO Analytics Portal
-          </span>
-          ${activeSession ? `
-            <button id="back-to-active-report-btn" class="btn btn-secondary" style="font-size: 0.85rem; background: rgba(16,185,129,0.15); border: 1px solid var(--accent-emerald); color: var(--accent-emerald); font-weight:700;">
-              ⬅️ Return to Active Student Report
-            </button>
-          ` : ''}
+    <div class="glass-card" style="padding: 2.5rem; max-width: 1100px; margin: 0 auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <div>
+          <h1 style="font-size: 1.8rem; font-weight: 800; color: #fff;">CodeRa CEO Executive Dashboard</h1>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Overview of all completed student assessments</p>
         </div>
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-          <button id="export-all-csv-btn" class="btn btn-primary" style="font-size: 0.85rem; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));">
-            📊 Export Master CSV (All Students)
-          </button>
-          <button id="ceo-restart-btn" class="btn btn-secondary" style="font-size: 0.85rem;">
-            ➕ Run New Assessment
-          </button>
+        <button id="back-to-report-btn" class="btn btn-secondary" style="font-size: 0.85rem;">
+          ${activeSession ? '🔙 Back to Current Report' : '🏠 Back to Home'}
+        </button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 2rem;">
+        <div style="background: rgba(15,23,42,0.7); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 14px; text-align: center;">
+          <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Total Students Assessed</div>
+          <div style="font-size: 2.4rem; font-weight: 900; color: var(--accent-cyan); margin-top: 0.25rem;">${totalStudents}</div>
+        </div>
+        <div style="background: rgba(15,23,42,0.7); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 14px; text-align: center;">
+          <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Average Readiness Score</div>
+          <div style="font-size: 2.4rem; font-weight: 900; color: var(--accent-emerald); margin-top: 0.25rem;">${avgTotalScore}/100</div>
+        </div>
+        <div style="background: rgba(15,23,42,0.7); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 14px; text-align: center;">
+          <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Average Thinking Time</div>
+          <div style="font-size: 2.4rem; font-weight: 900; color: #fff; margin-top: 0.25rem;">${avgActiveMins} min</div>
         </div>
       </div>
 
-      <!-- Header -->
-      <div style="margin-bottom: 2rem;">
-        <h1 style="font-size: 2.2rem; font-weight: 800; color: #fff;">
-          Institutional SEN Assessment Intelligence
-        </h1>
-        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem;">
-          Aggregated performance analytics, placement metrics, and diagnostic indicators across all completed student sessions.
-        </p>
+      <h3 style="font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 1rem;">Student Assessment Registry</h3>
+      <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(15,23,42,0.6);">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead style="background: rgba(30,41,59,0.95); font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">
+            <tr>
+              <th style="padding: 0.75rem 1rem;">#</th>
+              <th style="padding: 0.75rem 1rem;">Student Name</th>
+              <th style="padding: 0.75rem 1rem;">Age Group</th>
+              <th style="padding: 0.75rem 1rem;">Total Score</th>
+              <th style="padding: 0.75rem 1rem;">Placed Level</th>
+              <th style="padding: 0.75rem 1rem; text-align: center;">Active Time</th>
+              <th style="padding: 0.75rem 1rem; text-align: center;">Flags</th>
+              <th style="padding: 0.75rem 1rem;">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${studentRowsHtml}
+          </tbody>
+        </table>
       </div>
-
-      <!-- KPI Executive Summary Cards -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-        <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: 14px;">
-          <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Total Students Assessed</div>
-          <div style="font-size: 2rem; font-weight: 800; color: #fff; margin-top: 0.25rem;">${totalStudents}</div>
-          <div style="font-size: 0.75rem; color: var(--accent-emerald); margin-top: 0.25rem;">100% Completed</div>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: 14px;">
-          <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Average Overall Score</div>
-          <div style="font-size: 2rem; font-weight: 800; color: var(--accent-cyan); margin-top: 0.25rem;">${avgTotalScore}<span style="font-size:1.2rem;">/100</span></div>
-          <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Across all 5 domains</div>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: 14px;">
-          <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Avg Assessment Pace</div>
-          <div style="font-size: 2rem; font-weight: 800; color: var(--accent-blue); margin-top: 0.25rem;">${avgActiveMins}<span style="font-size:1.2rem;"> mins</span></div>
-          <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Active duration per student</div>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: 14px;">
-          <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">Support Alerts Flagged</div>
-          <div style="font-size: 2rem; font-weight: 800; color: ${totalFlaggedStudents > 0 ? '#f59e0b' : '#10b981'}; margin-top: 0.25rem;">${totalFlaggedStudents}</div>
-          <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Students requiring SEN scaffolding</div>
-        </div>
-      </div>
-
-      <!-- Domain Mastery Averages Bar Chart -->
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 16px; margin-bottom: 2rem;">
-        <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 1rem;">
-          📊 Domain Mastery Breakdown (All Students Average)
-        </h3>
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-          ${domainAverages.map(da => `
-            <div>
-              <div style="display: flex; justify-content: space-between; font-size: 0.88rem; font-weight: 600; margin-bottom: 0.3rem;">
-                <span>${da.name}</span>
-                <span style="color: var(--accent-cyan);">${da.pct}% Average</span>
-              </div>
-              <div style="height: 10px; background: rgba(255,255,255,0.08); border-radius: 5px; overflow: hidden;">
-                <div style="width: ${da.pct}%; height: 100%; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue)); border-radius: 5px;"></div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <!-- All Students Master Table -->
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 16px;">
-        <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 1rem;">
-          📋 Completed Student Roster (${sessions.length} Records)
-        </h3>
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.8rem; text-align: left;">
-                <th style="padding: 0.6rem 1rem;">#</th>
-                <th style="padding: 0.6rem 1rem;">Student Name</th>
-                <th style="padding: 0.6rem 1rem;">Age</th>
-                <th style="padding: 0.6rem 1rem;">Score</th>
-                <th style="padding: 0.6rem 1rem;">Placed Level</th>
-                <th style="padding: 0.6rem 1rem; text-align: center;">Active Time</th>
-                <th style="padding: 0.6rem 1rem; text-align: center;">Status</th>
-                <th style="padding: 0.6rem 1rem;">Date</th>
-                <th style="padding: 0.6rem 1rem; text-align: right;">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${studentRowsHtml}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
     </div>
   `;
 
-  const backToActiveReportBtn = container.querySelector('#back-to-active-report-btn');
-  if (backToActiveReportBtn && activeSession) {
-    backToActiveReportBtn.addEventListener('click', () => {
-      const dummyPlacement = {
-        totalScore: activeSession.total_score,
-        placedTrack: activeSession.placed_track || 'Level 1',
-        recommendedTrack: activeSession.recommended_track || 'Level 1',
-        flags: Array.isArray(activeSession.flags) ? activeSession.flags.map((f: any) => typeof f === 'string' ? { title: f, description: '', type: 'advisory' } : f) : [],
-        performanceIndicators: {
-          overallAccuracy: activeSession.total_score,
-          adaptabilityIndex: 0.85,
-          learningProgressVelocity: 'Steady',
-          hintDependencyRatio: 0.1
-        }
-      };
-      renderReportDashboard(container, activeSession, dummyPlacement as any);
-    });
-  }
-  if (exportMasterCsvBtn) {
-    exportMasterCsvBtn.addEventListener('click', () => exportMasterStudentsCSV(sessions));
-  }
-
-  const restartBtn = container.querySelector('#ceo-restart-btn');
-  if (restartBtn) {
-    restartBtn.addEventListener('click', () => window.location.reload());
-  }
-
-  const viewBtns = container.querySelectorAll('.view-session-btn');
-  viewBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const target = e.currentTarget as HTMLElement;
-      const id = target.getAttribute('data-id');
-      const targetSession = sessions.find(s => s.session_id === id);
-      if (targetSession) {
-        const dummyPlacement = {
-          totalScore: targetSession.total_score,
-          placedTrack: targetSession.placed_track || 'Level 1',
-          recommendedTrack: targetSession.recommended_track || 'Level 1',
-          flags: Array.isArray(targetSession.flags) ? targetSession.flags.map((f: any) => typeof f === 'string' ? { title: f, description: '', type: 'advisory' } : f) : [],
-          performanceIndicators: {
-            overallAccuracy: targetSession.total_score,
-            adaptabilityIndex: 0.85,
-            learningProgressVelocity: 'Steady',
-            hintDependencyRatio: 0.1
-          }
-        };
-        renderReportDashboard(container, targetSession, dummyPlacement as any);
+  const backBtn = container.querySelector('#back-to-report-btn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      if (activeSession) {
+        const placement = activePlacement || PlacementEngine.evaluatePlacement(
+          activeSession.total_score,
+          activeSession.domain_scores,
+          activeSession.item_telemetries,
+          activeSession.schema_version || '2.0'
+        );
+        renderReportDashboard(container, activeSession, placement);
+      } else {
+        window.location.reload();
       }
     });
-  });
+  }
 }
-
-function exportMasterStudentsCSV(sessions: StudentSessionTelemetry[]) {
-  let csv = 'StudentName,AgeGroup,TotalScore,PlacedTrack,ActiveTimeMins,Timeouts,BreaksCount,FlagsCount,CompletedDate\n';
-
-  sessions.forEach(s => {
-    const activeMins = ((s.total_active_duration_ms || 0) / 60000).toFixed(1);
-    const timeouts = s.question_time_records?.filter(r => r?.timedOut).length || 0;
-    const breaks = s.break_events?.length || 0;
-    const flags = Array.isArray(s.flags) ? s.flags.length : 0;
-    const dateStr = s.start_time ? new Date(s.start_time).toLocaleDateString() : 'Today';
-
-    csv += `"${s.student_name.replace(/"/g, '""')}","${s.age_group || '7-9'}",${s.total_score},"${s.placed_track || s.recommended_track || 'Level 1'}",${activeMins},${timeouts},${breaks},${flags},"${dateStr}"\n`;
-  });
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', `Cognix_CEO_Master_Analytics_${new Date().toISOString().split('T')[0]}.csv`);
-  link.click();
-}
-
-function downloadReportAsPDF(session: StudentSessionTelemetry) {
-  // Add a print class to body so CSS can target it cleanly
-  document.body.classList.add('printing-report');
-
-  const printStyle = document.createElement('style');
-  printStyle.id = 'cognix-print-style';
-  printStyle.innerHTML = `
-    @media print {
-      /* Force white background for all elements */
-      body.printing-report { background: #ffffff !important; }
-
-      /* Hide everything EXCEPT the exam container */
-      body.printing-report > *:not(#childTestPage):not(script):not(style) {
-        display: none !important;
-        visibility: hidden !important;
-      }
-
-      /* Make the exam container visible and full-width */
-      body.printing-report #childTestPage {
-        display: block !important;
-        visibility: visible !important;
-        position: static !important;
-        width: 100% !important;
-        height: auto !important;
-        overflow: visible !important;
-        background: #ffffff !important;
-      }
-
-      /* Hide header and interactive buttons in the report */
-      body.printing-report #childTestPage .app-header,
-      body.printing-report .report-action-btns,
-      body.printing-report #restart-btn {
-        display: none !important;
-      }
-
-      /* Make scrollable table visible in full */
-      body.printing-report [style*="max-height:420px"],
-      body.printing-report [style*="max-height: 420px"] {
-        max-height: none !important;
-        overflow: visible !important;
-      }
-
-      /* Light theme overrides */
-      body.printing-report :root {
-        --text-primary: #0f172a;
-        --text-secondary: #475569;
-        --accent-cyan: #0891b2;
-        --accent-blue: #2563eb;
-        --bg-card: #f8fafc;
-        --border-color: #e2e8f0;
-        --bg-surface: #f1f5f9;
-      }
-      body.printing-report .glass-card {
-        background: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        box-shadow: none !important;
-        backdrop-filter: none !important;
-      }
-      body.printing-report .placement-badge-card {
-        background: #f8fafc !important;
-        border: 1px solid #0891b2 !important;
-      }
-      body.printing-report .score-circle {
-        background: conic-gradient(#0891b2 calc(var(--score-pct) * 1%), #e2e8f0 0) !important;
-      }
-      body.printing-report .score-circle::before {
-        background: #f8fafc !important;
-      }
-
-      /* Ensure colors print correctly */
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-
-      /* Page layout */
-      @page { margin: 1.5cm; size: A4; }
-    }
-  `;
-  document.head.appendChild(printStyle);
-
-  // Set document title = default PDF filename
-  const originalTitle = document.title;
-  document.title = `Cognix_Report_${session.student_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}`;
-
-  window.print();
-
-  // Clean up after print dialog is dismissed
-  setTimeout(() => {
-    document.body.classList.remove('printing-report');
-    const existing = document.getElementById('cognix-print-style');
-    if (existing) existing.remove();
-    document.title = originalTitle;
-  }, 2000);
-}
-
-function exportTimeRecordsCSV(session: StudentSessionTelemetry) {
-  const records = session.question_time_records || [];
-  let csv = 'Slot,Domain,SubSkill,QuestionTitle,ActiveTimeSec,ResponseLatencySec,TimerRemainingSec,Status,TimedOut,Breaks,EarnedPoints,MaxPoints\n';
-
-  records.forEach(r => {
-    if (!r) return;
-    const activeSec = (r.activeDurationMs / 1000).toFixed(1);
-    const latencySec = r.responseLatencyMs ? (r.responseLatencyMs / 1000).toFixed(1) : '';
-    const remSec = r.remainingTimeWhenAnsweredMs ? (r.remainingTimeWhenAnsweredMs / 1000).toFixed(1) : '0';
-    const status = r.timedOut ? 'TIMED_OUT' : (r.activeDurationMs > 80000 ? 'SLOW' : (r.activeDurationMs > 45000 ? 'NORMAL' : 'FAST'));
-
-    csv += `${r.questionSlot},"${r.domain}","${r.subSkill}","${r.questionTitle.replace(/"/g, '""')}",${activeSec},${latencySec},${remSec},${status},${r.timedOut},${r.breaksDuringQuestion},${r.earnedScore},${r.maxScore}\n`;
-  });
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', `Cognix_CEO_Assessment_Time_Report_${session.student_name.replace(/\s+/g, '_')}.csv`);
-  link.click();
-}
-
-function formatMarkdown(text: string): string {
-  return text
-    .replace(/^### (.*$)/gim, '<h3 style="color:var(--text-primary); font-size:1.05rem; margin-top:1rem; margin-bottom:0.4rem;">$1</h3>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^> (.*$)/gim, '<blockquote style="border-left:3px solid var(--accent-cyan); padding-left:0.8rem; margin:0.8rem 0; color:var(--accent-cyan); font-size:0.9rem;">$1</blockquote>');
-}
-

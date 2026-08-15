@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import fs from 'fs';
 import path from 'path';
@@ -28,6 +29,10 @@ export default defineConfig(({ command }) => {
 
   return {
     base: './',
+    test: {
+      include: ['tests/**/*.test.ts'],
+      environment: 'node',
+    },
     plugins: [
       {
         name: 'rename-index1-to-index',

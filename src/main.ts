@@ -12,8 +12,15 @@ export function initAssessment(studentName: string = 'Alex Rivers', restoreIfAva
   }
 }
 
-export function exitAssessment() {
-  AssessmentRunner.clearSavedSession();
+export function exitAssessment(reload: boolean = true) {
+  if (currentRunner) {
+    currentRunner.exitAndReset(reload);
+  } else {
+    AssessmentRunner.clearSavedSession();
+    if (reload) {
+      window.location.reload();
+    }
+  }
 }
 
 export function openCEODashboard() {
@@ -21,6 +28,7 @@ export function openCEODashboard() {
   const childTestPage = document.getElementById('childTestPage');
   if (appContainer && childTestPage) {
     document.body.classList.add('exam-mode');
+    document.body.classList.add('ceo-view-mode');
     childTestPage.classList.remove('hidden');
     childTestPage.classList.add('exam-active');
     window.scrollTo(0, 0);

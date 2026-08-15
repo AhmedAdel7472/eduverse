@@ -1,9 +1,18 @@
-import { AssessmentDomain, ItemTelemetry, StudentSessionTelemetry, QuestionTimeRecord, BreakEvent } from '../engine/telemetrySchema';
+import {
+  AssessmentDomain,
+  ItemTelemetry,
+  StudentSessionTelemetry,
+  QuestionTimeRecord,
+  BreakEvent,
+  PartBreakRecord,
+  CodingChallengeResult,
+} from '../engine/telemetrySchema';
 import { ActivityGenerator, ActivityItem, QUESTION_BASELINES } from '../ai/activityGenerator';
-import { ScoringEngine, DOMAIN_CONFIG } from '../engine/scoringEngine';
+import { ScoringEngine, DOMAIN_CONFIG, TOTAL_BASE_QUESTIONS, PART_ONE_QUESTIONS } from '../engine/scoringEngine';
 import { PlacementEngine, PlacementResult } from '../engine/placementEngine';
 import { QualitativeAnalyzer } from '../ai/qualitativeAnalyzer';
 import { renderReportDashboard } from './ReportDashboard';
+import { CodingChallenge } from './CodingChallenge';
 
 export interface StoredUserAnswer {
   selectedAnswerIndex: number | null;
@@ -21,35 +30,42 @@ export interface StoredUserAnswer {
 }
 
 export interface SavedAssessmentSession {
+  schemaVersion: '2.0';
   studentName: string;
   currentQuestionIndex: number;
   totalTimerSeconds: number;
   currentQuestionRemainingSeconds: number;
   isPaused: boolean;
+  isOnPartBreak: boolean;
+  partBreakRemainingSeconds: number;
+  isTimerVisible: boolean;
   cachedActivities: (ActivityItem | null)[];
   userAnswers: StoredUserAnswer[];
   questionTimeRecords: QuestionTimeRecord[];
   breakEvents: BreakEvent[];
+  partBreakRecord: PartBreakRecord | null;
   savedAt: number;
 }
 
 export class AssessmentRunner {
-  public static STORAGE_KEY = 'cognix_active_assessment_session';
+  public static STORAGE_KEY = 'codera_active_assessment_session';
+  public static LEGACY_STORAGE_KEY = 'cognix_active_assessment_session';
   public static QUESTION_TIME_LIMIT_SEC = 90; // 1 minute 30 seconds
+  public static PART_BREAK_LIMIT_SEC = 300;   // 5 minutes optional break between Part 1 and Part 2
 
   private container: HTMLElement;
   private generator: ActivityGenerator;
   private analyzer: QualitativeAnalyzer;
   private studentName: string = 'Alex Rivers';
 
-  // 60-Question Plan & State
-  private cachedActivities: (ActivityItem | null)[] = new Array(60).fill(null);
+  // 50-Question Plan & State
+  private cachedActivities: (ActivityItem | null)[] = new Array(TOTAL_BASE_QUESTIONS).fill(null);
   private userAnswers: StoredUserAnswer[] = [];
   private questionTimeRecords: QuestionTimeRecord[] = [];
   private breakEvents: BreakEvent[] = [];
-  private currentQuestionIndex: number = 0; // 0 to 59
+  private currentQuestionIndex: number = 0; // 0 to 49
 
-  // Timers & Active State
+  // Timers & Toggles
   private totalTimerSeconds: number = 0;
   private questionTimerSecondsRemaining: number = AssessmentRunner.QUESTION_TIME_LIMIT_SEC;
   private itemStartTimestamp: number = 0;
@@ -58,18 +74,24 @@ export class AssessmentRunner {
   private pauseDurationForCurrentQuestionMs: number = 0;
   private isPaused: boolean = false;
 
+  // Part Break state
+  private isOnPartBreak: boolean = false;
+  private partBreakRemainingSeconds: number = AssessmentRunner.PART_BREAK_LIMIT_SEC;
+  private partBreakTimerInterval: any = null;
+  private partBreakRecord: PartBreakRecord | null = null;
+
+  // Accessibility Toggles
+  private isTimerVisible: boolean = true;
+  private isSignLanguageModalOpen: boolean = false;
+
   private globalTimerInterval: any = null;
   private questionTimerInterval: any = null;
 
-  // Load-generation counter: prevents stale async loadQuestion calls from starting a second timer.
-  // Each loadQuestion call captures the gen value at start; after any await, it checks if still active.
   private loadGen: number = 0;
-
-  // Blocks the submit button while the next question is being loaded to prevent double-advance.
   private isLoadingNextQuestion: boolean = false;
-
-  // Motor target position state (prevents resets on re-render)
   private motorTargetPos: { top: number; left: number } = { top: 80, left: 240 };
+
+  private isExiting: boolean = false;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -78,12 +100,21 @@ export class AssessmentRunner {
     this.initUserAnswers();
   }
 
+  // ---------------------------------------------------------------------------
+  // Session Persistence with Legacy Migration
+  // ---------------------------------------------------------------------------
   public static getSavedSession(): SavedAssessmentSession | null {
     try {
-      const data = localStorage.getItem(AssessmentRunner.STORAGE_KEY);
+      // 1. Try primary new key
+      let data = localStorage.getItem(AssessmentRunner.STORAGE_KEY);
+      // 2. Fallback to legacy key migration
+      if (!data) {
+        data = localStorage.getItem(AssessmentRunner.LEGACY_STORAGE_KEY);
+      }
       if (!data) return null;
-      const parsed = JSON.parse(data) as SavedAssessmentSession;
-      if (parsed && Array.isArray(parsed.userAnswers) && parsed.userAnswers.length === 60) {
+
+      const parsed: SavedAssessmentSession = JSON.parse(data);
+      if (parsed && Array.isArray(parsed.userAnswers) && parsed.userAnswers.length === TOTAL_BASE_QUESTIONS) {
         return parsed;
       }
       return null;
@@ -95,22 +126,54 @@ export class AssessmentRunner {
   public static clearSavedSession(): void {
     try {
       localStorage.removeItem(AssessmentRunner.STORAGE_KEY);
+      localStorage.removeItem(AssessmentRunner.LEGACY_STORAGE_KEY);
     } catch (e) {}
   }
 
+  public stopAllTimers(): void {
+    if (this.globalTimerInterval) {
+      clearInterval(this.globalTimerInterval);
+      this.globalTimerInterval = null;
+    }
+    if (this.questionTimerInterval) {
+      clearInterval(this.questionTimerInterval);
+      this.questionTimerInterval = null;
+    }
+    if (this.partBreakTimerInterval) {
+      clearInterval(this.partBreakTimerInterval);
+      this.partBreakTimerInterval = null;
+    }
+  }
+
+  public exitAndReset(reload: boolean = true): void {
+    this.isExiting = true;
+    this.detachBeforeUnload();
+    this.stopAllTimers();
+    AssessmentRunner.clearSavedSession();
+    if (reload) {
+      window.location.reload();
+    }
+  }
+
   public saveSession(studentName: string = this.studentName) {
+    if (this.isExiting) return;
     try {
       this.studentName = studentName;
       const sessionData: SavedAssessmentSession = {
+        schemaVersion: '2.0',
         studentName,
         currentQuestionIndex: this.currentQuestionIndex,
         totalTimerSeconds: this.totalTimerSeconds,
         currentQuestionRemainingSeconds: this.questionTimerSecondsRemaining,
         isPaused: this.isPaused,
+        isOnPartBreak: this.isOnPartBreak,
+        partBreakRemainingSeconds: this.partBreakRemainingSeconds,
+        isTimerVisible: this.isTimerVisible,
         cachedActivities: this.cachedActivities,
         userAnswers: this.userAnswers,
         questionTimeRecords: this.questionTimeRecords,
         breakEvents: this.breakEvents,
+        partBreakRecord: this.partBreakRecord,
         savedAt: Date.now()
       };
       localStorage.setItem(AssessmentRunner.STORAGE_KEY, JSON.stringify(sessionData));
@@ -118,7 +181,9 @@ export class AssessmentRunner {
   }
 
   private beforeUnloadHandler = () => {
-    this.saveSession(this.studentName);
+    if (!this.isExiting) {
+      this.saveSession(this.studentName);
+    }
   };
 
   private attachBeforeUnload() {
@@ -131,7 +196,7 @@ export class AssessmentRunner {
   }
 
   private initUserAnswers() {
-    this.userAnswers = new Array(60).fill(null).map(() => ({
+    this.userAnswers = new Array(TOTAL_BASE_QUESTIONS).fill(null).map(() => ({
       selectedAnswerIndex: null,
       robotSequence: [],
       motorClicks: [],
@@ -147,6 +212,7 @@ export class AssessmentRunner {
     }));
     this.questionTimeRecords = [];
     this.breakEvents = [];
+    this.partBreakRecord = null;
   }
 
   public async startSession(studentName: string = 'Alex Rivers', restoreIfAvailable: boolean = true) {
@@ -154,19 +220,25 @@ export class AssessmentRunner {
     const saved = restoreIfAvailable ? AssessmentRunner.getSavedSession() : null;
 
     if (saved) {
-      this.currentQuestionIndex = Math.max(0, Math.min(59, saved.currentQuestionIndex || 0));
-      this.cachedActivities = saved.cachedActivities || new Array(60).fill(null);
+      this.currentQuestionIndex = Math.max(0, Math.min(TOTAL_BASE_QUESTIONS - 1, saved.currentQuestionIndex || 0));
+      this.cachedActivities = saved.cachedActivities || new Array(TOTAL_BASE_QUESTIONS).fill(null);
       this.userAnswers = saved.userAnswers;
       this.questionTimeRecords = saved.questionTimeRecords || [];
       this.breakEvents = saved.breakEvents || [];
+      this.partBreakRecord = saved.partBreakRecord || null;
       this.totalTimerSeconds = saved.totalTimerSeconds || 0;
       this.questionTimerSecondsRemaining = saved.currentQuestionRemainingSeconds || AssessmentRunner.QUESTION_TIME_LIMIT_SEC;
       this.isPaused = saved.isPaused || false;
+      this.isOnPartBreak = saved.isOnPartBreak || false;
+      this.partBreakRemainingSeconds = saved.partBreakRemainingSeconds || AssessmentRunner.PART_BREAK_LIMIT_SEC;
+      this.isTimerVisible = saved.isTimerVisible !== false;
 
       this.startGlobalTimer(this.totalTimerSeconds);
       this.attachBeforeUnload();
 
-      if (this.isPaused) {
+      if (this.isOnPartBreak) {
+        this.renderPartBreakScreen();
+      } else if (this.isPaused) {
         await this.loadQuestion(this.currentQuestionIndex, false);
         this.pauseAssessment();
       } else {
@@ -174,20 +246,16 @@ export class AssessmentRunner {
       }
     } else {
       this.currentQuestionIndex = 0;
-      this.cachedActivities = new Array(60).fill(null);
+      this.cachedActivities = new Array(TOTAL_BASE_QUESTIONS).fill(null);
       this.initUserAnswers();
       this.totalTimerSeconds = 0;
       this.questionTimerSecondsRemaining = AssessmentRunner.QUESTION_TIME_LIMIT_SEC;
       this.isPaused = false;
+      this.isOnPartBreak = false;
+      this.isTimerVisible = true;
 
       this.startGlobalTimer(0);
       this.attachBeforeUnload();
-
-      // Check cache version — purge stale out-of-sync sessions from earlier builds
-      if (localStorage.getItem('cognix_cache_ver') !== 'v_3_0_clean') {
-        localStorage.removeItem('cognix_assessment_session');
-        localStorage.setItem('cognix_cache_ver', 'v_3_0_clean');
-      }
 
       this.saveSession(studentName);
       await this.loadQuestion(0, true);
@@ -198,7 +266,7 @@ export class AssessmentRunner {
     this.totalTimerSeconds = initialSeconds;
     if (this.globalTimerInterval) clearInterval(this.globalTimerInterval);
     this.globalTimerInterval = setInterval(() => {
-      if (!this.isPaused) {
+      if (!this.isPaused && !this.isOnPartBreak) {
         this.totalTimerSeconds++;
         if (this.totalTimerSeconds % 3 === 0) {
           this.saveSession(this.studentName);
@@ -213,7 +281,7 @@ export class AssessmentRunner {
     }, 1000);
   }
 
-  private speakAudio(text: string) {
+  public speakAudio(text: string) {
     try {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -231,13 +299,12 @@ export class AssessmentRunner {
       this.questionTimerInterval = null;
     }
 
-    // Safety guard: if remaining time is <= 0 for any reason, reset to 90s limit
     if (this.questionTimerSecondsRemaining <= 0) {
       this.questionTimerSecondsRemaining = AssessmentRunner.QUESTION_TIME_LIMIT_SEC;
     }
 
     this.questionTimerInterval = setInterval(() => {
-      if (!this.isPaused) {
+      if (!this.isPaused && !this.isOnPartBreak) {
         this.questionTimerSecondsRemaining--;
         this.updateQuestionTimerUI();
 
@@ -259,7 +326,7 @@ export class AssessmentRunner {
       qTimerEl.textContent = `${mins}:${secs}`;
 
       if (this.questionTimerSecondsRemaining <= 15) {
-        qTimerEl.style.color = '#ef4444'; // Warning red
+        qTimerEl.style.color = '#ef4444';
       } else {
         qTimerEl.style.color = 'var(--accent-cyan)';
       }
@@ -271,25 +338,19 @@ export class AssessmentRunner {
   }
 
   private async loadQuestion(targetIndex: number, resetTimer: boolean = true) {
-    if (targetIndex < 0 || targetIndex >= 60) return;
+    if (targetIndex < 0 || targetIndex >= TOTAL_BASE_QUESTIONS) return;
 
-    // Reset motor target position for new question
     this.motorTargetPos = { top: 80, left: 240 };
-
-    // Claim this load as the active one. Any previously suspended loadQuestion will
-    // see its captured gen no longer matches and will abort after its await.
     const myGen = ++this.loadGen;
 
     this.currentQuestionIndex = targetIndex;
     const baseline = QUESTION_BASELINES[targetIndex];
 
-    // Stop any running question timer while loading
     if (this.questionTimerInterval) {
       clearInterval(this.questionTimerInterval);
       this.questionTimerInterval = null;
     }
 
-    // Always reset question timer when loading a new question (unless explicitly resuming a valid active timer > 3s)
     if (resetTimer || this.questionTimerSecondsRemaining <= 3) {
       this.questionTimerSecondsRemaining = AssessmentRunner.QUESTION_TIME_LIMIT_SEC;
     }
@@ -297,34 +358,24 @@ export class AssessmentRunner {
     this.itemFirstInteractionTimestamp = null;
     this.pauseDurationForCurrentQuestionMs = 0;
 
-    // Render loading state if question is not yet cached
     if (!this.cachedActivities[targetIndex]) {
       this.renderLoadingState(targetIndex);
       this.cachedActivities[targetIndex] = await this.generator.generateActivity(baseline.slot);
-
-      // After the await: check if a newer loadQuestion has taken over while we were waiting.
-      // If so, abort — do NOT render or start a timer. The newer load will handle it.
       if (myGen !== this.loadGen) return;
     }
 
-    // Mark loading as done so the submit button becomes active again
     this.isLoadingNextQuestion = false;
-
     const activeActivity = this.cachedActivities[targetIndex];
     if (activeActivity) {
-      // Strictly enforce baseline type on active activity
       activeActivity.type = baseline.type;
       if (baseline.type !== 'robot_mission' && activeActivity.payload) {
         delete activeActivity.payload.availableBlocks;
         delete activeActivity.payload.correctSequence;
       }
-      // Shuffle options so correct answer is not always in position 0
       this.shuffleActivityOptions(activeActivity);
     }
 
-    // Start tracking active time ONLY after question is ready (not during AI loading delay)
     this.itemStartTimestamp = Date.now();
-
     this.saveSession(this.studentName);
     this.render();
 
@@ -336,11 +387,10 @@ export class AssessmentRunner {
       }
     }
 
-    if (!this.isPaused) {
+    if (!this.isPaused && !this.isOnPartBreak) {
       this.startQuestionTimer();
     }
 
-    // Pre-fetch next question in background
     this.prefetchNextQuestion(targetIndex + 1);
   }
 
@@ -371,7 +421,7 @@ export class AssessmentRunner {
       playground.innerHTML = `
         <div style="text-align: center; padding: 3rem 1rem; color: var(--accent-cyan);">
           <div style="font-size: 2.5rem; margin-bottom: 1rem; animation: pulse 1.2s infinite ease-in-out;">⚡</div>
-          <h3 style="font-size: 1.2rem; font-weight: 700;">Preparing Next Question...</h3>
+          <h3 style="font-size: 1.2rem; font-weight: 700;">Preparing Question ${targetIndex + 1}...</h3>
           <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">${domainConfig.name} • ${baseline.subSkill}</p>
         </div>
       `;
@@ -379,7 +429,7 @@ export class AssessmentRunner {
   }
 
   private async prefetchNextQuestion(nextIndex: number) {
-    if (nextIndex >= 0 && nextIndex < 60 && !this.cachedActivities[nextIndex]) {
+    if (nextIndex >= 0 && nextIndex < TOTAL_BASE_QUESTIONS && !this.cachedActivities[nextIndex]) {
       const baseline = QUESTION_BASELINES[nextIndex];
       this.generator.generateActivity(baseline.slot).then(activity => {
         this.cachedActivities[nextIndex] = activity;
@@ -388,7 +438,7 @@ export class AssessmentRunner {
   }
 
   public pauseAssessment() {
-    if (this.isPaused) return;
+    if (this.isPaused || this.isOnPartBreak) return;
     this.isPaused = true;
     this.currentPauseStartTimestamp = Date.now();
     const currentAns = this.userAnswers[this.currentQuestionIndex];
@@ -430,6 +480,102 @@ export class AssessmentRunner {
     this.saveSession(this.studentName);
   }
 
+  // ---------------------------------------------------------------------------
+  // Mandatory 2-Part Break Screen Logic
+  // ---------------------------------------------------------------------------
+  private triggerPartBreak() {
+    this.isOnPartBreak = true;
+    const now = Date.now();
+    this.partBreakRemainingSeconds = AssessmentRunner.PART_BREAK_LIMIT_SEC;
+
+    this.partBreakRecord = {
+      partBreakStart: now,
+      partBreakEnd: null,
+      breakDurationMs: null,
+      studentInitiatedEarly: false
+    };
+
+    if (this.questionTimerInterval) {
+      clearInterval(this.questionTimerInterval);
+      this.questionTimerInterval = null;
+    }
+
+    this.saveSession(this.studentName);
+    this.renderPartBreakScreen();
+
+    // Start 5-minute countdown interval
+    if (this.partBreakTimerInterval) clearInterval(this.partBreakTimerInterval);
+    this.partBreakTimerInterval = setInterval(() => {
+      this.partBreakRemainingSeconds--;
+      const timerEl = document.getElementById('part-break-timer');
+      if (timerEl) {
+        const mins = Math.floor(this.partBreakRemainingSeconds / 60);
+        const secs = String(this.partBreakRemainingSeconds % 60).padStart(2, '0');
+        timerEl.textContent = `${mins}:${secs}`;
+      }
+
+      if (this.partBreakRemainingSeconds <= 0) {
+        this.resumeFromPartBreak(false);
+      }
+    }, 1000);
+  }
+
+  private resumeFromPartBreak(early: boolean = true) {
+    if (!this.isOnPartBreak) return;
+    if (this.partBreakTimerInterval) {
+      clearInterval(this.partBreakTimerInterval);
+      this.partBreakTimerInterval = null;
+    }
+
+    const now = Date.now();
+    if (this.partBreakRecord) {
+      this.partBreakRecord.partBreakEnd = now;
+      this.partBreakRecord.breakDurationMs = now - this.partBreakRecord.partBreakStart;
+      this.partBreakRecord.studentInitiatedEarly = early;
+    }
+
+    this.isOnPartBreak = false;
+    this.loadQuestion(PART_ONE_QUESTIONS, true); // Move to Q26 (index 25)
+  }
+
+  private renderPartBreakScreen() {
+    const mins = Math.floor(this.partBreakRemainingSeconds / 60);
+    const secs = String(this.partBreakRemainingSeconds % 60).padStart(2, '0');
+
+    this.container.innerHTML = `
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:75vh; text-align:center; padding:2rem 1rem; color:#fff;">
+        <div style="font-size:4rem; margin-bottom:1rem; animation:bounce 2s infinite;">☕</div>
+        <span style="background:rgba(16,185,129,0.2); border:1px solid var(--accent-emerald); color:var(--accent-emerald); padding:0.35rem 1rem; border-radius:20px; font-weight:800; font-size:0.9rem; margin-bottom:1rem;">
+          PART 1 COMPLETED (25 / 50 QUESTIONS)
+        </span>
+        <h2 style="font-size:2.2rem; font-weight:800; margin-bottom:0.5rem; background:linear-gradient(135deg, #fff, var(--accent-cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+          Time for a 5-Minute Break!
+        </h2>
+        <p style="color:var(--text-secondary); max-width:500px; font-size:1.05rem; margin-bottom:2rem; line-height:1.6;">
+          Great job finishing Part 1! Take a rest, stretch, or get some water before starting Part 2. Your progress is saved.
+        </p>
+
+        <div style="background:rgba(15,23,42,0.9); border:2px solid var(--accent-cyan); padding:1.25rem 2.5rem; border-radius:20px; margin-bottom:2rem; box-shadow:0 0 25px rgba(6,182,212,0.25);">
+          <div style="font-size:0.85rem; color:var(--text-secondary); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">
+            Break Countdown
+          </div>
+          <div id="part-break-timer" style="font-family:monospace; font-size:3rem; font-weight:900; color:var(--accent-cyan);">
+            ${mins}:${secs}
+          </div>
+        </div>
+
+        <button id="resume-part2-btn" class="btn btn-primary" style="font-size:1.15rem; padding:1rem 3rem; background:linear-gradient(135deg, var(--accent-cyan), var(--accent-blue)); font-weight:800; box-shadow:0 6px 20px rgba(6,182,212,0.4);">
+          🚀 Ready? Start Part 2 Now
+        </button>
+      </div>
+    `;
+
+    const resumeBtn = this.container.querySelector('#resume-part2-btn');
+    if (resumeBtn) {
+      resumeBtn.addEventListener('click', () => this.resumeFromPartBreak(true));
+    }
+  }
+
   private handleQuestionTimeout() {
     if (this.questionTimerInterval) {
       clearInterval(this.questionTimerInterval);
@@ -457,9 +603,11 @@ export class AssessmentRunner {
     const activeDurationMs = Math.max(1000, totalDurationMs - this.pauseDurationForCurrentQuestionMs);
 
     answerState.timeSpentMs += activeDurationMs;
+    const part: 1 | 2 = (this.currentQuestionIndex < PART_ONE_QUESTIONS) ? 1 : 2;
 
     const record: QuestionTimeRecord = {
       questionSlot: baseline.slot,
+      part,
       domain: baseline.domain,
       subSkill: baseline.subSkill,
       questionTitle: activity?.title || baseline.title,
@@ -474,7 +622,7 @@ export class AssessmentRunner {
       wasAnswered,
       remainingTimeWhenAnsweredMs: answerState.remainingTimeWhenAnsweredMs,
       breaksDuringQuestion: answerState.breaksDuringQuestion,
-      earnedScore: 0, // Will be computed at submission
+      earnedScore: 0,
       maxScore: baseline.maxPoints
     };
 
@@ -482,7 +630,6 @@ export class AssessmentRunner {
   }
 
   private advanceToNextQuestion() {
-    // Block further submissions while the next question is loading
     this.isLoadingNextQuestion = true;
 
     if (this.questionTimerInterval) {
@@ -490,10 +637,16 @@ export class AssessmentRunner {
       this.questionTimerInterval = null;
     }
 
-    // Reset countdown for upcoming question
     this.questionTimerSecondsRemaining = AssessmentRunner.QUESTION_TIME_LIMIT_SEC;
 
-    if (this.currentQuestionIndex < 59) {
+    // Check for Part 1 completion (after Q25 / index 24)
+    if (this.currentQuestionIndex === PART_ONE_QUESTIONS - 1) {
+      this.isLoadingNextQuestion = false;
+      this.triggerPartBreak();
+      return;
+    }
+
+    if (this.currentQuestionIndex < TOTAL_BASE_QUESTIONS - 1) {
       const currentDomain = QUESTION_BASELINES[this.currentQuestionIndex].domain;
       const nextDomain = QUESTION_BASELINES[this.currentQuestionIndex + 1].domain;
 
@@ -538,11 +691,11 @@ export class AssessmentRunner {
     const domainConfig = DOMAIN_CONFIG[baseline.domain];
     const answerState = this.userAnswers[this.currentQuestionIndex];
 
-    // --- Child-Friendly Skill Ladder UI ---
-    const currentBaseline = QUESTION_BASELINES[this.currentQuestionIndex];
-    const currentDomain = currentBaseline.domain;
+    const partNum: 1 | 2 = (this.currentQuestionIndex < PART_ONE_QUESTIONS) ? 1 : 2;
+    const partQuestionNum = (this.currentQuestionIndex % PART_ONE_QUESTIONS) + 1;
 
-    // Group domain questions by Sub-Skill
+    // --- Skill Ladder UI ---
+    const currentDomain = baseline.domain;
     const domainQuestions = QUESTION_BASELINES.filter(q => q.domain === currentDomain);
     const uniqueSkills = Array.from(new Set(domainQuestions.map(q => q.subSkill)));
 
@@ -553,15 +706,20 @@ export class AssessmentRunner {
             <span style="font-size:1.5rem; animation: bounce 2s infinite;">🐸</span>
             <div>
               <div style="font-weight:800; font-size:1rem; color:var(--accent-cyan);">
-                Skill Ladder — ${domainConfig.name}
+                Part ${partNum} (${partQuestionNum}/25) — ${domainConfig.name}
               </div>
               <div style="font-size:0.8rem; color:var(--text-secondary);">
                 Active Skill: <strong style="color: #fff;">${baseline.subSkill}</strong>
               </div>
             </div>
           </div>
-          <div style="font-size:0.85rem; font-weight:700; background:rgba(16,185,129,0.15); border:1px solid var(--accent-emerald); padding:0.35rem 0.85rem; border-radius:12px; color:var(--accent-emerald);">
-            Progress: ${this.userAnswers.filter(a => a.isSolved || a.timedOut).length} Completed
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <span style="font-size:0.75rem; font-weight:700; background:rgba(79,70,229,0.2); border:1px solid #6366f1; padding:0.35rem 0.75rem; border-radius:12px; color:#a5b4fc;">
+              Format: ${activity.format.toUpperCase()}
+            </span>
+            <div style="font-size:0.85rem; font-weight:700; background:rgba(16,185,129,0.15); border:1px solid var(--accent-emerald); padding:0.35rem 0.85rem; border-radius:12px; color:var(--accent-emerald);">
+              Progress: ${this.userAnswers.filter(a => a.isSolved || a.timedOut).length}/50
+            </div>
           </div>
         </div>
 
@@ -622,12 +780,31 @@ export class AssessmentRunner {
         </button>
       </div>
 
+      <!-- Sign Language Accessibility Modal -->
+      <div id="sign-language-modal" style="display:${this.isSignLanguageModalOpen ? 'flex' : 'none'}; position:fixed; inset:0; background:rgba(11,15,25,0.92); backdrop-filter:blur(12px); z-index:350; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
+        <div style="background:rgba(15,23,42,0.95); border:2px solid var(--accent-cyan); padding:2rem; border-radius:20px; max-width:450px; width:100%; box-shadow:0 0 30px rgba(6,182,212,0.3);">
+          <div style="font-size:3rem; margin-bottom:1rem;">🤟</div>
+          <h3 style="font-size:1.5rem; font-weight:800; color:#fff; margin-bottom:0.5rem;">Sign Language Support</h3>
+          <p style="color:var(--text-secondary); font-size:0.95rem; margin-bottom:1.5rem; line-height:1.5;">
+            Visual sign language avatar instructions for Question ${this.currentQuestionIndex + 1}.
+          </p>
+          <div style="background:rgba(255,255,255,0.05); border:1px dashed var(--accent-cyan); padding:1.5rem; border-radius:14px; margin-bottom:1.5rem;">
+            <div style="font-size:2rem; margin-bottom:0.5rem;">🤖🤟</div>
+            <div style="font-size:0.85rem; color:var(--accent-cyan); font-weight:700;">[ Sign Language Animation Preview ]</div>
+            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.3rem;">"${activity.instructions}"</div>
+          </div>
+          <button id="close-sign-language-btn" class="btn btn-secondary" style="width:100%; padding:0.75rem;">
+            Close Window
+          </button>
+        </div>
+      </div>
+
       <!-- Exit Confirmation Overlay -->
       <div id="exit-confirm-overlay" style="display:none; position:fixed; inset:0; background:rgba(11,15,25,0.94); backdrop-filter:blur(14px); z-index:400; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
         <div style="font-size:3.5rem; margin-bottom:1rem;">⚠️</div>
         <h2 style="font-size:1.8rem; font-weight:800; color:#fff; margin-bottom:0.5rem;">Exit &amp; Reset Assessment?</h2>
         <p style="color:var(--text-secondary); max-width:420px; margin-bottom:2rem; font-size:0.95rem; line-height:1.5;">
-          Exiting will stop your current progress, clear all saved assessment cache, and restart the assessment from the beginning.
+          Exiting will stop your current progress, clear all saved assessment cache, and restart from the beginning.
         </p>
         <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center;">
           <button id="cancel-exit-btn" class="btn btn-secondary" style="padding:0.75rem 1.5rem; font-weight:700;">Cancel</button>
@@ -643,15 +820,32 @@ export class AssessmentRunner {
             <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
               <span class="activity-domain-badge">${domainConfig.name}</span>
               <span style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); background:rgba(255,255,255,0.06); padding:0.25rem 0.6rem; border-radius:8px;">
-                ${baseline.subSkill} • ${baseline.maxPoints} Pt${baseline.maxPoints > 1 ? 's' : ''}
+                Q${this.currentQuestionIndex + 1} of 50 • ${baseline.subSkill}
               </span>
-              <span style="font-size:0.75rem; font-weight:700; background:${activity.source === 'azure_openai' ? 'rgba(139,92,246,0.2)' : 'rgba(245,158,11,0.2)'}; border:1px solid ${activity.source === 'azure_openai' ? '#8b5cf6' : '#f59e0b'}; color:${activity.source === 'azure_openai' ? '#a78bfa' : '#fbbf24'}; padding:0.2rem 0.6rem; border-radius:12px;" title="Engine Source">
-                ${activity.source === 'azure_openai' ? '🤖 Live Azure AI (o4-mini)' : '⚡ Engine Fast-Track'}
-              </span>
+              ${activity.source === 'azure_openai'
+                ? `<span style="font-size:0.75rem; font-weight:800; background:rgba(6,182,212,0.18); border:1px solid var(--accent-cyan); color:var(--accent-cyan); padding:0.25rem 0.6rem; border-radius:8px; display:inline-flex; align-items:center; gap:4px;" title="Generated dynamically via Azure OpenAI">🤖 Azure AI</span>`
+                : `<span style="font-size:0.75rem; font-weight:800; background:rgba(234,179,8,0.18); border:1px solid #eab308; color:#fde047; padding:0.25rem 0.6rem; border-radius:8px; display:inline-flex; align-items:center; gap:4px;" title="Loaded from deterministic Slot Config (Offline/Fallback)">⚡ Slot Config (Offline)</span>`
+              }
             </div>
-            <div style="display:flex; align-items:center; gap:0.75rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+
+              <!-- 🔊 Audio Play Button -->
+              <button id="speak-question-btn" class="btn btn-secondary" style="padding:0.4rem 0.75rem; font-size:0.85rem; font-weight:700;" title="Read Aloud Question">
+                🔊 Audio
+              </button>
+
+              <!-- 🤟 Sign Language Toggle -->
+              <button id="toggle-sign-language-btn" class="btn btn-secondary" style="padding:0.4rem 0.75rem; font-size:0.85rem; font-weight:700; background:rgba(168,85,247,0.15); border:1px solid #a855f7; color:#c084fc;" title="Sign Language Instruction">
+                🤟 Sign Language
+              </button>
+
+              <!-- 👁️ Timer Visibility Toggle -->
+              <button id="toggle-timer-vis-btn" class="btn btn-secondary" style="padding:0.4rem 0.75rem; font-size:0.85rem;" title="Show/Hide Timer">
+                ${this.isTimerVisible ? '👁️ Hide Timer' : '🙈 Show Timer'}
+              </button>
+
               <!-- ⏱️ Per-question countdown timer -->
-              <div style="display:flex; align-items:center; gap:0.5rem; background:rgba(15,23,42,0.8); border:1px solid var(--border-color); padding:0.4rem 0.9rem; border-radius:20px;">
+              <div id="question-timer-container" style="display:${this.isTimerVisible ? 'flex' : 'none'}; align-items:center; gap:0.5rem; background:rgba(15,23,42,0.8); border:1px solid var(--border-color); padding:0.4rem 0.9rem; border-radius:20px;">
                 <span style="font-size:0.95rem;">⏱️</span>
                 <span id="question-timer-display" style="font-family:monospace; font-size:1.1rem; font-weight:800; color:${this.questionTimerSecondsRemaining <= 15 ? '#ef4444' : 'var(--accent-cyan)'};">
                   ${Math.floor(this.questionTimerSecondsRemaining / 60)}:${String(this.questionTimerSecondsRemaining % 60).padStart(2, '0')}
@@ -660,6 +854,7 @@ export class AssessmentRunner {
                   <div id="question-timer-ring" style="width:${(this.questionTimerSecondsRemaining / AssessmentRunner.QUESTION_TIME_LIMIT_SEC) * 100}%; height:100%; background:${this.questionTimerSecondsRemaining <= 15 ? '#ef4444' : 'var(--accent-cyan)'}; transition:width 0.9s linear;"></div>
                 </div>
               </div>
+
               <!-- Pause Button -->
               <button id="pause-btn" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.85rem;" title="Pause Assessment">
                 ⏸️ Pause
@@ -670,7 +865,6 @@ export class AssessmentRunner {
               </button>
             </div>
           </div>
-
 
           <h2 class="activity-title">${activity.title}</h2>
           <p class="activity-instructions">${activity.instructions}</p>
@@ -704,38 +898,37 @@ export class AssessmentRunner {
   private renderPlaygroundContent(activity: ActivityItem, answerState: StoredUserAnswer): string {
     const payload = activity.payload || {};
 
-    // 1. Robot Mission UI — ONLY for activities explicitly specified as robot_mission type
     if (activity.type === 'robot_mission') {
       const blocks: string[] = payload.availableBlocks || ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'];
       const slot = activity.slot;
 
-      let mapHtml = '';
-      if (slot === 16) {
-        mapHtml = `[ 🤖 Robo ] ➔ ➡️ [ ◽ Path ] ➔ ➡️ [ ⭐ Star ]`;
-      } else if (slot === 17 || slot === 18) {
-        mapHtml = `[ 🤖 Robo ] ➔ ➡️ [ ◽ Walk Forward ] ➔ ⤵️ [ Turn Right ] ➔ 🦾 [ 🦷 Shiny Tooth ]`;
-      } else if (slot === 19) {
-        mapHtml = `[ 🤖 Robo ] ➔ ⤴️ [ Turn Left ] ➔ ➡️ [ ◽ Walk Forward ] ➔ 📦 [ Package ]`;
-      } else if (slot === 20 || slot === 24) {
-        mapHtml = `[ 🤖 Robo ] ➔ ➡️ [ ◽ Move Forward ] ➔ ⤵️ [ Turn Right ] ➔ 🦾 [ 💎 Gem ]`;
-      } else if (slot === 21) {
-        mapHtml = `[ 🤖 Robo ] ➔ ⤴️ [ Turn Left ] ➔ ➡️ [ ◽ Walk Forward ] ➔ 📦 [ Drop Package ]`;
-      } else if (slot === 22 || slot === 26) {
-        mapHtml = `[ 🤖 Robo ] ➔ 🚪 [ Open Door ] ➔ ➡️ [ Move ] ➔ 🦾 [ Grab Treasure ] ➔ 🏠 [ Return Home ]`;
-      } else if (slot === 28) {
-        mapHtml = `
-          <div style="display:flex; flex-direction:column; align-items:center; gap:0.4rem;">
-            <div>[ 🤖 Robo ] ➔ ➡️ [ 🧱 BIG ROCK! (Blocked!) ]</div>
-            <div style="color:var(--accent-amber); font-size:0.95rem;">⤵️ Turn Right Around Rock ➔ ➡️ Move Forward ➔ ⤴️ Turn Left</div>
-            <div>[ 💎 Gem Treasure ]</div>
-          </div>
-        `;
-      } else if (slot === 30) {
-        mapHtml = `[ 🤖 Robo ] ➔ ⚡ [ Power On ] ➔ 🎯 [ Start Task ]`;
-      } else if (slot === 60) {
-        mapHtml = `[ ⚡ Power On ] ➔ 📡 [ Connect ] ➔ 📱 [ Open App ] ➔ 🎓 [ Start Learning ]`;
-      } else {
-        mapHtml = `[ 🤖 Robo ] ➔ ➡️ [ ◽ Path ] ➔ 🦾 [ Target Goal ]`;
+      let mapHtml = payload.routeMap || '';
+      if (!mapHtml) {
+        if (slot === 13) {
+          mapHtml = `[ 🤖 Robo ] ➔ ➡️ [ ◽ Path ] ➔ ➡️ [ ⭐ Star ]`;
+        } else if (slot === 14 || slot === 15) {
+          mapHtml = `[ 🤖 Robo ] ➔ ➡️ [ ◽ Walk Forward ] ➔ ⤵️ [ Turn Right ] ➔ 🦾 [ 💎 Gem ]`;
+        } else if (slot === 16) {
+          mapHtml = `[ 🤖 Robo ] ➔ ⤴️ [ Turn Left ] ➔ ➡️ [ ◽ Walk Forward ] ➔ 📦 [ Package ]`;
+        } else if (slot === 17 || slot === 21) {
+          mapHtml = `[ 🤖 Robo ] ➔ ➡️ [ ◽ Move Forward ] ➔ ⤵️ [ Turn Right ] ➔ 🦾 [ 💎 Gem ]`;
+        } else if (slot === 18) {
+          mapHtml = `[ 🤖 Robo ] ➔ ⤴️ [ Turn Left ] ➔ ➡️ [ ◽ Walk Forward ] ➔ 📦 [ Drop Package ]`;
+        } else if (slot === 19 || slot === 23) {
+          mapHtml = `[ 🤖 Robo ] ➔ 🚪 [ Open Door ] ➔ ➡️ [ Move ] ➔ 🦾 [ Grab Treasure ] ➔ 🏠 [ Return Home ]`;
+        } else if (slot === 24) {
+          mapHtml = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:0.4rem;">
+              <div>[ 🤖 Robo ] ➔ ➡️ [ 🧱 BIG ROCK! (Blocked!) ]</div>
+              <div style="color:var(--accent-amber); font-size:0.95rem;">⤵️ Turn Right Around Rock ➔ ➡️ Move Forward ➔ ⤴️ Turn Left</div>
+              <div>[ 💎 Gem Treasure ]</div>
+            </div>
+          `;
+        } else if (slot === 50) {
+          mapHtml = `[ ⚡ Power On ] ➔ 📡 [ Connect ] ➔ 📱 [ Open App ] ➔ 🎓 [ Start Learning ]`;
+        } else {
+          mapHtml = `[ 🤖 Robo ] ➔ ➡️ [ ◽ Path ] ➔ 🦾 [ Target Goal ]`;
+        }
       }
 
       return `
@@ -780,7 +973,6 @@ export class AssessmentRunner {
       `;
     }
 
-    // 2. Picture Match UI — detected by activity.type
     if (activity.type === 'picture_match') {
       const audioPrompt = payload.audioPromptText || activity.instructions || 'Select the matching item';
       const options: any[] = payload.options && payload.options.length > 0 ? payload.options : [
@@ -810,7 +1002,6 @@ export class AssessmentRunner {
       `;
     }
 
-    // 3. Fine Motor Canvas Target UI
     if (activity.type === 'motor_target') {
       const targetsCount = payload.targetsCount || 3;
       const allHit = answerState.motorClicks.length >= targetsCount;
@@ -825,79 +1016,12 @@ export class AssessmentRunner {
       `;
     }
 
-    // 4. Default 3-Choice Multiple Choice Grid (pattern_matrix, rule_shift, and any fallback)
     let sequenceList = Array.isArray(payload.sequence) ? payload.sequence : null;
     let gridMatrix = Array.isArray(payload.grid) ? payload.grid : null;
-
-    const slot = activity.slot;
-    if (!sequenceList && !gridMatrix && slot) {
-      if (slot === 1) sequenceList = ['🔵 Circle', '🔴 Circle', '🔵 Circle', '🔴 Circle', '❓'];
-      else if (slot === 2) sequenceList = ['🍎 Apple', '🍎 Apple', '🍌 Banana'];
-      else if (slot === 3) sequenceList = ['🔺 Triangle', '🔷 Diamond', '🔺 Triangle', '🔷 Diamond', '❓'];
-      else if (slot === 4) sequenceList = ['🐶 Dog', '🐱 Cat', '🦁 Lion'];
-      else if (slot === 5) sequenceList = ['🚗 Car', '🚌 Bus', '✈️ Airplane', '🍎 Apple'];
-      else if (slot === 6) sequenceList = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '❓'];
-      else if (slot === 7) sequenceList = ['🌱 Seed', '➡️', '🌿 Sprout', '➡️', '🌸 Flower'];
-      else if (slot === 8) sequenceList = ['⭐ Star', '⭐ Star', '🌙 Moon', '⭐ Star', '⭐ Star', '❓'];
-      else if (slot === 9) {
-        gridMatrix = [
-          ['🔺 Triangle', '⬛ Square', '🔴 Circle'],
-          ['⬛ Square', '🔴 Circle', '🔺 Triangle'],
-          ['🔴 Circle', '🔺 Triangle', '❓']
-        ];
-      }
-      else if (slot === 10) sequenceList = ['🟢 Green', '🟢 Green', '🟡 Yellow', '🟢 Green', '🟢 Green', '❓'];
-      else if (slot === 11) {
-        gridMatrix = [
-          ['⭕ Circle', '⬛ Square', '🔺 Triangle'],
-          ['⬛ Square', '🔺 Triangle', '⭕ Circle'],
-          ['🔺 Triangle', '⭕ Circle', '❓']
-        ];
-      }
-      else if (slot === 12) sequenceList = ['☀️ Daytime ➔', '🌙 Nighttime ➔', '☀️ Daytime ➔', '❓'];
-      else if (slot === 13) sequenceList = ['🌧️ Rain Outside ➔', '❓ What do you bring?'];
-      else if (slot === 14) sequenceList = ['🔑 Key ➔', '🚪 Door ➔', '❓ What happens?'];
-      else if (slot === 15) sequenceList = ['🫗 Glass Dropped ➔', '❓ What happens next?'];
-    }
 
     let optionsList = Array.isArray(payload.options) && payload.options.length > 0
       ? payload.options.slice(0, 3)
       : [{ label: 'Choice A' }, { label: 'Choice B' }, { label: 'Choice C' }];
-
-    // Auto-fix generic "Option A" labels with rich visual content per slot:
-    if (optionsList.some((o: any) => !o.label || o.label === 'Option A' || o.label === 'Option B')) {
-      if (slot === 7) {
-        optionsList = [
-          { label: '🌱 Seed ➔ 🌿 Sprout ➔ 🌸 Flower', emoji: '🌸', correct: true },
-          { label: '🌸 Flower ➔ 🌱 Seed ➔ 🌿 Sprout', emoji: '🌱', correct: false },
-          { label: '🌿 Sprout ➔ 🌸 Flower ➔ 🌱 Seed', emoji: '🌿', correct: false }
-        ];
-      } else if (slot === 8) {
-        optionsList = [
-          { label: '🌙 Moon', emoji: '🌙', correct: true },
-          { label: '⭐ Star', emoji: '⭐', correct: false },
-          { label: '☀️ Sun', emoji: '☀️', correct: false }
-        ];
-      } else if (slot === 9) {
-        optionsList = [
-          { label: '🟩 Green Square', emoji: '🟩', correct: true },
-          { label: '🔴 Red Circle', emoji: '🔴', correct: false },
-          { label: '🔷 Blue Triangle', emoji: '🔷', correct: false }
-        ];
-      } else if (slot === 11) {
-        optionsList = [
-          { label: '⬛ Square', emoji: '⬛', correct: true },
-          { label: '⭕ Circle', emoji: '⭕', correct: false },
-          { label: '🔺 Triangle', emoji: '🔺', correct: false }
-        ];
-      } else if (slot === 15) {
-        optionsList = [
-          { label: '💥 The glass shatters', emoji: '💥', correct: true },
-          { label: '🎈 It floats in the air', emoji: '🎈', correct: false },
-          { label: '🍎 It turns into an apple', emoji: '🍎', correct: false }
-        ];
-      }
-    }
 
     return `
       ${gridMatrix ? `
@@ -933,7 +1057,6 @@ export class AssessmentRunner {
         }).join('')}
       </div>
     `;
-
   }
 
   private registerInteraction() {
@@ -947,8 +1070,6 @@ export class AssessmentRunner {
   }
 
   private attachEventListeners() {
-    // Safety guard: if a load is already in progress, don't attach submit listener again.
-    // The submit button is already rendered as disabled; this prevents keyboard/programmatic triggering.
     const answerState = this.userAnswers[this.currentQuestionIndex];
 
     // Options click (3 choice grid)
@@ -1008,15 +1129,52 @@ export class AssessmentRunner {
       });
     }
 
-    // Listen Audio button handler
+    // Audio button handlers
+    const speakQuestionBtn = this.container.querySelector('#speak-question-btn');
+    if (speakQuestionBtn) {
+      speakQuestionBtn.addEventListener('click', () => {
+        const activity = this.cachedActivities[this.currentQuestionIndex];
+        if (activity) {
+          const promptText = activity.payload?.audioPromptText || activity.instructions;
+          this.speakAudio(promptText);
+        }
+      });
+    }
+
     const listenAudioBtn = this.container.querySelector('#listen-audio-btn');
     if (listenAudioBtn) {
       listenAudioBtn.addEventListener('click', () => {
         const activity = this.cachedActivities[this.currentQuestionIndex];
         if (activity) {
-          const promptText = activity.payload?.audioPromptText || activity.instructions || 'Select the matching item';
+          const promptText = activity.payload?.audioPromptText || activity.instructions;
           this.speakAudio(promptText);
         }
+      });
+    }
+
+    // Sign Language toggle
+    const toggleSignLanguageBtn = this.container.querySelector('#toggle-sign-language-btn');
+    if (toggleSignLanguageBtn) {
+      toggleSignLanguageBtn.addEventListener('click', () => {
+        this.isSignLanguageModalOpen = true;
+        this.render();
+      });
+    }
+
+    const closeSignLanguageBtn = this.container.querySelector('#close-sign-language-btn');
+    if (closeSignLanguageBtn) {
+      closeSignLanguageBtn.addEventListener('click', () => {
+        this.isSignLanguageModalOpen = false;
+        this.render();
+      });
+    }
+
+    // Timer visibility toggle
+    const toggleTimerVisBtn = this.container.querySelector('#toggle-timer-vis-btn');
+    if (toggleTimerVisBtn) {
+      toggleTimerVisBtn.addEventListener('click', () => {
+        this.isTimerVisible = !this.isTimerVisible;
+        this.render();
       });
     }
 
@@ -1050,8 +1208,6 @@ export class AssessmentRunner {
       });
     }
 
-    // Hint request (removed — no hints in assessment)
-
     // Pause & Resume buttons
     const pauseBtn = this.container.querySelector('#pause-btn');
     if (pauseBtn) {
@@ -1081,10 +1237,7 @@ export class AssessmentRunner {
     }
     if (confirmExitBtn) {
       confirmExitBtn.addEventListener('click', () => {
-        AssessmentRunner.clearSavedSession();
-        localStorage.removeItem('cognix_active_assessment_session');
-        localStorage.removeItem('cognix_assessment_session');
-        window.location.reload();
+        this.exitAndReset(true);
       });
     }
 
@@ -1092,13 +1245,11 @@ export class AssessmentRunner {
     const submitAnswerBtn = this.container.querySelector('#submit-answer-btn');
     if (submitAnswerBtn) {
       submitAnswerBtn.addEventListener('click', () => {
-        // Triple-lock guard: button is visually disabled + this runtime check + loadGen counter
         if (this.isLoadingNextQuestion) return;
         this.recordQuestionTimeData(answerState.isSolved);
         this.advanceToNextQuestion();
       });
     }
-
   }
 
   private showCompletionLoadingScreen() {
@@ -1107,11 +1258,11 @@ export class AssessmentRunner {
         <div style="font-size:4rem; margin-bottom:1.5rem; animation:bounce 1.5s infinite;">🎉</div>
         <h2 style="font-size:2rem; font-weight:800; color:#fff; margin-bottom:0.75rem;">Assessment Complete!</h2>
         <p style="color:var(--text-secondary); font-size:1.05rem; margin-bottom:2rem; max-width:460px;">
-          Amazing work! Your results are being compiled and your personalised AI report is being generated...
+          Amazing work completing all 50 questions! Your results are being compiled and your personalised CodeRa AI report is being generated...
         </p>
         <div style="display:flex; align-items:center; gap:0.75rem; background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); padding:1rem 2rem; border-radius:20px;">
           <div style="width:18px; height:18px; border-radius:50%; border:3px solid var(--accent-cyan); border-top-color:transparent; animation:spin 0.9s linear infinite;"></div>
-          <span style="color:var(--accent-cyan); font-weight:700; font-size:1rem;">Generating Your Report...</span>
+          <span style="color:var(--accent-cyan); font-weight:700; font-size:1rem;">Generating Your CodeRa Report...</span>
         </div>
       </div>
     `;
@@ -1124,14 +1275,13 @@ export class AssessmentRunner {
     this.detachBeforeUnload();
     AssessmentRunner.clearSavedSession();
 
-    // Show loading screen while compiling report
     this.showCompletionLoadingScreen();
 
     const itemTelemetries: ItemTelemetry[] = [];
     const itemMaxPtsMap: Record<string, number> = {};
 
-    // Compile telemetry across all 60 questions
-    for (let i = 0; i < 60; i++) {
+    // Compile telemetry across all 50 questions
+    for (let i = 0; i < TOTAL_BASE_QUESTIONS; i++) {
       const activity = this.cachedActivities[i];
       const answerState = this.userAnswers[i];
       const baseline = QUESTION_BASELINES[i];
@@ -1162,6 +1312,7 @@ export class AssessmentRunner {
         item_id: activity.id,
         domain: activity.domain,
         skill: activity.skill,
+        format: activity.format,
         difficulty_level: activity.difficulty,
         is_correct: isCorrect,
         accuracy_score: accuracyScore,
@@ -1176,12 +1327,15 @@ export class AssessmentRunner {
       }
     }
 
-    // Calculate domain & placement scores
+    // Calculate domain, format & placement scores (v2 schema)
     const domainScores = ScoringEngine.calculateDomainScores(itemTelemetries, itemMaxPtsMap);
-    const totalScore = ScoringEngine.calculateTotalScore(domainScores);
-    const placement = PlacementEngine.evaluatePlacement(totalScore, domainScores, itemTelemetries);
+    const formatScores = ScoringEngine.calculateFormatScores(itemTelemetries, itemMaxPtsMap);
+    const codingReadinessScore = ScoringEngine.calculateCodingReadinessScore(itemTelemetries);
 
-    // Calculate Domain Time Summaries
+    const totalScore = ScoringEngine.calculateTotalScore(domainScores);
+    const placement = PlacementEngine.evaluatePlacement(totalScore, domainScores, itemTelemetries, '2.0');
+
+    // Domain Time Summaries
     const domainsList: AssessmentDomain[] = [
       'cognitive_ability', 'functional_skills', 'communication_level', 'behavioral_readiness', 'fine_motor_technology'
     ];
@@ -1204,37 +1358,55 @@ export class AssessmentRunner {
     });
 
     const totalActiveDurationMs = this.questionTimeRecords.reduce((acc, r) => acc + (r?.activeDurationMs || 0), 0);
-    const totalBreakDurationMs = this.breakEvents.reduce((acc, b) => acc + b.breakDurationMs, 0);
+    const totalBreakDurationMs = this.breakEvents.reduce((acc, b) => acc + b.breakDurationMs, 0) + (this.partBreakRecord?.breakDurationMs || 0);
 
     const session: StudentSessionTelemetry = {
-      session_id: `sess_60_${Date.now()}`,
+      schema_version: '2.0',
+      session_id: `codera_sess_${Date.now()}`,
       student_name: this.studentName || 'Alex Rivers',
-      age_group: '7-9',
+      age_group: '13-16',
       start_time: new Date(Date.now() - this.totalTimerSeconds * 1000).toISOString(),
       end_time: new Date().toISOString(),
       item_telemetries: itemTelemetries,
       domain_scores: domainScores,
+      format_scores: formatScores,
+      coding_readiness_score: codingReadinessScore,
       total_score: totalScore,
       placed_track: placement.baseTrack,
       recommended_track: placement.recommendedTrack,
       flags: placement.flags.map(f => f.id),
 
-      // CEO Time & Analytics
       question_time_records: this.questionTimeRecords,
       break_events: this.breakEvents,
-      total_breaks_count: this.breakEvents.length,
+      part_break_record: this.partBreakRecord || undefined,
+      total_breaks_count: this.breakEvents.length + (this.partBreakRecord ? 1 : 0),
       total_break_duration_ms: totalBreakDurationMs,
       total_active_duration_ms: totalActiveDurationMs,
       total_wall_clock_duration_ms: totalActiveDurationMs + totalBreakDurationMs,
       domain_time_summary: domainTimeSummary
     };
 
-    // Generate AI Summary
+    // Generate AI Qualitative Summary
     const reportSummary = await this.analyzer.generateReportSummary(session, placement);
     session.qualitative_summary = reportSummary;
 
-    // Render Final Dashboard
-    renderReportDashboard(this.container, session, placement);
+    // ── Coding Challenge Gate ──────────────────────────────────────────────
+    // If the student qualifies (L3 or L4), show the Coding Challenge before
+    // the report. The challenge result is stored in session.coding_challenge_result
+    // and included in the final report rendered afterwards.
+    if (placement.qualifiesForCodingChallenge) {
+      const challenge = new CodingChallenge(
+        this.container,
+        placement.baseTrack,
+        (result: CodingChallengeResult) => {
+          session.coding_challenge_result = result;
+          renderReportDashboard(this.container, session, placement);
+        }
+      );
+      challenge.start();
+    } else {
+      // L1 / L2 students go straight to the report
+      renderReportDashboard(this.container, session, placement);
+    }
   }
 }
-

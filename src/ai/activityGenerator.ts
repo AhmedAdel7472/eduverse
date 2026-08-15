@@ -1,11 +1,12 @@
-import { AssessmentDomain, SkillName } from '../engine/telemetrySchema';
+﻿import { AssessmentDomain, SkillName, QuestionFormat } from '../engine/telemetrySchema';
 import { AzureOpenAIClient } from './azureOpenAIClient';
 
 export interface ActivityItem {
   id: string;
-  slot: number; // 1 to 60
+  slot: number; // 1 to 50
   domain: AssessmentDomain;
   skill: SkillName;
+  format: QuestionFormat;
   subSkill: string;
   title: string;
   instructions: string;
@@ -19,9 +20,10 @@ export interface ActivityItem {
 }
 
 export interface QuestionBaseline {
-  slot: number; // 1 to 60
+  slot: number; // 1 to 50
   domain: AssessmentDomain;
   skill: SkillName;
+  format: QuestionFormat;
   subSkill: string;
   title: string;
   baselinePrompt: string;
@@ -31,214 +33,484 @@ export interface QuestionBaseline {
 }
 
 export const QUESTION_BASELINES: QuestionBaseline[] = [
-  // --- DOMAIN 1: COGNITIVE ABILITIES (Q1 - Q15 | 25 Pts) ---
-  { slot: 1, domain: 'cognitive_ability', skill: 'classification', subSkill: 'Visual Discrimination', title: 'Match Identical Shapes', baselinePrompt: 'Match the identical shapes.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
-  { slot: 2, domain: 'cognitive_ability', skill: 'classification', subSkill: 'Visual Discrimination', title: 'Spot the Difference', baselinePrompt: 'Identify the object that is different.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
-  { slot: 3, domain: 'cognitive_ability', skill: 'pattern_recognition', subSkill: 'Visual Discrimination', title: 'Match the Pattern', baselinePrompt: 'Match the same visual pattern.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
-  { slot: 4, domain: 'cognitive_ability', skill: 'classification', subSkill: 'Classification', title: 'Group Together', baselinePrompt: 'Which objects belong together in the same group?', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
-  { slot: 5, domain: 'cognitive_ability', skill: 'classification', subSkill: 'Classification', title: 'Does Not Belong', baselinePrompt: 'Which object does not belong in this group?', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
-  { slot: 6, domain: 'cognitive_ability', skill: 'sequencing', subSkill: 'Sequencing', title: 'Next in Sequence', baselinePrompt: 'What comes next in the sequence?', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 7, domain: 'cognitive_ability', skill: 'sequencing', subSkill: 'Sequencing', title: 'Order the Story', baselinePrompt: 'Arrange the pictures in the correct logical order.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 8, domain: 'cognitive_ability', skill: 'pattern_recognition', subSkill: 'Pattern Recognition', title: 'Complete Visual Pattern', baselinePrompt: 'Complete the visual pattern.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 9, domain: 'cognitive_ability', skill: 'pattern_recognition', subSkill: 'Pattern Recognition', title: 'Identify Missing Element', baselinePrompt: 'Identify the missing element in the grid.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 10, domain: 'cognitive_ability', skill: 'pattern_recognition', subSkill: 'Pattern Recognition', title: 'Continue Pattern', baselinePrompt: 'Continue the pattern to the next step.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 11, domain: 'cognitive_ability', skill: 'logical_reasoning', subSkill: 'Logical Reasoning', title: 'Solve the Problem', baselinePrompt: 'Which answer solves the logical problem?', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
-  { slot: 12, domain: 'cognitive_ability', skill: 'logical_reasoning', subSkill: 'Logical Reasoning', title: 'What Happens Next', baselinePrompt: 'What should logically happen next?', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
-  { slot: 13, domain: 'cognitive_ability', skill: 'problem_solving', subSkill: 'Problem Solving', title: 'Best Solution', baselinePrompt: 'Select the best solution for this situation.', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
-  { slot: 14, domain: 'cognitive_ability', skill: 'problem_solving', subSkill: 'Problem Solving', title: 'Sequence to Solve', baselinePrompt: 'Identify the correct sequence of actions to solve the problem.', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
-  { slot: 15, domain: 'cognitive_ability', skill: 'cause_and_effect', subSkill: 'Cause & Effect', title: 'Predict Cause & Effect', baselinePrompt: 'What will happen if this action is performed?', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
+  // --- DOMAIN 1: COGNITIVE ABILITIES (Q1 - Q12 | 25 Pts) ---
+  { slot: 1, domain: 'cognitive_ability', skill: 'classification', format: 'structured', subSkill: 'Rule-Based Grouping', title: 'Logical Grouping', baselinePrompt: 'Identify which candidate follows the group classification rule.', maxPoints: 2, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 2, domain: 'cognitive_ability', skill: 'classification', format: 'structured', subSkill: 'Process Verification', title: 'Workflow Stage Check', baselinePrompt: 'Determine which stage immediately precedes the final labeling step.', maxPoints: 2, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 3, domain: 'cognitive_ability', skill: 'pattern_recognition', format: 'structured', subSkill: 'Geometric Transformation', title: 'Rotation Pattern', baselinePrompt: 'Identify the rotation angle that completes the 4-phase transformation.', maxPoints: 2, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 4, domain: 'cognitive_ability', skill: 'classification', format: 'structured', subSkill: 'Hardware Architecture', title: 'Input Device Identification', baselinePrompt: 'Select the hardware components that function as computer input devices.', maxPoints: 2, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 5, domain: 'cognitive_ability', skill: 'classification', format: 'structured', subSkill: 'Cause & Effect Logic', title: 'Sensor Trigger Action', baselinePrompt: 'Determine the automated safety system action when temperature threshold is exceeded.', maxPoints: 2, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 6, domain: 'cognitive_ability', skill: 'sequencing', format: 'structured', subSkill: 'Data Pipeline', title: 'Data Processing Workflow', baselinePrompt: 'Identify the required third stage in the data engineering workflow.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 7, domain: 'cognitive_ability', skill: 'sequencing', format: 'structured', subSkill: 'Branching Decisions', title: 'File Optimizer Branching', baselinePrompt: 'Determine the correct decision branch based on the file size threshold.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 8, domain: 'cognitive_ability', skill: 'pattern_recognition', format: 'structured', subSkill: 'Coordinate Grid Matrix', title: '2D Grid Matrix', baselinePrompt: 'Determine the missing coordinate element in the 3x3 matrix grid.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 9, domain: 'cognitive_ability', skill: 'pattern_recognition', format: 'structured', subSkill: 'State Transitions', title: 'Battery Consumption Math', baselinePrompt: 'Calculate remaining robot battery percentage after multiple sequential tasks.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  
+  // --- Coding Readiness Questions (Cognitive) ---
+  { slot: 10, domain: 'cognitive_ability', skill: 'sequencing', format: 'performance', subSkill: 'Coding Readiness: Execution Tracing', title: 'Script Failure Trace', baselinePrompt: 'Identify which program stages are skipped when a mid-sequence network error occurs.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 11, domain: 'cognitive_ability', skill: 'if_then_logic', format: 'structured', subSkill: 'Coding Readiness: Boolean Logic', title: 'Compound Logic Evaluation', baselinePrompt: 'Evaluate compound boolean criteria (AND condition) for Level 3 advancement.', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
+  { slot: 12, domain: 'cognitive_ability', skill: 'algorithmic_thinking', format: 'performance', subSkill: 'Coding Readiness: Loop Calculations', title: 'Loop Execution Angle', baselinePrompt: 'Calculate the total angular rotation resulting from a 4-iteration turn loop.', maxPoints: 3, difficulty: 3, type: 'pattern_matrix' },
 
-  // --- DOMAIN 2: FUNCTIONAL ABILITIES (Q16 - Q30 | 25 Pts) ---
-  { slot: 16, domain: 'functional_skills', skill: 'following_instructions', subSkill: '1-Step Instruction', title: 'Follow Simple Instruction', baselinePrompt: 'Follow a simple 1-step instruction.', maxPoints: 1, difficulty: 1, type: 'robot_mission' },
-  { slot: 17, domain: 'functional_skills', skill: 'following_instructions', subSkill: '1-Step Instruction', title: 'Independent Instruction', baselinePrompt: 'Complete a second independent 1-step action.', maxPoints: 1, difficulty: 1, type: 'robot_mission' },
-  { slot: 18, domain: 'functional_skills', skill: 'following_instructions', subSkill: '2-Step Instruction', title: 'Two-Step Action', baselinePrompt: 'Complete two actions in the correct order.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
-  { slot: 19, domain: 'functional_skills', skill: 'following_instructions', subSkill: '2-Step Instruction', title: 'Direct Execution', baselinePrompt: 'Complete the task smoothly without repeating steps.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
-  { slot: 20, domain: 'functional_skills', skill: 'following_instructions', subSkill: 'Multi-Step Task', title: 'Three-Step Activity', baselinePrompt: 'Complete a 3-step structured activity.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
-  { slot: 21, domain: 'functional_skills', skill: 'following_instructions', subSkill: 'Multi-Step Task', title: 'Sequential Workflow', baselinePrompt: 'Complete the activity in the exact correct sequence.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
-  { slot: 22, domain: 'functional_skills', skill: 'task_completion', subSkill: 'Task Completion', title: 'Finish Structured Task', baselinePrompt: 'Start and finish the structured robotics task.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
-  { slot: 23, domain: 'functional_skills', skill: 'task_completion', subSkill: 'Task Completion', title: 'Minimal Prompt Task', baselinePrompt: 'Complete the goal with minimal visual prompting.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
-  { slot: 24, domain: 'functional_skills', skill: 'working_memory', subSkill: 'Organization', title: 'Organize Tools', baselinePrompt: 'Organize the programming blocks before beginning.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
-  { slot: 25, domain: 'functional_skills', skill: 'working_memory', subSkill: 'Organization', title: 'Return Materials', baselinePrompt: 'Return all unused blocks to their correct place.', maxPoints: 1, difficulty: 1, type: 'robot_mission' },
-  { slot: 26, domain: 'functional_skills', skill: 'problem_solving', subSkill: 'Independence', title: 'Independent Task', baselinePrompt: 'Complete the familiar coding mission independently.', maxPoints: 2, difficulty: 3, type: 'robot_mission' },
-  { slot: 27, domain: 'functional_skills', skill: 'problem_solving', subSkill: 'Independence', title: 'Ask for Help', baselinePrompt: 'Identify when and how to request assistance appropriately.', maxPoints: 1, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 28, domain: 'functional_skills', skill: 'problem_solving', subSkill: 'Functional Problem Solving', title: 'Overcome Blockade', baselinePrompt: 'Identify what to do when a path cannot be completed.', maxPoints: 2, difficulty: 3, type: 'robot_mission' },
-  { slot: 29, domain: 'functional_skills', skill: 'attention', subSkill: 'Learning Routine', title: 'Learning Routine', baselinePrompt: 'Follow the expected technology learning routine.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
-  { slot: 30, domain: 'functional_skills', skill: 'task_completion', subSkill: 'Functional Learning', title: 'Practical Learning Task', baselinePrompt: 'Complete a simple practical digital learning task.', maxPoints: 1, difficulty: 2, type: 'robot_mission' },
+  // --- DOMAIN 2: FUNCTIONAL ABILITIES (Q13 - Q24 | 25 Pts) ---
+  { slot: 13, domain: 'functional_skills', skill: 'following_instructions', format: 'performance', subSkill: '1-Step Instruction', title: 'Hospital Supply Cart', baselinePrompt: 'Deliver emergency first-aid supplies directly to Room 101.', maxPoints: 2, difficulty: 1, type: 'robot_mission' },
+  { slot: 14, domain: 'functional_skills', skill: 'following_instructions', format: 'performance', subSkill: '1-Step Instruction', title: 'Library Book Sorter', baselinePrompt: 'Retrieve the returned coding textbook from Shelf B.', maxPoints: 2, difficulty: 1, type: 'robot_mission' },
+  { slot: 15, domain: 'functional_skills', skill: 'following_instructions', format: 'performance', subSkill: '2-Step Instruction', title: 'Campus Lab Navigation', baselinePrompt: 'Navigate to Computer Lab via reception turn and hallway traversal.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 16, domain: 'functional_skills', skill: 'following_instructions', format: 'performance', subSkill: '2-Step Instruction', title: 'Warehouse Shelf Retrieval', baselinePrompt: 'Turn toward Aisle 4 and advance to retrieve the inventory item.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 17, domain: 'functional_skills', skill: 'following_instructions', format: 'performance', subSkill: 'Multi-Step Task', title: 'Smart Farm Drone Survey', baselinePrompt: 'Fly forward, turn right into Sector C, and scan soil moisture.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 18, domain: 'functional_skills', skill: 'following_instructions', format: 'performance', subSkill: 'Multi-Step Task', title: 'Apartment Delivery Courier', baselinePrompt: 'Turn left at intersection, advance to Apartment 5B, and place package.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 19, domain: 'functional_skills', skill: 'task_completion', format: 'performance', subSkill: 'Task Completion', title: 'Cleanroom Security Entry', baselinePrompt: 'Unlock badge door, advance inside, collect sterile sample, and navigate to station.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 20, domain: 'functional_skills', skill: 'task_completion', format: 'performance', subSkill: 'Task Completion', title: 'Data Center Maintenance', baselinePrompt: 'Advance to server rack 7 and secure the backup hard drive.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 21, domain: 'functional_skills', skill: 'working_memory', format: 'performance', subSkill: 'Organization', title: '3D Printer Workflow Setup', baselinePrompt: 'Load filament spool, heat nozzle to 200°C, and calibrate print bed.', maxPoints: 2, difficulty: 2, type: 'robot_mission' },
+  { slot: 22, domain: 'functional_skills', skill: 'working_memory', format: 'performance', subSkill: 'Organization', title: 'End-of-Shift Charging Dock', baselinePrompt: 'Guide Robo onto the wireless charging dock at the end of the shift.', maxPoints: 2, difficulty: 1, type: 'robot_mission' },
+  { slot: 23, domain: 'functional_skills', skill: 'problem_solving', format: 'performance', subSkill: 'Independence', title: 'Facility Emergency Shutoff', baselinePrompt: 'Advance to sensor room, close emergency water valve, and signal command.', maxPoints: 3, difficulty: 3, type: 'robot_mission' },
+  { slot: 24, domain: 'functional_skills', skill: 'problem_solving', format: 'performance', subSkill: 'Functional Problem Solving', title: 'Corridor Detour Routing', baselinePrompt: 'Navigate around the blocked fire door via service hall to reach emergency exit.', maxPoints: 2, difficulty: 3, type: 'robot_mission' },
 
-  // --- DOMAIN 3: COMMUNICATION LEVEL (Q31 - Q40 | 20 Pts) ---
-  { slot: 31, domain: 'communication_level', skill: 'listening', subSkill: 'Receptive Communication', title: 'Listen & Follow', baselinePrompt: 'Follow a spoken audio instruction.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
-  { slot: 32, domain: 'communication_level', skill: 'listening', subSkill: 'Receptive Communication', title: 'Identify Object', baselinePrompt: 'Identify the requested target object from audio prompt.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
-  { slot: 33, domain: 'communication_level', skill: 'vocabulary', subSkill: 'Expressive Communication', title: 'Name Component', baselinePrompt: 'Select the correct name for the highlighted technology item.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
-  { slot: 34, domain: 'communication_level', skill: 'vocabulary', subSkill: 'Expressive Communication', title: 'Express Choice', baselinePrompt: 'Communicate the correct preference or action needed.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
-  { slot: 35, domain: 'communication_level', skill: 'understanding_instructions', subSkill: 'Following Instructions', title: 'Two-Step Audio', baselinePrompt: 'Follow a 2-step audio communication instruction.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
-  { slot: 36, domain: 'communication_level', skill: 'understanding_instructions', subSkill: 'Following Instructions', title: 'Classroom Tech Instruction', baselinePrompt: 'Follow a functional technology classroom command.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
-  { slot: 37, domain: 'communication_level', skill: 'picture_matching', subSkill: 'Identification', title: 'Identify Digital Icon', baselinePrompt: 'Identify the matching digital icon or symbol.', maxPoints: 2, difficulty: 1, type: 'picture_match' },
-  { slot: 38, domain: 'communication_level', skill: 'verbal_comprehension', subSkill: 'Question Response', title: 'Answer WH-Question', baselinePrompt: 'Answer the question: "Which tool helps robots move?"', maxPoints: 2, difficulty: 3, type: 'picture_match' },
-  { slot: 39, domain: 'communication_level', skill: 'verbal_comprehension', subSkill: 'Functional Communication', title: 'Request Clarification', baselinePrompt: 'Choose the symbol used to request help or clarification.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
-  { slot: 40, domain: 'communication_level', skill: 'understanding_instructions', subSkill: 'Problem Solving Communication', title: 'Communicate Solution', baselinePrompt: 'Communicate the correct solution choice to the team.', maxPoints: 2, difficulty: 3, type: 'picture_match' },
+  // --- DOMAIN 3: COMMUNICATION LEVEL (Q25 - Q34 | 20 Pts) ---
+  { slot: 25, domain: 'communication_level', skill: 'listening', format: 'structured', subSkill: 'Assistive Tech Identification', title: 'Live Speech-to-Text Tool', baselinePrompt: 'Identify the assistive technology app that generates real-time text subtitles.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 26, domain: 'communication_level', skill: 'listening', format: 'structured', subSkill: 'Data Visualization', title: 'Project Timeline Chart', baselinePrompt: 'Select the visual scheduling tool used to track project milestones over time.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 27, domain: 'communication_level', skill: 'vocabulary', format: 'structured', subSkill: 'Hardware Terminology', title: 'Central Processor (CPU)', baselinePrompt: 'Identify the primary computer component responsible for executing program instructions.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 28, domain: 'communication_level', skill: 'vocabulary', format: 'structured', subSkill: 'Collaboration Software', title: 'Video Conferencing Platform', baselinePrompt: 'Choose the digital collaboration tool used for remote screen sharing and video calls.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 29, domain: 'communication_level', skill: 'understanding_instructions', format: 'structured', subSkill: 'Digital Classroom Etiquette', title: 'Mute Mic & Raise Hand', baselinePrompt: 'Execute the 2-step audio instruction: Mute microphone and raise virtual hand.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 30, domain: 'communication_level', skill: 'understanding_instructions', format: 'structured', subSkill: 'Cloud Submission Commands', title: 'Cloud Upload Icon', baselinePrompt: 'Identify the universal icon used to submit coding files to the cloud.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 31, domain: 'communication_level', skill: 'picture_matching', format: 'structured', subSkill: 'Accessibility Standards', title: 'Closed Captions [CC] Icon', baselinePrompt: 'Select the standard accessibility icon indicating closed captions/subtitles.', maxPoints: 2, difficulty: 1, type: 'picture_match' },
+  { slot: 32, domain: 'communication_level', skill: 'verbal_comprehension', format: 'structured', subSkill: 'Technical Problem Response', title: 'Error Reporting Protocol', baselinePrompt: 'Choose the best communication response when encountering an unexpected code bug.', maxPoints: 2, difficulty: 3, type: 'picture_match' },
+  { slot: 33, domain: 'communication_level', skill: 'verbal_comprehension', format: 'structured', subSkill: 'Clarification Requests', title: 'Constructive Help Request', baselinePrompt: 'Select the most professional and clear phrase to ask for help on an algorithm.', maxPoints: 2, difficulty: 2, type: 'picture_match' },
+  { slot: 34, domain: 'communication_level', skill: 'understanding_instructions', format: 'structured', subSkill: 'Project Demonstration', title: 'Live Solution Showcase', baselinePrompt: 'Identify the best method to communicate completed project outcomes to a client.', maxPoints: 2, difficulty: 3, type: 'picture_match' },
 
-  // --- DOMAIN 4: BEHAVIORAL & LEARNING READINESS (Q41 - Q50 | 15 Pts) ---
-  { slot: 41, domain: 'behavioral_readiness', skill: 'persistence', subSkill: 'Attention', title: 'Sustain Attention', baselinePrompt: 'Maintains focus when a puzzle takes longer to solve.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 42, domain: 'behavioral_readiness', skill: 'persistence', subSkill: 'Task Engagement', title: 'Remain Engaged', baselinePrompt: 'Remains engaged in the learning activity despite distractions.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 43, domain: 'behavioral_readiness', skill: 'adaptability', subSkill: 'Instruction Following', title: 'Responds to Signals', baselinePrompt: 'Responds promptly when given a stop or transition instruction.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 44, domain: 'behavioral_readiness', skill: 'error_recovery', subSkill: 'Response to Correction', title: 'Accept Redirection', baselinePrompt: 'Accepts gentle feedback and adjusts the approach calmly.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 45, domain: 'behavioral_readiness', skill: 'flexibility', subSkill: 'Frustration Tolerance', title: 'Persevere on Error', baselinePrompt: 'Continues trying calmly after an initial error or bug.', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
-  { slot: 46, domain: 'behavioral_readiness', skill: 'adaptability', subSkill: 'Transition', title: 'Smooth Transition', baselinePrompt: 'Moves smoothly from one activity to the next when time is up.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
-  { slot: 47, domain: 'behavioral_readiness', skill: 'adaptability', subSkill: 'Turn Taking / Waiting', title: 'Wait Appropriately', baselinePrompt: 'Waits patiently while another student or robot finishes their turn.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
-  { slot: 48, domain: 'behavioral_readiness', skill: 'persistence', subSkill: 'Motivation', title: 'Eager to Learn', baselinePrompt: 'Demonstrates willingness to try a new technology challenge.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
-  { slot: 49, domain: 'behavioral_readiness', skill: 'response_to_feedback', subSkill: 'Independence', title: 'Independent Effort', baselinePrompt: 'Attempts the problem independently before asking for help.', maxPoints: 1, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 50, domain: 'behavioral_readiness', skill: 'response_to_feedback', subSkill: 'Help Seeking', title: 'Polite Help Request', baselinePrompt: 'Requests assistance politely and appropriately when stuck.', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
+  // --- DOMAIN 4: BEHAVIORAL & LEARNING READINESS (Q35 - Q42 | 15 Pts) ---
+  { slot: 35, domain: 'behavioral_readiness', skill: 'persistence', format: 'observation', subSkill: 'Attention', title: 'Sustain Attention', baselinePrompt: 'Maintains focus when a puzzle takes longer to solve.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 36, domain: 'behavioral_readiness', skill: 'persistence', format: 'observation', subSkill: 'Task Engagement', title: 'Remain Engaged', baselinePrompt: 'Remains engaged in the learning activity despite distractions.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 37, domain: 'behavioral_readiness', skill: 'adaptability', format: 'observation', subSkill: 'Instruction Following', title: 'Responds to Signals', baselinePrompt: 'Responds promptly when given a stop or transition instruction.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 38, domain: 'behavioral_readiness', skill: 'error_recovery', format: 'observation', subSkill: 'Response to Correction', title: 'Accept Redirection', baselinePrompt: 'Accepts gentle feedback and adjusts the approach calmly.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 39, domain: 'behavioral_readiness', skill: 'flexibility', format: 'observation', subSkill: 'Frustration Tolerance', title: 'Persevere on Error', baselinePrompt: 'Continues trying calmly after an initial error or bug.', maxPoints: 2, difficulty: 3, type: 'pattern_matrix' },
+  { slot: 40, domain: 'behavioral_readiness', skill: 'adaptability', format: 'observation', subSkill: 'Transition', title: 'Smooth Transition', baselinePrompt: 'Moves smoothly from one activity to the next when time is up.', maxPoints: 2, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 41, domain: 'behavioral_readiness', skill: 'adaptability', format: 'observation', subSkill: 'Turn Taking / Waiting', title: 'Wait Appropriately', baselinePrompt: 'Waits patiently while another student or robot finishes their turn.', maxPoints: 1.5, difficulty: 1, type: 'pattern_matrix' },
+  { slot: 42, domain: 'behavioral_readiness', skill: 'persistence', format: 'observation', subSkill: 'Motivation', title: 'Eager to Learn', baselinePrompt: 'Demonstrates willingness to try a new technology challenge.', maxPoints: 1.5, difficulty: 1, type: 'pattern_matrix' },
 
-  // --- DOMAIN 5: FINE MOTOR & TECHNOLOGY SKILLS (Q51 - Q60 | 15 Pts) ---
-  { slot: 51, domain: 'fine_motor_technology', skill: 'touch_interaction', subSkill: 'Fine Motor Control', title: 'Object Precision', baselinePrompt: 'Tap or manipulate small digital targets with precision.', maxPoints: 2, difficulty: 2, type: 'motor_target' },
-  { slot: 52, domain: 'fine_motor_technology', skill: 'mouse_control', subSkill: 'Hand-Eye Coordination', title: 'Accurate Movement', baselinePrompt: 'Move pointer accurately to the target element.', maxPoints: 1, difficulty: 1, type: 'motor_target' },
-  { slot: 53, domain: 'fine_motor_technology', skill: 'drag_and_drop', subSkill: 'Object Manipulation', title: 'Assemble Structure', baselinePrompt: 'Which set of steps correctly assembles Robo\'s body? Choose the right order.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 54, domain: 'fine_motor_technology', skill: 'mouse_control', subSkill: 'Mouse/Trackpad', title: 'Pointer Navigation', baselinePrompt: 'Control pointer speed and target alignment.', maxPoints: 2, difficulty: 2, type: 'motor_target' },
-  { slot: 55, domain: 'fine_motor_technology', skill: 'keyboard_navigation', subSkill: 'Keyboard Skills', title: 'Key Identification', baselinePrompt: 'Locate and press key directional arrows or spacebar.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
-  { slot: 56, domain: 'fine_motor_technology', skill: 'touch_interaction', subSkill: 'Touchscreen', title: 'Touch Target', baselinePrompt: 'Select the highlighted item cleanly on screen.', maxPoints: 1, difficulty: 1, type: 'motor_target' },
-  { slot: 57, domain: 'fine_motor_technology', skill: 'drag_and_drop', subSkill: 'Drag & Drop', title: 'Drag Block to Slot', baselinePrompt: 'Which image shows the correct way to place a block into its matching slot?', maxPoints: 1, difficulty: 1, type: 'pattern_matrix' },
-  { slot: 58, domain: 'fine_motor_technology', skill: 'basic_robot_control', subSkill: 'Digital Navigation', title: 'Select App Icon', baselinePrompt: 'Open or select the correct learning activity application.', maxPoints: 1, difficulty: 2, type: 'picture_match' },
-  { slot: 59, domain: 'fine_motor_technology', skill: 'basic_robot_control', subSkill: 'Tech Problem Solving', title: 'Fix Screen Freeze', baselinePrompt: 'Identify what button to click if a digital task freezes.', maxPoints: 1, difficulty: 3, type: 'pattern_matrix' },
-  { slot: 60, domain: 'fine_motor_technology', skill: 'basic_robot_control', subSkill: 'Technology Independence', title: 'Independent Navigation', baselinePrompt: 'Complete the basic technology startup sequence independently.', maxPoints: 2, difficulty: 3, type: 'robot_mission' }
+  // --- DOMAIN 5: FINE MOTOR & TECHNOLOGY SKILLS (Q43 - Q50 | 15 Pts) ---
+  { slot: 43, domain: 'fine_motor_technology', skill: 'touch_interaction', format: 'performance', subSkill: 'Fine Motor Control', title: 'Object Precision', baselinePrompt: 'Tap or manipulate small digital targets with precision.', maxPoints: 2, difficulty: 2, type: 'motor_target' },
+  { slot: 44, domain: 'fine_motor_technology', skill: 'mouse_control', format: 'performance', subSkill: 'Hand-Eye Coordination', title: 'Accurate Movement', baselinePrompt: 'Move pointer accurately to the target element.', maxPoints: 2, difficulty: 1, type: 'motor_target' },
+  { slot: 45, domain: 'fine_motor_technology', skill: 'drag_and_drop', format: 'performance', subSkill: 'Object Manipulation', title: 'Assemble Structure', baselinePrompt: 'Which set of steps correctly assembles Robo\'s body? Choose the right order.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 46, domain: 'fine_motor_technology', skill: 'mouse_control', format: 'performance', subSkill: 'Mouse/Trackpad', title: 'Pointer Navigation', baselinePrompt: 'Control pointer speed and target alignment.', maxPoints: 2, difficulty: 2, type: 'motor_target' },
+  { slot: 47, domain: 'fine_motor_technology', skill: 'keyboard_navigation', format: 'structured', subSkill: 'Keyboard Skills', title: 'Key Identification', baselinePrompt: 'Locate and press key directional arrows or spacebar.', maxPoints: 2, difficulty: 2, type: 'pattern_matrix' },
+  
+  // --- Coding Readiness Questions (Technology) ---
+  { slot: 48, domain: 'fine_motor_technology', skill: 'repetition_patterns', format: 'structured', subSkill: 'Coding Readiness: Loop Pattern', title: 'Repeat Pattern', baselinePrompt: 'Repeat this action 3 times: Move Forward → Turn Right. What is the pattern?', maxPoints: 1.5, difficulty: 2, type: 'pattern_matrix' },
+  { slot: 49, domain: 'fine_motor_technology', skill: 'basic_robot_control', format: 'structured', subSkill: 'Coding Readiness: Debugging', title: 'Fix Bug', baselinePrompt: 'The robot turned left instead of right. Which block fixes the error?', maxPoints: 1.5, difficulty: 3, type: 'pattern_matrix' },
+  { slot: 50, domain: 'fine_motor_technology', skill: 'basic_robot_control', format: 'performance', subSkill: 'Technology Independence', title: 'Independent Navigation', baselinePrompt: 'Complete the basic technology startup sequence independently.', maxPoints: 2, difficulty: 3, type: 'robot_mission' }
 ];
 
-// Per-slot robot mission configurations: unique block sets and sequences per question
-const ROBOT_MISSION_CONFIGS: Record<number, { blocks: string[]; correctSequence: string[]; description: string }> = {
-  16: { blocks: ['Move Forward ⬆️', 'Turn Left ⬅️', 'Stop 🛑'], correctSequence: ['Move Forward ⬆️'], description: 'Robo needs to move forward ONCE to reach the star. Add just one block!' },
-  17: { blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'], correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'], description: 'Robo needs to find the shiny tooth! Walk forward, turn right to face the tooth, and grab it.' },
-  18: { blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾', 'Stop 🛑'], correctSequence: ['Turn Right ➡️', 'Move Forward ⬆️'], description: 'Turn right first, then move forward — 2 steps to reach the goal!' },
-  19: { blocks: ['Turn Left ⬅️', 'Move Forward ⬆️', 'Grab Item 🦾', 'Jump 🦸'], correctSequence: ['Turn Left ⬅️', 'Move Forward ⬆️'], description: 'Turn LEFT first, then walk forward — build the 2-step path!' },
-  20: { blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾', 'Turn Left ⬅️'], correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'], description: 'Move forward, turn right, then grab the gem — 3 steps in order!' },
-  21: { blocks: ['Jump 🦸', 'Turn Left ⬅️', 'Move Forward ⬆️', 'Drop Item 📦'], correctSequence: ['Turn Left ⬅️', 'Move Forward ⬆️', 'Drop Item 📦'], description: 'Turn left, walk forward, then drop the package — 3 steps!' },
-  22: { blocks: ['Open Door 🚪', 'Move Forward ⬆️', 'Grab Item 🦾', 'Return Home 🏠'], correctSequence: ['Open Door 🚪', 'Move Forward ⬆️', 'Grab Item 🦾', 'Return Home 🏠'], description: 'Full mission: Open door, move forward, grab item, return home — 4 steps!' },
-  23: { blocks: ['Move Forward ⬆️', 'Grab Item 🦾', 'Turn Right ➡️', 'Jump 🦸', 'Stop 🛑'], correctSequence: ['Move Forward ⬆️', 'Grab Item 🦾'], description: 'Only use what you need! 2 blocks — move forward and grab item.' },
-  24: { blocks: ['Turn Right ➡️', 'Move Forward ⬆️', 'Grab Item 🦾', 'Return Home 🏠'], correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'], description: 'Organize the blocks: Move forward first, turn right, then grab the item.' },
-  25: { blocks: ['Return Home 🏠', 'Stop 🛑', 'Turn Left ⬅️'], correctSequence: ['Return Home 🏠'], description: 'Robo finished the task! Add the RETURN HOME block to complete.' },
-  26: { blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾', 'Return Home 🏠'], correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾', 'Return Home 🏠'], description: 'Independent Mission: Walk forward, turn right to face the shiny treasure, grab it, and return home!' },
-  28: { blocks: ['Turn Right ➡️', 'Move Forward ⬆️', 'Turn Left ⬅️', 'Grab Item 🦾'], correctSequence: ['Turn Right ➡️', 'Move Forward ⬆️', 'Turn Left ⬅️', 'Grab Item 🦾'], description: 'Uh-oh! The usual straight path is blocked by a big rock! Turn right first, move forward around the rock, turn left, and grab the gem.' },
-  30: { blocks: ['Power On ⚡', 'Move Forward ⬆️', 'Start Task 🎯'], correctSequence: ['Power On ⚡', 'Start Task 🎯'], description: 'Turn Robo on, then start the task — simple 2-step startup!' },
-  60: { blocks: ['Power On ⚡', 'Connect 📡', 'Open App 📱', 'Start Learning 🎓'], correctSequence: ['Power On ⚡', 'Connect 📡', 'Open App 📱', 'Start Learning 🎓'], description: 'Full 4-step startup sequence — Power On, Connect, Open App, Start Learning!' },
+// Per-slot robot mission configurations: unique block sets, rich real-world scenarios, and customized route maps
+const ROBOT_MISSION_CONFIGS: Record<number, { blocks: string[]; correctSequence: string[]; description: string; routeMap: string }> = {
+  13: {
+    blocks: ['Move Forward ⬆️', 'Turn Left ⬅️', 'Sound Siren 🚨'],
+    correctSequence: ['Move Forward ⬆️'],
+    description: 'Autonomous Hospital Cart: Deliver emergency first-aid kit directly to Room 101 down the straight corridor.',
+    routeMap: '[ 🤖 Robo Cart ] ➔ ➡️ [ 🏥 Clear Corridor ] ➔ 📦 [ Room 101 First-Aid Kit ]'
+  },
+  14: {
+    blocks: ['Pick Up Textbook 📚', 'Move Forward ⬆️', 'Turn Right ➡️'],
+    correctSequence: ['Pick Up Textbook 📚'],
+    description: 'Digital Library Sorter: Robo is parked in front of Shelf B. Retrieve the returned computer science textbook.',
+    routeMap: '[ 🤖 Robo ] ➔ 📚 [ Shelf B (Target) ] ➔ 🦾 [ Pick Up Textbook ]'
+  },
+  15: {
+    blocks: ['Turn Right ➡️', 'Move Forward ⬆️', 'Grab Item 🦾', 'Emergency Stop 🛑'],
+    correctSequence: ['Turn Right ➡️', 'Move Forward ⬆️'],
+    description: 'Campus Lab Navigation: Reach the Computer Lab by turning right at the Reception Desk and advancing forward.',
+    routeMap: '[ 🤖 Robo ] ➔ ⤵️ [ Turn Right at Reception ] ➔ ➡️ [ Advance to Computer Lab 💻 ]'
+  },
+  16: {
+    blocks: ['Turn Left ⬅️', 'Move Forward ⬆️', 'Sound Alarm 🔊', 'Drop Package 📦'],
+    correctSequence: ['Turn Left ⬅️', 'Move Forward ⬆️'],
+    description: 'Smart Warehouse Sorter: Turn left toward Aisle 4 and move forward to the inventory shelf.',
+    routeMap: '[ 🤖 Robo ] ➔ ⤴️ [ Turn Left to Aisle 4 ] ➔ ➡️ [ Move to Inventory Shelf 📦 ]'
+  },
+  17: {
+    blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Scan Soil Moisture 🔍', 'Land Drone 🛬'],
+    correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Scan Soil Moisture 🔍'],
+    description: 'Smart Agriculture Drone: Fly forward above crop row, turn right into Sector C, and scan soil moisture level.',
+    routeMap: '[ 🚁 Drone ] ➔ ➡️ [ Fly Forward ] ➔ ⤵️ [ Turn Right Sector C ] ➔ 🔍 [ Scan Soil Moisture ]'
+  },
+  18: {
+    blocks: ['Turn Left ⬅️', 'Move Forward ⬆️', 'Place Parcel 📦', 'Power Off 🛑'],
+    correctSequence: ['Turn Left ⬅️', 'Move Forward ⬆️', 'Place Parcel 📦'],
+    description: 'Autonomous Delivery Courier: Turn left at intersection, advance to Apartment 5B, and place the parcel on the mat.',
+    routeMap: '[ 🤖 Courier ] ➔ ⤴️ [ Turn Left ] ➔ ➡️ [ Walk to Apt 5B ] ➔ 📦 [ Place Parcel ]'
+  },
+  19: {
+    blocks: ['Unlock Door 🔑', 'Move Forward ⬆️', 'Collect Sample 🧪', 'Navigate to Station 🏢'],
+    correctSequence: ['Unlock Door 🔑', 'Move Forward ⬆️', 'Collect Sample 🧪', 'Navigate to Station 🏢'],
+    description: 'Cleanroom Lab Protocol: Unlock badge door, advance inside chamber, collect sterile sample, and navigate to station.',
+    routeMap: '[ 🤖 Robo ] ➔ 🔑 [ Unlock Door ] ➔ ➡️ [ Advance ] ➔ 🧪 [ Sample ] ➔ 🏢 [ Testing Station ]'
+  },
+  20: {
+    blocks: ['Move Forward ⬆️', 'Secure Hard Drive 💾', 'Jump Laser 🦘', 'Turn Left ⬅️'],
+    correctSequence: ['Move Forward ⬆️', 'Secure Hard Drive 💾'],
+    description: 'Data Center Maintenance: Move forward to Server Rack 7 and safely secure the backup hard drive.',
+    routeMap: '[ 🤖 Robo ] ➔ ➡️ [ Advance to Rack 7 ] ➔ 💾 [ Secure Backup Hard Drive ]'
+  },
+  21: {
+    blocks: ['Load Filament 🧵', 'Heat Nozzle 🔥', 'Calibrate Bed 📐', 'Cancel Print ❌'],
+    correctSequence: ['Load Filament 🧵', 'Heat Nozzle 🔥', 'Calibrate Bed 📐'],
+    description: '3D Printer Workflow Setup: Prepare 3D printer: load filament spool, heat nozzle to 200°C, and calibrate print bed.',
+    routeMap: '[ 🧵 Load Filament ] ➔ 🔥 [ Heat Nozzle to 200°C ] ➔ 📐 [ Calibrate Print Bed ]'
+  },
+  22: {
+    blocks: ['Dock at Charger ⚡', 'Power Off 🛑', 'Turn Left ⬅️'],
+    correctSequence: ['Dock at Charger ⚡'],
+    description: 'End-of-Shift Protocol: Robotics session complete! Guide Robo directly onto its wireless charging dock.',
+    routeMap: '[ 🤖 Robo ] ➔ ⚡ [ Wireless Charging Dock ]'
+  },
+  23: {
+    blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Close Water Valve 🚰', 'Signal Command Center 📡'],
+    correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Close Water Valve 🚰', 'Signal Command Center 📡'],
+    description: 'Emergency Facility Control: Advance through hallway, turn right to sensor room, close water valve, and signal command.',
+    routeMap: '[ 🤖 Robo ] ➔ ➡️ [ Advance ] ➔ ⤵️ [ Turn Right ] ➔ 🚰 [ Close Valve ] ➔ 📡 [ Signal Command ]'
+  },
+  24: {
+    blocks: ['Turn Right ➡️', 'Move Forward ⬆️', 'Turn Left ⬅️', 'Open Emergency Exit 🚪'],
+    correctSequence: ['Turn Right ➡️', 'Move Forward ⬆️', 'Turn Left ⬅️', 'Open Emergency Exit 🚪'],
+    description: 'Pathway Detour: Main corridor blocked by fire shutter. Turn right into Service Hall, advance, turn left, and open Exit Door.',
+    routeMap: '[ 🤖 Robo ] ➔ ⤵️ [ Turn Right Detour ] ➔ ➡️ [ Advance ] ➔ ⤴️ [ Turn Left ] ➔ 🚪 [ Exit Door ]'
+  },
+  50: {
+    blocks: ['Power On Workstation 💻', 'Verify VPN Link 🛡️', 'Launch CodeRa IDE 🚀', 'Join Virtual Classroom 🎓'],
+    correctSequence: ['Power On Workstation 💻', 'Verify VPN Link 🛡️', 'Launch CodeRa IDE 🚀', 'Join Virtual Classroom 🎓'],
+    description: 'Cloud Lab Startup: Full 4-step tech startup: Power on workstation, verify VPN link, launch CodeRa IDE, and connect.',
+    routeMap: '[ 💻 Power On ] ➔ 🛡️ [ Verify VPN ] ➔ 🚀 [ Launch IDE ] ➔ 🎓 [ Join Classroom ]'
+  }
 };
 
 // Rich picture_match configs: audioPromptText + emoji options per slot
 const PICTURE_MATCH_CONFIGS: Record<number, { audioPromptText: string; options: Array<{ label: string; emoji: string; correct: boolean }> }> = {
-  31: { audioPromptText: 'Tap the picture that shows a ROBOT', options: [{ label: 'Robot', emoji: '🤖', correct: true }, { label: 'Apple', emoji: '🍎', correct: false }, { label: 'Ball', emoji: '⚽', correct: false }] },
-  32: { audioPromptText: 'Which picture shows something that MOVES?', options: [{ label: 'Car', emoji: '🚗', correct: true }, { label: 'Book', emoji: '📚', correct: false }, { label: 'Chair', emoji: '🪑', correct: false }] },
-  33: { audioPromptText: 'What is this technology item called?', options: [{ label: 'Tablet', emoji: '📱', correct: true }, { label: 'Pencil', emoji: '✏️', correct: false }, { label: 'Hat', emoji: '🎩', correct: false }] },
-  34: { audioPromptText: 'Which tool should Robo use to GRAB the item?', options: [{ label: 'Robot Arm', emoji: '🦷', correct: true }, { label: 'Umbrella', emoji: '☂️', correct: false }, { label: 'Clock', emoji: '🕐', correct: false }] },
-  35: { audioPromptText: 'Tap what has WHEELS and can CARRY things', options: [{ label: 'Truck', emoji: '🚛', correct: true }, { label: 'Balloon', emoji: '🎈', correct: false }, { label: 'Flower', emoji: '🌸', correct: false }] },
-  36: { audioPromptText: 'Teacher says: Open the learning APP. Tap the correct one!', options: [{ label: 'App Icon', emoji: '📲', correct: true }, { label: 'Speaker', emoji: '🔊', correct: false }, { label: 'Battery', emoji: '🔋', correct: false }] },
-  37: { audioPromptText: 'Which icon means SAVE your work?', options: [{ label: 'Save Disk', emoji: '💾', correct: true }, { label: 'Delete', emoji: '❌', correct: false }, { label: 'Print', emoji: '🖨️', correct: false }] },
-  38: { audioPromptText: 'Which part helps Robo MOVE FORWARD?', options: [{ label: 'Gear/Motor', emoji: '⚙️', correct: true }, { label: 'Camera', emoji: '📷', correct: false }, { label: 'Microphone', emoji: '🎤', correct: false }] },
-  39: { audioPromptText: 'Which symbol means "I NEED HELP please!"?', options: [{ label: 'Help Hand', emoji: '🙋', correct: true }, { label: 'Stop Sign', emoji: '🛑', correct: false }, { label: 'Music Note', emoji: '🎵', correct: false }] },
-  40: { audioPromptText: 'Tap the picture that shows YOUR ANSWER to the team', options: [{ label: 'Thumbs Up', emoji: '👍', correct: true }, { label: 'Question Mark', emoji: '❓', correct: false }, { label: 'Sleeping', emoji: '😴', correct: false }] },
-  58: { audioPromptText: 'Which icon opens the ROBOT CODING activity?', options: [{ label: 'Code Robot', emoji: '🤖', correct: true }, { label: 'Music', emoji: '🎵', correct: false }, { label: 'Food', emoji: '🍕', correct: false }] },
+  25: {
+    audioPromptText: 'Which assistive technology app converts spoken audio into real-time text subtitles on screen?',
+    options: [
+      { label: 'Live Speech-to-Text App 📱', emoji: '📱', correct: true },
+      { label: 'Analog Wall Clock ⏰', emoji: '⏰', correct: false },
+      { label: 'Coffee Machine ☕', emoji: '☕', correct: false }
+    ]
+  },
+  26: {
+    audioPromptText: 'The team lead asks for a visual schedule showing project phases over time. Which tool is this?',
+    options: [
+      { label: 'Project Timeline Gantt Chart 📊', emoji: '📊', correct: true },
+      { label: 'Audio Volume Slider 🔊', emoji: '🔊', correct: false },
+      { label: 'Recycle Bin Icon 🗑️', emoji: '🗑️', correct: false }
+    ]
+  },
+  27: {
+    audioPromptText: 'What is the primary computer component that executes code and processes program logic?',
+    options: [
+      { label: 'Central Processor (CPU) 🧠', emoji: '🧠', correct: true },
+      { label: 'Plastic Desk Mat 🖱️', emoji: '🖱️', correct: false },
+      { label: 'Monitor Stand 🖥️', emoji: '🖥️', correct: false }
+    ]
+  },
+  28: {
+    audioPromptText: 'In a remote coding team, which digital tool allows you to video conference and screen-share code?',
+    options: [
+      { label: 'Video Conferencing Platform 💻', emoji: '💻', correct: true },
+      { label: 'Pocket Calculator 🧮', emoji: '🧮', correct: false },
+      { label: 'Paper Notebook 📓', emoji: '📓', correct: false }
+    ]
+  },
+  29: {
+    audioPromptText: 'Follow the 2-step instruction: First mute your microphone, then click the Raise Hand icon.',
+    options: [
+      { label: 'Mute Mic & Raise Hand 🎙️✋', emoji: '✋', correct: true },
+      { label: 'Turn Up Volume 🔊', emoji: '🔊', correct: false },
+      { label: 'Leave Video Call 🚪', emoji: '🚪', correct: false }
+    ]
+  },
+  30: {
+    audioPromptText: 'The trainer announces: "Submit your Python project file to the cloud portal." Which icon represents upload?',
+    options: [
+      { label: 'Cloud Upload Icon ☁️⬆️', emoji: '☁️', correct: true },
+      { label: 'Bluetooth Disconnect 📴', emoji: '📴', correct: false },
+      { label: 'Airplane Mode ✈️', emoji: '✈️', correct: false }
+    ]
+  },
+  31: {
+    audioPromptText: 'Which accessibility symbol indicates that Closed Captions and subtitles are available for this video?',
+    options: [
+      { label: 'Closed Captions [CC] 🔤', emoji: '🔤', correct: true },
+      { label: 'Dark Mode Switch 🌓', emoji: '🌓', correct: false },
+      { label: 'Screen Brightness ☀️', emoji: '☀️', correct: false }
+    ]
+  },
+  32: {
+    audioPromptText: 'When your code encounters an execution bug, what is the most constructive immediate communication step?',
+    options: [
+      { label: 'Copy error message & ask mentor 🙋', emoji: '🙋', correct: true },
+      { label: 'Shut down computer & walk out 🚪', emoji: '🚪', correct: false },
+      { label: 'Delete the entire project folder 🗑️', emoji: '🗑️', correct: false }
+    ]
+  },
+  33: {
+    audioPromptText: 'Which phrase represents a clear, professional way to request clarification on an algorithm step?',
+    options: [
+      { label: '"Could you explain Step 2 with an example?" 💬', emoji: '💬', correct: true },
+      { label: '"I cannot do this at all" 😞', emoji: '😞', correct: false },
+      { label: '"Skip the entire session" 🛑', emoji: '🛑', correct: false }
+    ]
+  },
+  34: {
+    audioPromptText: 'Your team has finished creating an accessibility website. How should you communicate results to the audience?',
+    options: [
+      { label: 'Live interactive demo presentation 📊', emoji: '📊', correct: true },
+      { label: 'Keep code hidden on flash drive 🤐', emoji: '🤐', correct: false },
+      { label: 'Power off the web server 🛑', emoji: '🛑', correct: false }
+    ]
+  }
 };
 
-// Per-slot cognitive configurations: 100% synchronized instructions, sequence/grid diagrams, and option choices per question (Q1-Q15)
+// Per-slot cognitive configurations: Grade 8 to University SEN (Age 13-21) Logic & Pattern Metrics
 const COGNITIVE_SLOT_CONFIGS: Record<number, { instructions: string; sequence?: string[]; grid?: string[][]; options: Array<{ label: string; emoji?: string; correct: boolean }>; hint: string }> = {
   1: {
-    instructions: 'Look at the shape below. Which option matches it exactly?',
-    sequence: ['🔴 Red Circle'],
-    options: [{ label: 'Red Circle', emoji: '🔴', correct: true }, { label: 'Blue Square', emoji: '🟦', correct: false }, { label: 'Yellow Triangle', emoji: '🔺', correct: false }],
-    hint: 'Find the red circle!'
+    instructions: 'Logical Grouping: Group A contains [🔴 2 Dots, 🔴 4 Dots, 🔴 6 Dots] (Even Numbers). Group B contains [🔵 1 Dot, 🔵 3 Dots, 🔵 5 Dots] (Odd Numbers). Which item follows the Group A rule?',
+    sequence: ['Group A (Even): 🔴 2 | 🔴 4 | 🔴 6', 'Group B (Odd): 🔵 1 | 🔵 3 | 🔵 5', 'Candidate Item = ❓'],
+    options: [
+      { label: '🔴 8 Dots (Even Rule)', emoji: '🔴', correct: true },
+      { label: '🔵 7 Dots (Odd Number)', emoji: '🔵', correct: false },
+      { label: '🟩 0 Dots (Empty)', emoji: '🟩', correct: false }
+    ],
+    hint: 'Group A only contains even numbers: 2, 4, 6, 8!'
   },
   2: {
-    instructions: 'Look at the shapes: 🔴 Circle | 🔴 Circle | 🟩 Square. Which shape is DIFFERENT?',
-    sequence: ['🔴 Circle', '🔴 Circle', '🟩 Square (Different!)'],
-    options: [{ label: 'Green Square', emoji: '🟩', correct: true }, { label: 'Red Circle', emoji: '🔴', correct: false }, { label: 'Blue Triangle', emoji: '🔺', correct: false }],
-    hint: 'Two are red circles, one is a green square!'
+    instructions: 'Workflow Inspection: An automated packaging line runs: [1. Scan QR 📷 → 2. Weigh Package ⚖️ → 3. Pack in Box 📦 → 4. Print Label 🏷️]. Which stage immediately precedes Print Label (Stage 4)?',
+    sequence: ['1. 📷 Scan QR', '2. ⚖️ Weigh', '3. 📦 Pack in Box', '4. 🏷️ Print Label'],
+    options: [
+      { label: 'Pack in Box 📦 (Stage 3)', emoji: '📦', correct: true },
+      { label: 'Scan QR 📷 (Stage 1)', emoji: '📷', correct: false },
+      { label: 'Weigh Package ⚖️ (Stage 2)', emoji: '⚖️', correct: false }
+    ],
+    hint: 'Look at the step right before Stage 4!'
   },
   3: {
-    instructions: 'Look at the pattern: 🔺 🔷 🔺 🔷 ... What comes next?',
-    sequence: ['🔺 Triangle', '🔷 Diamond', '🔺 Triangle', '🔷 Diamond', '❓'],
-    options: [{ label: 'Triangle', emoji: '🔺', correct: true }, { label: 'Diamond', emoji: '🔷', correct: false }, { label: 'Star', emoji: '⭐', correct: false }],
-    hint: 'Triangle and Diamond take turns!'
+    instructions: 'Geometric Rotation Pattern: [90° Quarter Turn ↻] → [180° Half Turn ↻] → [270° Three-Quarter Turn ↻] → [❓ Complete Turn]. What rotation angle completes the full 4-phase cycle?',
+    sequence: ['Phase 1: 90° ↻', 'Phase 2: 180° ↻', 'Phase 3: 270° ↻', 'Phase 4: ❓ Full Turn'],
+    options: [
+      { label: '360° Complete Turnaround 🔄', emoji: '🔄', correct: true },
+      { label: '45° Half Step ↗️', emoji: '↗️', correct: false },
+      { label: '90° Reset Step ➡️', emoji: '➡️', correct: false }
+    ],
+    hint: 'Adding 90° at each step: 270° + 90° = 360°!'
   },
   4: {
-    instructions: 'Which objects belong together in the same group?',
-    sequence: ['🐶 Dog', '🐱 Cat', '🦁 Lion'],
-    options: [{ label: 'Animals Group', emoji: '🐶', correct: true }, { label: 'Vehicle Group', emoji: '🚗', correct: false }, { label: 'Fruit Group', emoji: '🍎', correct: false }],
-    hint: 'Dog, Cat, and Lion are all animals!'
+    instructions: 'Hardware Architecture: Which of the following device pairs are INPUT devices that capture data and feed it into the processor?',
+    sequence: ['Category: Input Devices (Data In)', 'Target: Hardware that sends input signals', '❓ Candidate Pair: '],
+    options: [
+      { label: 'Keyboard & Microphone ⌨️🎙️', emoji: '⌨️', correct: true },
+      { label: 'Monitor Display & Speaker 🖥️🔊', emoji: '🖥️', correct: false },
+      { label: 'Power Supply Cord 🔌', emoji: '🔌', correct: false }
+    ],
+    hint: 'Input devices send user input into the computer!'
   },
   5: {
-    instructions: 'Which item does NOT belong in this vehicle group?',
-    sequence: ['🚗 Car', '🚌 Bus', '✈️ Airplane', '🍎 Apple'],
-    options: [{ label: 'Apple', emoji: '🍎', correct: true }, { label: 'Car', emoji: '🚗', correct: false }, { label: 'Airplane', emoji: '✈️', correct: false }],
-    hint: 'Car, bus, and airplane are vehicles. Apple is food!'
+    instructions: 'Cause & Effect Rule: Temperature sensor reads 86°C. The system safety rule is: [IF Temp > 80°C → Activate Cooling Fan ❄️]. What is the immediate expected effect?',
+    sequence: ['Sensor Reading: 86°C', 'Rule: IF Temp > 80°C THEN Activate Fan', 'System Action = ❓'],
+    options: [
+      { label: 'Activate Cooling Fan ❄️', emoji: '❄️', correct: true },
+      { label: 'Dim Display Screen 🖥️', emoji: '🖥️', correct: false },
+      { label: 'Increase Motor Speed 🏎️', emoji: '🏎️', correct: false }
+    ],
+    hint: '86°C is greater than 80°C, so the cooling rule triggers!'
   },
   6: {
-    instructions: 'Look at the number sequence: 1️⃣ ➔ 2️⃣ ➔ 3️⃣ ➔ 4️⃣ ... What comes next?',
-    sequence: ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '❓'],
-    options: [{ label: '5️⃣ Five', emoji: '5️⃣', correct: true }, { label: '6️⃣ Six', emoji: '6️⃣', correct: false }, { label: '3️⃣ Three', emoji: '3️⃣', correct: false }],
-    hint: 'Numbers count up: 1, 2, 3, 4, 5!'
+    instructions: 'Data Pipeline Sequence: In data engineering: [Step 1: Ingest Data 📥 → Step 2: Clean & Filter 🧹 → Step 3: Run AI Model 🧠 → Step 4: Export Analytics 📊]. What happens at Step 3?',
+    sequence: ['1. 📥 Ingest Data', '2. 🧹 Clean & Filter', '3. 🧠 Run AI Model', '4. 📊 Export Analytics'],
+    options: [
+      { label: 'Run AI Model 🧠 (Step 3)', emoji: '🧠', correct: true },
+      { label: 'Ingest Data 📥 (Step 1)', emoji: '📥', correct: false },
+      { label: 'Export Analytics 📊 (Step 4)', emoji: '📊', correct: false }
+    ],
+    hint: 'Check the 3rd item in the processing pipeline!'
   },
   7: {
-    instructions: "Let's help the seed grow into a flower! Pick the correct order:",
-    sequence: ['🌱 Seed', '➡️', '🌿 Sprout', '➡️', '🌸 Flower'],
+    instructions: 'Branching Flowchart: A file optimizer rule states: [IF File Size < 25MB → Direct Upload ⚡. ELSE IF File Size >= 25MB → Compress ZIP First 🗜️]. Your project is 48MB. Which action is taken?',
+    sequence: ['File Size: 48MB', 'Threshold: 25MB Maximum Direct', 'Required Action = ❓'],
     options: [
-      { label: '🌱 Seed ➔ 🌿 Sprout ➔ 🌸 Flower', emoji: '🌸', correct: true },
-      { label: '🌸 Flower ➔ 🌱 Seed ➔ 🌿 Sprout', emoji: '🌱', correct: false },
-      { label: '🌿 Sprout ➔ 🌸 Flower ➔ 🌱 Seed', emoji: '🌿', correct: false }
+      { label: 'Compress ZIP First 🗜️ then Upload', emoji: '🗜️', correct: true },
+      { label: 'Direct Upload ⚡ without Compression', emoji: '⚡', correct: false },
+      { label: 'Permanently Delete Project 🗑️', emoji: '🗑️', correct: false }
     ],
-    hint: 'Seed grows into sprout, then flower!'
+    hint: '48MB is larger than 25MB, so the ELSE condition (Compress) applies!'
   },
   8: {
-    instructions: 'Look at the color pattern: 🔴 🔵 🟨 🔴 🔵 __. Which shape comes next?',
-    sequence: ['🔴 Red', '🔵 Blue', '🟨 Yellow', '🔴 Red', '🔵 Blue', '❓'],
-    options: [{ label: 'Yellow Square', emoji: '🟨', correct: true }, { label: 'Blue Circle', emoji: '🔵', correct: false }, { label: 'Red Circle', emoji: '🔴', correct: false }],
-    hint: 'Red, Blue, Yellow repeat in order!'
+    instructions: '2D Coordinate Grid Matrix: Row 1: [A1, B1, C1]. Row 2: [A2, B2, C2]. Row 3: [A3, B3, ❓]. What cell coordinate completes the 3×3 matrix?',
+    sequence: ['Row 1: A1 → B1 → C1', 'Row 2: A2 → B2 → C2', 'Row 3: A3 → B3 → ❓'],
+    options: [
+      { label: 'C3 (Column C, Row 3)', emoji: '🎯', correct: true },
+      { label: 'D4 (Column D, Row 4)', emoji: '❌', correct: false },
+      { label: 'B4 (Column B, Row 4)', emoji: '❌', correct: false }
+    ],
+    hint: 'Column C at Row 3 is C3!'
   },
   9: {
-    instructions: 'Look at the shapes in the grid. Which shape finishes the last row?',
-    grid: [
-      ['🔺 Triangle', '⬛ Square', '🔴 Circle'],
-      ['⬛ Square', '🔴 Circle', '🔺 Triangle'],
-      ['🔴 Circle', '🔺 Triangle', '❓']
+    instructions: 'Battery Consumption Logic: Robot battery starts at 100%. Each completed task consumes exactly 15% power. After 3 tasks, what is the remaining battery percentage?',
+    sequence: ['Start: 100% 🔋', '3 Tasks × 15% = 45% consumed', 'Remaining Battery = ❓'],
+    options: [
+      { label: '55% Remaining (100 - 45)', emoji: '🔋', correct: true },
+      { label: '70% Remaining', emoji: '⚠️', correct: false },
+      { label: '40% Remaining', emoji: '🪫', correct: false }
     ],
-    options: [{ label: 'Square', emoji: '⬛', correct: true }, { label: 'Circle', emoji: '🔴', correct: false }, { label: 'Triangle', emoji: '🔺', correct: false }],
-    hint: 'Each row has a triangle, square, and circle!'
+    hint: '100 - (15 × 3) = 100 - 45 = 55%!'
   },
   10: {
-    instructions: 'Look at the color block pattern: 🟦 🟦 🟨 🟦 🟦 ... What comes next?',
-    sequence: ['🟦 Blue', '🟦 Blue', '🟨 Yellow', '🟦 Blue', '🟦 Blue', '❓'],
-    options: [{ label: 'Yellow Square', emoji: '🟨', correct: true }, { label: 'Blue Square', emoji: '🟦', correct: false }, { label: 'Red Square', emoji: '🟥', correct: false }],
-    hint: 'Two blue squares, then one yellow square!'
+    instructions: 'Coding Readiness — Execution Trace: Program steps: [1. Initialize Sensor 🔌 → 2. Connect WiFi 📡 → 3. Stream Telemetry 📊 → 4. Save Database 💾]. If network fails at Step 2, which steps are NEVER executed?',
+    sequence: ['Step 1: 🔌 Init Sensor', 'Step 2: 📡 Connect WiFi (CRASHED 💥)', 'Unexecuted Steps = ❓'],
+    options: [
+      { label: 'Stream Telemetry 📊 & Save Database 💾', emoji: '⏭️', correct: true },
+      { label: 'Initialize Sensor 🔌', emoji: '⏮️', correct: false },
+      { label: 'Connect WiFi 📡', emoji: '⚠️', correct: false }
+    ],
+    hint: 'Execution halts at Step 2, so Steps 3 and 4 cannot run!'
   },
   11: {
-    instructions: 'Look at the shape matrix. Which shape completes the pattern?',
-    grid: [
-      ['⭕ Circle', '⬛ Square', '🔺 Triangle'],
-      ['⬛ Square', '🔺 Triangle', '⭕ Circle'],
-      ['🔺 Triangle', '⭕ Circle', '❓']
+    instructions: 'Coding Readiness — Boolean Condition: Rule: `IF (score >= 70 AND passed_challenge == true) → Advance to L3`. Student data: `score = 84`, `passed_challenge = true`. What is the result?',
+    sequence: ['Condition: score >= 70 AND challenge == true', 'Student: score = 84 (>=70 ✓), challenge = true (✓)', 'Result = ❓'],
+    options: [
+      { label: 'Advance to Level 3 (L3) 🚀', emoji: '✅', correct: true },
+      { label: 'Hold at Level 1 (L1) 🛑', emoji: '❌', correct: false },
+      { label: 'Reset and Retake Exam 🔄', emoji: '⚠️', correct: false }
     ],
-    options: [{ label: 'Square', emoji: '⬛', correct: true }, { label: 'Circle', emoji: '⭕', correct: false }, { label: 'Triangle', emoji: '🔺', correct: false }],
-    hint: 'Each row must contain circle, square, and triangle!'
+    hint: 'Both conditions are true (84 >= 70 and passed_challenge is true)!'
   },
   12: {
-    instructions: 'Look at the day cycle: ☀️ Daytime ➔ 🌙 Nighttime ➔ ☀️ Daytime ... What comes next?',
-    sequence: ['☀️ Daytime ➔', '🌙 Nighttime ➔', '☀️ Daytime ➔', '❓'],
-    options: [{ label: 'Nighttime', emoji: '🌙', correct: true }, { label: 'Daytime', emoji: '☀️', correct: false }, { label: 'Rain', emoji: '🌧️', correct: false }],
-    hint: 'Day comes after night, night comes after day!'
+    instructions: 'Coding Readiness — Loop Calculation: A loop executes 4 times: `FOR i = 1 TO 4: [ Move_Forward(); Turn_Right_90(); ]`. What total angle has the robot turned in degrees?',
+    sequence: ['Loop: 4 iterations', 'Turn per iteration: 90° Right', 'Total Angle = 4 × 90° = ❓'],
+    options: [
+      { label: '360° (Full 4-corner box turnaround) 🔄', emoji: '🔄', correct: true },
+      { label: '180° (Half turnaround) ↔️', emoji: '↔️', correct: false },
+      { label: '90° (Single corner turn) ↪️', emoji: '↪️', correct: false }
+    ],
+    hint: '4 turns of 90° each = 4 × 90 = 360°!'
   },
-  13: {
-    instructions: 'It is raining outside! What should you bring before going out?',
-    sequence: ['🌧️ Rain Outside ➔ ❓ What do you bring?'],
-    options: [{ label: 'Umbrella', emoji: '☂️', correct: true }, { label: 'Sunglasses', emoji: '🕶️', correct: false }, { label: 'Ice Cream', emoji: '🍦', correct: false }],
-    hint: 'Umbrella keeps you dry in the rain!'
+  48: {
+    instructions: 'Coding Readiness — Loop Pattern: A repetitive robot motion pattern executes 3 iterations of: [Move Forward ⬆️ → Turn Right ➡️]. How many forward moves occur in total?',
+    sequence: ['Iteration 1: ⬆️ ➡️', 'Iteration 2: ⬆️ ➡️', 'Iteration 3: ⬆️ ➡️'],
+    options: [
+      { label: '3 Forward Moves Total 3️⃣', emoji: '3️⃣', correct: true },
+      { label: '1 Forward Move Total 1️⃣', emoji: '1️⃣', correct: false },
+      { label: '6 Forward Moves Total 6️⃣', emoji: '6️⃣', correct: false }
+    ],
+    hint: '1 move forward per loop × 3 loops = 3 moves forward!'
   },
-  14: {
-    instructions: 'You put a key into a locked door and turn it. What happens next?',
-    sequence: ['🔑 Key ➔ 🚪 Door ➔ ❓ What happens?'],
-    options: [{ label: 'Door Unlocks', emoji: '🔓', correct: true }, { label: 'Door Locks', emoji: '🔒', correct: false }, { label: 'Lights Turn Off', emoji: '💡', correct: false }],
-    hint: 'A key turns to unlock the door!'
+  49: {
+    instructions: 'Coding Readiness — Debugging: Robot error analysis: The navigation unit steered LEFT ⬅️ instead of RIGHT ➡️ at Intersection 3. Which block replacement fixes the bug?',
+    sequence: ['Bug Detected: Steer Left ⬅️', 'Required Correction: Replace with ❓'],
+    options: [
+      { label: 'Steer Right ➡️', emoji: '➡️', correct: true },
+      { label: 'Reverse Backward ⬇️', emoji: '⬇️', correct: false },
+      { label: 'Emergency Power Off 🛑', emoji: '🛑', correct: false }
+    ],
+    hint: 'Swap the incorrect Left turn block for a Right turn block!'
   },
-  15: {
-    instructions: 'What will happen if a glass cup is dropped on a hard tile floor?',
-    sequence: ['🫗 Glass Dropped ➔ ❓ What happens next?'],
-    options: [{ label: 'Glass Shatters', emoji: '💥', correct: true }, { label: 'Floats in Air', emoji: '🎈', correct: false }, { label: 'Turns into Apple', emoji: '🍎', correct: false }],
-    hint: 'Glass breaks when dropped!'
-  }
+
+
+  // ── Behavioral Readiness (slots 35–42) ──────────────────────────────────
+  35: {
+    instructions: 'Robo has been working on a hard puzzle for 2 minutes and still has not solved it. What should Robo do?',
+    sequence: ['⏱️ 2 minutes passed...', '🤖 Puzzle still unsolved', '❓ What next?'],
+    options: [
+      { label: 'Keep trying patiently 💪', emoji: '💪', correct: true },
+      { label: 'Quit immediately 🚪', emoji: '🚪', correct: false },
+      { label: 'Throw the puzzle away 🗑️', emoji: '🗑️', correct: false }
+    ],
+    hint: 'Persistence means not giving up when things are hard!'
+  },
+  36: {
+    instructions: 'During the coding activity, another student starts making noise. What should a focused learner do?',
+    sequence: ['🔊 Noise nearby...', '💻 Coding activity on screen', '❓ What to do?'],
+    options: [
+      { label: 'Stay focused on the screen 👀', emoji: '👀', correct: true },
+      { label: 'Join the noise 📢', emoji: '📢', correct: false },
+      { label: 'Close the laptop 💤', emoji: '💤', correct: false }
+    ],
+    hint: 'A good learner stays focused even with distractions!'
+  },
+  37: {
+    instructions: 'The teacher claps twice — this is the STOP signal. What should the student do?',
+    sequence: ['👏👏 Teacher claps twice', '❓ Student should...'],
+    options: [
+      { label: 'Stop and look at the teacher 🛑', emoji: '🛑', correct: true },
+      { label: 'Keep working and ignore it 🙉', emoji: '🙉', correct: false },
+      { label: 'Run to the door 🏃', emoji: '🏃', correct: false }
+    ],
+    hint: 'Two claps = STOP and pay attention!'
+  },
+  38: {
+    instructions: 'The teacher says "try a different way". The student\'s first approach was wrong. What should the student do?',
+    sequence: ['❌ First attempt = wrong', '🗣️ Teacher: "Try a different way"', '❓ Student does...'],
+    options: [
+      { label: 'Calmly try again a new way 🔄', emoji: '🔄', correct: true },
+      { label: 'Cry and refuse to continue 😭', emoji: '😭', correct: false },
+      { label: 'Pretend not to hear 🙉', emoji: '🙉', correct: false }
+    ],
+    hint: 'Accepting feedback calmly makes you a better learner!'
+  },
+  39: {
+    instructions: 'Robo makes an error in the code and stops moving. What is the BEST thing for the student to do?',
+    sequence: ['🤖 Robo stops', '⚠️ Error in the code!', '❓ Best response?'],
+    options: [
+      { label: 'Take a breath and look for the bug 🔍', emoji: '🔍', correct: true },
+      { label: 'Give up completely 😞', emoji: '😞', correct: false },
+      { label: 'Get angry at the computer 😠', emoji: '😠', correct: false }
+    ],
+    hint: 'Staying calm and looking for the bug is the best move!'
+  },
+  40: {
+    instructions: 'Time is up on the robot activity. The teacher says "Switch to the drawing activity". What should the student do?',
+    sequence: ['⏰ Time is up!', '🗣️ Teacher: Switch activities now', '❓ Student does...'],
+    options: [
+      { label: 'Stop and move to drawing 🎨', emoji: '🎨', correct: true },
+      { label: 'Refuse to switch 😤', emoji: '😤', correct: false },
+      { label: 'Hide the robot 🙈', emoji: '🙈', correct: false }
+    ],
+    hint: 'Smooth transitions help the whole class!'
+  },
+  41: {
+    instructions: 'Another student is having their turn with Robo. How should you wait?',
+    sequence: ['🤖 Robo is busy with another student', '👧 Their turn is not done yet', '❓ You should...'],
+    options: [
+      { label: 'Wait quietly and watch 👀', emoji: '👀', correct: true },
+      { label: 'Grab Robo from them 😡', emoji: '😡', correct: false },
+      { label: 'Walk away and sulk 😔', emoji: '😔', correct: false }
+    ],
+    hint: 'Waiting patiently is a great team skill!'
+  },
+  42: {
+    instructions: 'The teacher says "Today we try something new — coding a real robot!". How would an eager learner react?',
+    sequence: ['🗣️ Teacher: New coding challenge today!', '🤖 A real robot is on the table', '❓ Eager learner does...'],
+    options: [
+      { label: 'Smile and say "Let\'s try it!" 😊', emoji: '😊', correct: true },
+      { label: 'Say "I don\'t want to" 😑', emoji: '😑', correct: false },
+      { label: 'Fall asleep 😴', emoji: '😴', correct: false }
+    ],
+    hint: 'Eagerness to learn opens every door!'
+  },
+
+  // ── Fine Motor / Technology (slots 45, 47) ──────────────────────────────
+  45: {
+    instructions: 'To build Robo correctly, which ORDER of steps is right?',
+    sequence: ['Step A: 🔩 Attach wheels', 'Step B: 🔋 Insert battery', 'Step C: 💡 Turn on'],
+    options: [
+      { label: 'Wheels → Battery → Turn on 🔩🔋💡', emoji: '✅', correct: true },
+      { label: 'Turn on → Wheels → Battery 💡🔩🔋', emoji: '❌', correct: false },
+      { label: 'Battery → Turn on → Wheels 🔋💡🔩', emoji: '❌', correct: false }
+    ],
+    hint: 'Always attach parts before turning the robot on!'
+  },
+  47: {
+    instructions: 'Which ARROW KEY moves the cursor DOWN on a keyboard?',
+    sequence: ['⬆️ Up Arrow', '⬇️ Down Arrow', '⬅️ Left Arrow', '➡️ Right Arrow', '❓ Which one moves DOWN?'],
+    options: [
+      { label: 'Down Arrow ⬇️', emoji: '⬇️', correct: true },
+      { label: 'Up Arrow ⬆️', emoji: '⬆️', correct: false },
+      { label: 'Left Arrow ⬅️', emoji: '⬅️', correct: false }
+    ],
+    hint: 'The DOWN arrow points toward the bottom of the screen!'
+  },
 };
 
 export class ActivityGenerator {
@@ -249,310 +521,213 @@ export class ActivityGenerator {
   }
 
   /**
-   * Generates a unique assessment activity (1 of 60) based on its fixed baseline specification.
-   * Ensures EXACTLY 3 answer choices per question.
+   * Generates or loads activity item for slot (1 to 50).
+   *
+   * STRATEGY:
+   *   1. Build a guaranteed-correct fallback from the slot config (instant, offline).
+   *   2. Skip AI for robot_mission / picture_match / motor_target (interaction-based).
+   *   3. Ask Azure OpenAI for the FULL question including matching answer options.
+   *   4. Strictly validate: exactly 3 options, exactly 1 correct, all labels non-empty.
+   *   5. Any failure at steps 3-4 silently returns the slot-config fallback.
    */
   public async generateActivity(slot: number): Promise<ActivityItem> {
-    const safeSlot = Math.max(1, Math.min(60, slot));
-    const baseline = QUESTION_BASELINES[safeSlot - 1];
-    const missionConfig = ROBOT_MISSION_CONFIGS[safeSlot];
-    const pmConfig = PICTURE_MATCH_CONFIGS[safeSlot];
+    const base = QUESTION_BASELINES.find(b => b.slot === slot) || QUESTION_BASELINES[0];
 
-    let typeSpecificInstructions = '';
-    if (baseline.type === 'robot_mission' && missionConfig) {
-      typeSpecificInstructions = `
-This is a robot coding question. Available blocks: [${missionConfig.blocks.join(', ')}]. Correct sequence: [${missionConfig.correctSequence.join(' → ')}]. Context: ${missionConfig.description}`;
-    } else if (baseline.type === 'picture_match' && pmConfig) {
-      typeSpecificInstructions = `
-This is a picture-matching/audio question. Audio prompt: "${pmConfig.audioPromptText}". Use these options: ${JSON.stringify(pmConfig.options)}`;
-    }
+    // ── Step 1: Build guaranteed fallback from slot config ──────────────────
+    const fallbackPayload = this.buildProceduralPayload(base);
 
-    const prompt = `You are generating Question #${baseline.slot} of 60 for the Cognix SEN Placement Assessment (aged 6-12).
-Baseline: "${baseline.baselinePrompt}" (Domain: ${baseline.domain}, Sub-skill: ${baseline.subSkill}, Difficulty: ${baseline.difficulty}/3, Type: ${baseline.type}).${typeSpecificInstructions}
-
-CRITICAL REQUIREMENTS:
-- Generate a child-friendly, engaging variation.
-- MUST HAVE EXACTLY 3 ANSWER CHOICES (Option A, Option B, Option C) with text labels and emojis.
-- 1 choice MUST be fully correct, 2 choices MUST be plausible wrong distractors.
-- Keep language simple, positive, encouraging.
-
-Return ONLY valid JSON with no markdown:
-{
-  "title": "${baseline.title}",
-  "instructions": "Child-friendly question prompt",
-  "type": "${baseline.type}",
-  "hintText": "Encouraging hint",
-  "payload": {
-    "options": [
-      { "label": "Choice A Label", "emoji": "🟢", "correct": true },
-      { "label": "Choice B Label", "emoji": "🔴", "correct": false },
-      { "label": "Choice C Label", "emoji": "🟡", "correct": false }
-    ],
-    "correctIndex": 0
-  }
-}`;
-
-    try {
-      const aiResponse = await this.client.generateCompletion(prompt);
-
-      if (aiResponse) {
-        let cleanJson = aiResponse.trim();
-        if (cleanJson.startsWith('```json')) {
-          cleanJson = cleanJson.replace(/^```json/, '').replace(/```$/, '').trim();
-        } else if (cleanJson.startsWith('```')) {
-          cleanJson = cleanJson.replace(/^```/, '').replace(/```$/, '').trim();
-        }
-        const lastBrace = cleanJson.lastIndexOf('}');
-        if (lastBrace !== -1) cleanJson = cleanJson.substring(0, lastBrace + 1);
-
-        const parsed = JSON.parse(cleanJson);
-        if (parsed.instructions && parsed.payload) {
-          // Force type to baseline type
-          parsed.type = baseline.type;
-
-          // For non-robot questions, explicitly strip any robot blocks
-          if (baseline.type !== 'robot_mission') {
-            delete parsed.payload.availableBlocks;
-            delete parsed.payload.correctSequence;
-          }
-
-          // Attach slot-matched cognitive sequence/grid if AI omitted it
-          const cogCfg = COGNITIVE_SLOT_CONFIGS[safeSlot];
-          if (cogCfg) {
-            if (!parsed.payload.sequence && cogCfg.sequence) parsed.payload.sequence = cogCfg.sequence;
-            if (!parsed.payload.grid && cogCfg.grid) parsed.payload.grid = cogCfg.grid;
-          }
-
-          // Force exactly 3 options
-          if (Array.isArray(parsed.payload.options) && parsed.payload.options.length > 3) {
-            parsed.payload.options = parsed.payload.options.slice(0, 3);
-          }
-          // Always enforce the correct robot mission blocks from our config
-          if (baseline.type === 'robot_mission' && missionConfig) {
-            parsed.payload.availableBlocks = missionConfig.blocks;
-            if (!parsed.payload.correctSequence || parsed.payload.correctSequence.length === 0) {
-              parsed.payload.correctSequence = missionConfig.correctSequence;
-            }
-          }
-          // Always enforce picture_match data from our config
-          if (baseline.type === 'picture_match' && pmConfig && !parsed.payload.audioPromptText) {
-            parsed.payload.audioPromptText = pmConfig.audioPromptText;
-          }
-          if (baseline.type === 'picture_match' && pmConfig && (!Array.isArray(parsed.payload.options) || parsed.payload.options.length === 0)) {
-            parsed.payload.options = pmConfig.options;
-          }
-
-          return {
-            id: `q_slot_${baseline.slot}_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-            slot: baseline.slot,
-            domain: baseline.domain,
-            skill: baseline.skill,
-            subSkill: baseline.subSkill,
-            title: parsed.title || baseline.title,
-            instructions: parsed.instructions,
-            difficulty: baseline.difficulty,
-            expectedTimeMs: 90000,
-            maxPoints: baseline.maxPoints,
-            type: baseline.type,
-            payload: parsed.payload,
-            hintText: parsed.hintText || 'Take your time and think carefully!',
-            source: 'azure_openai'
-          };
-        }
-      }
-    } catch (e) {
-      // Fall through to procedural fallback
-    }
-
-    return this.generateDynamicFallback(safeSlot);
-  }
-
-  /**
-   * Procedural generator creating a deterministic unique 3-choice variation for any of the 60 question slots.
-   */
-  public generateDynamicFallback(slot: number): ActivityItem {
-    const safeSlot = Math.max(1, Math.min(60, slot));
-    const baseline = QUESTION_BASELINES[safeSlot - 1];
-    const id = `fallback_q_${safeSlot}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-
-    let payload: any = {};
-    let instructions = baseline.baselinePrompt;
-    let hintText = 'Look at all options carefully before picking.';
-
-    if (baseline.type === 'robot_mission') {
-      const mCfg = ROBOT_MISSION_CONFIGS[safeSlot] || {
-        blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'],
-        correctSequence: ['Move Forward ⬆️', 'Grab Item 🦾'],
-        description: 'Build the correct sequence to complete the mission!'
-      };
-      instructions = mCfg.description;
-      payload = {
-        availableBlocks: mCfg.blocks,
-        correctSequence: mCfg.correctSequence,
-        options: [
-          { label: mCfg.correctSequence.join(' ➔ '), correct: true },
-          { label: [...mCfg.blocks].reverse().slice(0, 2).join(' ➔ '), correct: false },
-          { label: mCfg.blocks.slice(0, Math.min(2, mCfg.blocks.length)).reverse().join(' ➔ '), correct: false }
-        ],
-        correctIndex: 0
-      };
-      hintText = `Hint: ${mCfg.correctSequence.join(' → then ')}`;
-
-    } else if (baseline.type === 'picture_match') {
-      const pmCfg = PICTURE_MATCH_CONFIGS[safeSlot];
-      if (pmCfg) {
-        payload = { ...pmCfg };
-        instructions = pmCfg.audioPromptText;
-        hintText = 'Listen carefully and tap the right picture!';
-      } else {
-        payload = {
-          audioPromptText: baseline.baselinePrompt,
-          options: [
-            { label: 'Robot', emoji: '🤖', correct: true },
-            { label: 'Apple', emoji: '🍎', correct: false },
-            { label: 'Ball', emoji: '⚽', correct: false }
-          ],
-          correctIndex: 0
-        };
-        hintText = 'Tap the correct picture!';
-      }
-
-    } else if (baseline.type === 'motor_target') {
-      const targetsMap: Record<number, number> = { 51: 4, 52: 3, 54: 5, 56: 3 };
-      payload = {
-        targetsCount: targetsMap[safeSlot] || 3,
-        options: [
-          { label: 'Hit target 🎯', correct: true },
-          { label: 'Miss edge', correct: false },
-          { label: 'Click outside', correct: false }
-        ],
-        correctIndex: 0
-      };
-      hintText = 'Click directly inside the glowing circle!';
-
-    } else if (COGNITIVE_SLOT_CONFIGS[safeSlot]) {
-      const cogCfg = COGNITIVE_SLOT_CONFIGS[safeSlot];
-      instructions = cogCfg.instructions;
-      payload = {
-        sequence: cogCfg.sequence,
-        grid: cogCfg.grid,
-        options: [...cogCfg.options],
-        correctIndex: 0
-      };
-      hintText = cogCfg.hint;
-
-    } else if (COGNITIVE_SLOT_CONFIGS[safeSlot]) {
-      const cogCfg = COGNITIVE_SLOT_CONFIGS[safeSlot];
-      instructions = cogCfg.instructions;
-      payload = {
-        sequence: cogCfg.sequence,
-        grid: cogCfg.grid,
-        options: [...cogCfg.options],
-        correctIndex: 0
-      };
-      hintText = cogCfg.hint;
-
-    } else {
-      const behavioralMap: Record<number, { options: any[]; hint: string }> = {
-        41: { options: [{ label: '😌 Stay calm & focus on puzzle', correct: true }, { label: '😤 Slam tablet down', correct: false }, { label: '🚪 Walk away', correct: false }], hint: 'Take a deep breath and stay focused!' },
-        42: { options: [{ label: '👀 Keep eyes on learning screen', correct: true }, { label: '🎈 Look at noise outside', correct: false }, { label: '😴 Fall asleep', correct: false }], hint: 'Maintain attention on your task!' },
-        43: { options: [{ label: '🛑 Stop when teacher gives stop signal', correct: true }, { label: '🏃 Keep running', correct: false }, { label: '😶 Ignore signal', correct: false }], hint: 'Always stop when given the stop signal!' },
-        44: { options: [{ label: '💡 Listen to hint and try again', correct: true }, { label: '😤 Get mad at feedback', correct: false }, { label: '🗑️ Delete activity', correct: false }], hint: 'Feedback helps you learn!' },
-        45: { options: [{ label: '🔄 Try a different block calmly', correct: true }, { label: '🗣️ Shout loudly', correct: false }, { label: '❌ Quit immediately', correct: false }], hint: 'If a step fails, try another approach!' },
-        46: { options: [{ label: '✅ Put tablet away gently when time is up', correct: true }, { label: '😭 Refuse to stop', correct: false }, { label: '🙈 Hide tablet', correct: false }], hint: 'Transition smoothly when time is up!' },
-        47: { options: [{ label: '✋ Wait patiently for my turn', correct: true }, { label: '🫱 Grab robot from friend', correct: false }, { label: '🗣️ Yell for turn', correct: false }], hint: 'Wait your turn politely!' },
-        48: { options: [{ label: '🌟 Eagerly try the new technology challenge', correct: true }, { label: '🙈 Say I cannot do it', correct: false }, { label: '😴 Ignore challenge', correct: false }], hint: 'Give new challenges a try!' },
-        49: { options: [{ label: '🤔 Think independently before asking', correct: true }, { label: '🙋 Ask help without trying', correct: false }, { label: '❌ Give up', correct: false }], hint: 'Try solving on your own first!' },
-        50: { options: [{ label: '🙋 Raise hand and ask politely: "Can you help?"', correct: true }, { label: '🗣️ Scream for help', correct: false }, { label: '😤 Cry loudly', correct: false }], hint: 'Polite help requests are best!' }
-      };
-
-      const fineMotorMap: Record<number, { options: any[]; hint: string }> = {
-        53: {
-          options: [
-            { label: '🗣️ Head ➔ 🦿 Body ➔ 🦾 Arms', emoji: '🤖', correct: true },
-            { label: '🦿 Body ➔ 🗣️ Head ➔ 🦾 Arms', emoji: '⚙️', correct: false },
-            { label: '🦾 Arms ➔ 🦿 Body ➔ 🗣️ Head', emoji: '🔧', correct: false }
-          ],
-          hint: 'Assemble Robo from head to body!'
-        },
-        55: {
-          options: [
-            { label: '⌨️ Long Spacebar Key', emoji: '⌨️', correct: true },
-            { label: '🔌 Power Cable', emoji: '🔌', correct: false },
-            { label: '🔊 Volume Button', emoji: '🔊', correct: false }
-          ],
-          hint: 'Spacebar is the long key at bottom!'
-        },
-        57: {
-          options: [
-            { label: '🧩 Drag block smoothly into matching slot', emoji: '✅', correct: true },
-            { label: '🔨 Tap screen with heavy object', emoji: '❌', correct: false },
-            { label: '✂️ Cut screen image', emoji: '❌', correct: false }
-          ],
-          hint: 'Drag gently into the matching slot!'
-        },
-        59: {
-          options: [
-            { label: '🔄 Refresh or Restart App', emoji: '🔄', correct: true },
-            { label: '📵 Throw tablet on floor', emoji: '🛑', correct: false },
-            { label: '⏳ Wait 10 hours', emoji: '⏳', correct: false }
-          ],
-          hint: 'Restarting fixes frozen screens!'
-        }
-      };
-
-      if (baseline.domain === 'behavioral_readiness' && behavioralMap[safeSlot]) {
-        payload = { options: behavioralMap[safeSlot].options, correctIndex: 0 };
-        hintText = behavioralMap[safeSlot].hint;
-      } else if (baseline.domain === 'fine_motor_technology' && fineMotorMap[safeSlot]) {
-        payload = { options: fineMotorMap[safeSlot].options, correctIndex: 0 };
-        hintText = fineMotorMap[safeSlot].hint;
-      } else {
-        payload = {
-          options: [
-            { label: '🌟 Correct Solution', correct: true },
-            { label: '❌ Distractor Option A', correct: false },
-            { label: '🛑 Distractor Option B', correct: false }
-          ],
-          correctIndex: 0
-        };
-      }
-    }
-
-    if (payload.options && Array.isArray(payload.options) && payload.options.length === 3) {
-      const correctItem = payload.options.find((o: any) => o.correct) || payload.options[0];
-      const shuffled = this.shuffleArray([...payload.options]);
-      payload.options = shuffled;
-      payload.correctIndex = shuffled.indexOf(correctItem);
-    }
-
-    return {
-      id,
-      slot: baseline.slot,
-      domain: baseline.domain,
-      skill: baseline.skill,
-      subSkill: baseline.subSkill,
-      title: baseline.title,
-      instructions,
-      difficulty: baseline.difficulty,
-      expectedTimeMs: 90000,
-      maxPoints: baseline.maxPoints,
-      type: baseline.type,
-      payload,
-      hintText,
+    const fallbackItem: ActivityItem = {
+      id: `act_slot_${slot}_${Date.now()}`,
+      slot,
+      domain: base.domain,
+      skill: base.skill,
+      format: base.format,
+      subSkill: base.subSkill,
+      title: base.title,
+      instructions: fallbackPayload.instructions || base.baselinePrompt,
+      difficulty: base.difficulty,
+      expectedTimeMs: 90_000,
+      maxPoints: base.maxPoints,
+      type: base.type,
+      payload: fallbackPayload,
+      hintText: fallbackPayload.hint || `Focus on the ${base.subSkill} carefully. Take your time!`,
       source: 'procedural'
     };
+
+    // ── Step 2: Skip AI for interaction-based question types ────────────────
+    if (base.type === 'robot_mission' || base.type === 'picture_match' || base.type === 'motor_target') {
+      return fallbackItem;
+    }
+
+    // ── Step 3: Ask Azure OpenAI for a full coherent question + options ─────
+    try {
+      const domainLabel = base.domain.replace(/_/g, ' ');
+      const skillLabel  = base.skill.replace(/_/g, ' ');
+      const prompt = [
+        'You are an inclusive education assessment designer for SEN students (Grade 8 to University, ages 13-21).',
+        '',
+        'Generate a COMPLETE assessment question for:',
+        `- Slot: ${slot} of 50`,
+        `- Domain: ${domainLabel}`,
+        `- Skill: ${skillLabel}`,
+        `- Sub-skill: ${base.subSkill}`,
+        `- Difficulty: ${base.difficulty}/3`,
+        '- Question type: pattern_matrix (multiple choice with a visual sequence)',
+        '',
+        'RULES (follow strictly):',
+        '1. Write a clear, engaging question for SEN students',
+        '2. The "sequence" array shows the visual puzzle to the student (2-5 short emoji+text items)',
+        '3. Provide EXACTLY 3 answer options',
+        '4. Mark EXACTLY 1 option as correct (correct: true), the other 2 must be false',
+        '5. Options must directly and logically answer the question in "instructions"',
+        '6. Use simple language and supportive emojis',
+        '7. Output ONLY valid JSON — no markdown fences, no text outside the JSON',
+        '',
+        'JSON format:',
+        '{',
+        '  "title": "short title (max 6 words)",',
+        '  "instructions": "the full question text shown to student",',
+        '  "sequence": ["emoji + text 1", "emoji + text 2", "emoji + ?"],',
+        '  "options": [',
+        '    { "label": "correct answer text", "emoji": "emoji", "correct": true },',
+        '    { "label": "wrong answer 1", "emoji": "emoji", "correct": false },',
+        '    { "label": "wrong answer 2", "emoji": "emoji", "correct": false }',
+        '  ],',
+        '  "hintText": "one short helpful hint"',
+        '}'
+      ].join('\n');
+
+      const aiResponseText = await this.client.generateCompletion(
+        prompt,
+        'You are an AI assessment designer for inclusive education. Output valid JSON only.'
+      );
+
+      if (!aiResponseText) {
+        console.info(`[ActivityGenerator] Slot ${slot}: No AI response — using slot config fallback.`);
+        return fallbackItem;
+      }
+
+      // ── Step 4: Parse ────────────────────────────────────────────────────
+      const jsonMatch = aiResponseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.warn(`[ActivityGenerator] Slot ${slot}: AI returned non-JSON — using slot config fallback.`);
+        return fallbackItem;
+      }
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (_parseErr) {
+        console.warn(`[ActivityGenerator] Slot ${slot}: AI JSON parse error — using slot config fallback.`);
+        return fallbackItem;
+      }
+
+      // ── Step 4: Validate ─────────────────────────────────────────────────
+      const hasTitle        = typeof parsed.title === 'string' && parsed.title.trim().length > 0;
+      const hasInstructions = typeof parsed.instructions === 'string' && parsed.instructions.trim().length > 0;
+      const hasOptions      = Array.isArray(parsed.options) && parsed.options.length === 3;
+
+      if (!hasTitle || !hasInstructions || !hasOptions) {
+        console.warn(`[ActivityGenerator] Slot ${slot}: AI response missing required fields — using slot config fallback.`);
+        return fallbackItem;
+      }
+
+      const correctCount = (parsed.options as any[]).filter(o => o.correct === true).length;
+      if (correctCount !== 1) {
+        console.warn(`[ActivityGenerator] Slot ${slot}: AI gave ${correctCount} correct options (need 1) — using slot config fallback.`);
+        return fallbackItem;
+      }
+
+      const allHaveLabels = (parsed.options as any[]).every(o => typeof o.label === 'string' && o.label.trim().length > 0);
+      if (!allHaveLabels) {
+        console.warn(`[ActivityGenerator] Slot ${slot}: AI option missing label — using slot config fallback.`);
+        return fallbackItem;
+      }
+
+      // ── Step 5: Build coherent AI item ───────────────────────────────────
+      const aiPayload = {
+        instructions: parsed.instructions.trim(),
+        sequence: Array.isArray(parsed.sequence) && parsed.sequence.length > 0
+          ? (parsed.sequence as any[]).slice(0, 6).map(String)
+          : (fallbackPayload.sequence || []),
+        options: (parsed.options as any[]).map(o => ({
+          label:   String(o.label).trim(),
+          emoji:   typeof o.emoji === 'string' ? o.emoji : '',
+          correct: o.correct === true
+        })),
+        hint: typeof parsed.hintText === 'string' && parsed.hintText.trim().length > 0
+          ? parsed.hintText.trim()
+          : fallbackItem.hintText
+      };
+
+      console.info(`[ActivityGenerator] Slot ${slot}: AI question loaded successfully.`);
+
+      return {
+        ...fallbackItem,
+        title:        parsed.title.trim(),
+        instructions: aiPayload.instructions,
+        hintText:     aiPayload.hint,
+        payload:      aiPayload,
+        source:       'azure_openai'
+      };
+
+    } catch (e) {
+      console.warn(`[ActivityGenerator] Slot ${slot}: AI call failed — using slot config fallback.`, e);
+      return fallbackItem;
+    }
   }
 
 
-  private shuffleArray<T>(arr: T[]): T[] {
-    const copy = [...arr];
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
+  private buildProceduralPayload(base: QuestionBaseline): any {
+    const slot = base.slot;
+
+    // 1. Robot Mission
+    if (base.type === 'robot_mission') {
+      const config = ROBOT_MISSION_CONFIGS[slot] || {
+        blocks: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'],
+        correctSequence: ['Move Forward ⬆️', 'Turn Right ➡️', 'Grab Item 🦾'],
+        description: 'Guide Robo to the destination star!'
+      };
+      return {
+        availableBlocks: config.blocks,
+        correctSequence: config.correctSequence,
+        description: config.description
+      };
     }
-    return copy;
+
+    // 2. Picture Match
+    if (base.type === 'picture_match') {
+      const config = PICTURE_MATCH_CONFIGS[slot] || {
+        audioPromptText: `Tap the correct option for: ${base.title}`,
+        options: [
+          { label: 'Option A (Correct)', emoji: '⭐', correct: true },
+          { label: 'Option B', emoji: '🔴', correct: false },
+          { label: 'Option C', emoji: '🟦', correct: false }
+        ]
+      };
+      return config;
+    }
+
+    // 3. Motor Target
+    if (base.type === 'motor_target') {
+      return {
+        targetSizePx: 50,
+        targetShape: 'circle',
+        instructionText: 'Click or tap inside the glowing blue target star!'
+      };
+    }
+
+    // 4. Pattern Matrix / Rule Shift (Cognitive & Behavioral & Motor Qs)
+    const cogConfig = COGNITIVE_SLOT_CONFIGS[slot] || {
+      instructions: base.baselinePrompt,
+      sequence: ['⭐ Choice A', '🔴 Choice B', '🟦 Choice C'],
+      options: [
+        { label: 'Correct Answer', emoji: '⭐', correct: true },
+        { label: 'Wrong Answer 1', emoji: '🔴', correct: false },
+        { label: 'Wrong Answer 2', emoji: '🟦', correct: false }
+      ],
+      hint: 'Look closely at the shapes and patterns.'
+    };
+    return cogConfig;
   }
 }
-
-

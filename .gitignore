@@ -3,3 +3,4 @@ dist
 *.log
 api.env
 .DS_Store
+prompt
