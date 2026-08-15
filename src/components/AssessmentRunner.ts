@@ -695,80 +695,10 @@ export class AssessmentRunner {
     const partNum: 1 | 2 = (this.currentQuestionIndex < PART_ONE_QUESTIONS) ? 1 : 2;
     const partQuestionNum = (this.currentQuestionIndex % PART_ONE_QUESTIONS) + 1;
 
-    // --- Skill Ladder UI ---
-    const currentDomain = baseline.domain;
-    const domainQuestions = QUESTION_BASELINES.filter(q => q.domain === currentDomain);
-    const uniqueSkills = Array.from(new Set(domainQuestions.map(q => q.subSkill)));
-
-    let questionGridHtml = `
-      <div class="skill-ladder-bar" style="background: rgba(15,23,42,0.8); border: 1px solid var(--border-color); border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; backdrop-filter: blur(10px);">
-        <div class="ladder-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
-          <div style="display:flex; align-items:center; gap:0.6rem;">
-            <span style="font-size:1.5rem; animation: bounce 2s infinite;">🐸</span>
-            <div>
-              <div style="font-weight:800; font-size:1rem; color:var(--accent-cyan);">
-                Part ${partNum} (${partQuestionNum}/25) — ${domainConfig.name}
-              </div>
-              <div style="font-size:0.8rem; color:var(--text-secondary);">
-                Active Skill: <strong style="color: #fff;">${baseline.subSkill}</strong>
-              </div>
-            </div>
-          </div>
-          <div style="display:flex; gap:0.5rem; align-items:center;">
-            <span style="font-size:0.75rem; font-weight:700; background:rgba(79,70,229,0.2); border:1px solid #6366f1; padding:0.35rem 0.75rem; border-radius:12px; color:#a5b4fc;">
-              Format: ${activity.format.toUpperCase()}
-            </span>
-            <div style="font-size:0.85rem; font-weight:700; background:rgba(16,185,129,0.15); border:1px solid var(--accent-emerald); padding:0.35rem 0.85rem; border-radius:12px; color:var(--accent-emerald);">
-              Progress: ${this.userAnswers.filter(a => a.isSolved || a.timedOut).length}/50
-            </div>
-          </div>
-        </div>
-
-        <div class="skill-milestones-track" style="display:flex; align-items:center; gap:0.6rem; overflow-x:auto; padding:0.25rem 0; scrollbar-width:thin;">
-    `;
-
-    uniqueSkills.forEach((skillName, idx) => {
-      const skillQs = domainQuestions.filter(q => q.subSkill === skillName);
-      const isCurrentSkill = baseline.subSkill === skillName;
-      const solvedInSkill = skillQs.filter(q => {
-        const ans = this.userAnswers[q.slot - 1];
-        return ans && (ans.isSolved || ans.timedOut);
-      }).length;
-      const isSkillDone = solvedInSkill === skillQs.length;
-
-      let icon = `${idx + 1}`;
-      let bgStyle = 'background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); color: var(--text-secondary);';
-
-      if (isCurrentSkill) {
-        icon = '🐸';
-        bgStyle = 'background: linear-gradient(135deg, rgba(6,182,212,0.3), rgba(59,130,246,0.3)); border: 1px solid var(--accent-cyan); color: #fff; box-shadow: 0 0 12px rgba(6,182,212,0.3);';
-      } else if (isSkillDone) {
-        icon = '⭐';
-        bgStyle = 'background: rgba(16,185,129,0.15); border: 1px solid var(--accent-emerald); color: var(--accent-emerald);';
-      }
-
-      questionGridHtml += `
-        <div style="flex:1; min-width:135px; ${bgStyle} padding:0.5rem 0.75rem; border-radius:10px; display:flex; flex-direction:column; gap:0.3rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; font-weight:700;">
-            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95px;" title="${skillName}">${skillName}</span>
-            <span style="font-size:0.85rem;">${icon}</span>
-          </div>
-          <div style="font-size:0.72rem; opacity:0.85; display:flex; justify-content:space-between;">
-            <span>${solvedInSkill}/${skillQs.length} Qs</span>
-            ${isSkillDone ? '<span style="font-weight:700;">✓</span>' : ''}
-          </div>
-          <div style="height:4px; width:100%; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
-            <div style="width:${(solvedInSkill / skillQs.length) * 100}%; height:100%; background:${isSkillDone ? 'var(--accent-emerald)' : 'var(--accent-cyan)'}; transition:width 0.3s ease;"></div>
-          </div>
-        </div>
-      `;
-    });
-
-    questionGridHtml += `</div></div>`;
+    // Accurate total completed calculation
+    const totalCompleted = this.userAnswers.filter((a, idx) => idx < this.currentQuestionIndex || (a && (a.isSolved || a.timedOut))).length;
 
     this.container.innerHTML = `
-      ${questionGridHtml}
-
       <!-- Pause Overlay -->
       <div id="pause-overlay" style="display:${this.isPaused ? 'flex' : 'none'}; position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(12px); z-index:300; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
         <div style="background:#fff; border-radius:2rem; border:4px solid #fff; padding:2.5rem 2rem; max-width:450px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); display:flex; flex-direction:column; align-items:center;">
@@ -836,7 +766,7 @@ export class AssessmentRunner {
             </div>
           </div>
           <div style="background:#fef3c7; border:2px solid #fde68a; color:#d97706; padding:0.4rem 0.9rem; border-radius:1rem; font-weight:900; font-size:0.85rem; display:flex; align-items:center; gap:0.4rem;">
-            ⭐ <span>${this.userAnswers.length} of 50 Completed</span>
+            ⭐ <span>${totalCompleted} of 50 Completed</span>
           </div>
         </div>
 
@@ -850,7 +780,7 @@ export class AssessmentRunner {
           ].map(d => {
             const isCurrentDomain = this.currentQuestionIndex >= d.range[0] && this.currentQuestionIndex <= d.range[1];
             const isCompletedDomain = this.currentQuestionIndex > d.range[1];
-            const answeredInDomain = this.userAnswers.filter(a => a.questionIndex >= d.range[0] && a.questionIndex <= d.range[1]).length;
+            const answeredInDomain = this.userAnswers.filter((a, idx) => idx >= d.range[0] && idx <= d.range[1] && (idx < this.currentQuestionIndex || (a && (a.isSolved || a.timedOut)))).length;
             const pct = Math.min(100, Math.round((answeredInDomain / d.total) * 100));
 
             let cardBg = '#ffffff';
