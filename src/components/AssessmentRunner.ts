@@ -128,6 +128,11 @@ export class AssessmentRunner {
     try {
       localStorage.removeItem(AssessmentRunner.STORAGE_KEY);
       localStorage.removeItem(AssessmentRunner.LEGACY_STORAGE_KEY);
+      localStorage.removeItem('codera_active_assessment_session');
+      localStorage.removeItem('cognix_active_assessment_session');
+      localStorage.removeItem('eduverse_assessment_session_v2');
+      localStorage.removeItem('eduverse_assessment_session');
+      localStorage.removeItem('active_assessment_session');
     } catch (e) {}
   }
 

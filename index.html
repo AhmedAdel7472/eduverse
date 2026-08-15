@@ -1746,7 +1746,7 @@
             }
         };
 
-        function startChildTest() {
+        function startChildTest(restore = false) {
             closeModal();
             document.body.classList.add('exam-mode');
             const testPage = document.getElementById('childTestPage');
@@ -1757,7 +1757,7 @@
             window.scrollTo(0, 0);
 
             if (typeof window.initAssessment === 'function') {
-                window.initAssessment('Alex Rivers');
+                window.initAssessment('Alex Rivers', restore);
             }
         }
 
@@ -1770,13 +1770,17 @@
             if (typeof window.exitAssessment === 'function') {
                 window.exitAssessment(true);
             } else {
+                localStorage.removeItem('codera_active_assessment_session');
+                localStorage.removeItem('cognix_active_assessment_session');
+                localStorage.removeItem('eduverse_assessment_session_v2');
+                localStorage.removeItem('eduverse_assessment_session');
                 const testPage = document.getElementById('childTestPage');
                 if (testPage) {
                     testPage.classList.remove('exam-active');
                     testPage.classList.add('hidden');
                 }
                 document.body.classList.remove('exam-mode');
-                window.scrollTo(0, 0);
+                window.location.reload();
             }
         }
 

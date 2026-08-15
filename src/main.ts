@@ -4,21 +4,31 @@ import { renderCEODashboard } from './components/ReportDashboard';
 
 let currentRunner: AssessmentRunner | null = null;
 
-export function initAssessment(studentName: string = 'Alex Rivers', restoreIfAvailable: boolean = true) {
+export function initAssessment(studentName: string = 'Alex Rivers', restoreIfAvailable: boolean = false) {
   const appContainer = document.getElementById('app');
   if (appContainer) {
+    if (!restoreIfAvailable) {
+      AssessmentRunner.clearSavedSession();
+    }
     currentRunner = new AssessmentRunner(appContainer);
     currentRunner.startSession(studentName, restoreIfAvailable);
   }
 }
 
 export function exitAssessment(reload: boolean = true) {
+  AssessmentRunner.clearSavedSession();
   if (currentRunner) {
     currentRunner.exitAndReset(reload);
   } else {
-    AssessmentRunner.clearSavedSession();
+    const testPage = document.getElementById('childTestPage');
+    if (testPage) {
+      testPage.classList.add('hidden');
+      testPage.classList.remove('exam-active');
+    }
+    document.body.classList.remove('exam-mode');
+    document.body.classList.remove('ceo-view-mode');
     if (reload) {
-      window.location.reload();
+      window.location.href = window.location.pathname;
     }
   }
 }
