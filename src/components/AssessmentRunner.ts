@@ -770,29 +770,31 @@ export class AssessmentRunner {
       ${questionGridHtml}
 
       <!-- Pause Overlay -->
-      <div id="pause-overlay" style="display:${this.isPaused ? 'flex' : 'none'}; position:fixed; inset:0; background:rgba(11,15,25,0.92); backdrop-filter:blur(12px); z-index:300; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
-        <div style="font-size:4rem; margin-bottom:1rem; animation:bounce 1.5s infinite;">⏸️</div>
-        <h2 style="font-size:2rem; font-weight:800; color:#fff; margin-bottom:0.5rem;">Assessment Paused</h2>
-        <p style="color:var(--text-secondary); max-width:400px; margin-bottom:2rem; font-size:1rem;">
-          Take a deep breath or a short sensory break! Your progress is safely saved.
-        </p>
-        <button id="resume-btn" class="btn btn-primary" style="font-size:1.1rem; padding:0.9rem 2.5rem;">
-          ▶️ Resume Assessment
-        </button>
+      <div id="pause-overlay" style="display:${this.isPaused ? 'flex' : 'none'}; position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(12px); z-index:300; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
+        <div style="background:#fff; border-radius:2rem; border:4px solid #fff; padding:2.5rem 2rem; max-width:450px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); display:flex; flex-direction:column; align-items:center;">
+          <div style="font-size:3.5rem; margin-bottom:0.75rem; animation:bounce 1.5s infinite;">⏸️</div>
+          <h2 style="font-size:1.8rem; font-weight:900; color:#1e293b; margin-bottom:0.4rem;">Assessment Paused</h2>
+          <p style="color:#64748b; margin-bottom:1.75rem; font-size:0.95rem; line-height:1.5;">
+            Take a deep breath or a short sensory break! Your progress is safely saved.
+          </p>
+          <button id="resume-btn" class="btn btn-primary" style="font-size:1.05rem; padding:0.85rem 2rem; width:100%; font-weight:800;">
+            ▶️ Resume Assessment
+          </button>
+        </div>
       </div>
 
       <!-- Sign Language Accessibility Modal -->
-      <div id="sign-language-modal" style="display:${this.isSignLanguageModalOpen ? 'flex' : 'none'}; position:fixed; inset:0; background:rgba(11,15,25,0.92); backdrop-filter:blur(12px); z-index:350; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
-        <div style="background:rgba(15,23,42,0.95); border:2px solid var(--accent-cyan); padding:2rem; border-radius:20px; max-width:450px; width:100%; box-shadow:0 0 30px rgba(6,182,212,0.3);">
-          <div style="font-size:3rem; margin-bottom:1rem;">🤟</div>
-          <h3 style="font-size:1.5rem; font-weight:800; color:#fff; margin-bottom:0.5rem;">Sign Language Support</h3>
-          <p style="color:var(--text-secondary); font-size:0.95rem; margin-bottom:1.5rem; line-height:1.5;">
-            Visual sign language avatar instructions for Question ${this.currentQuestionIndex + 1}.
+      <div id="sign-language-modal" style="display:${this.isSignLanguageModalOpen ? 'flex' : 'none'}; position:fixed; inset:0; background:rgba(15,23,42,0.7); backdrop-filter:blur(12px); z-index:350; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
+        <div style="background:#ffffff; border:4px solid #ffffff; padding:2rem; border-radius:2rem; max-width:460px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+          <div style="font-size:3rem; margin-bottom:0.75rem;">🤟</div>
+          <h3 style="font-size:1.5rem; font-weight:900; color:#1e293b; margin-bottom:0.4rem;">Sign Language Support</h3>
+          <p style="color:#64748b; font-size:0.92rem; margin-bottom:1.25rem; line-height:1.5;">
+            Visual sign language instructions for Question ${this.currentQuestionIndex + 1}.
           </p>
-          <div style="background:rgba(255,255,255,0.05); border:1px dashed var(--accent-cyan); padding:1.5rem; border-radius:14px; margin-bottom:1.5rem;">
+          <div style="background:#f8fafc; border:2px dashed #cbd5e1; padding:1.25rem; border-radius:1.25rem; margin-bottom:1.5rem;">
             <div style="font-size:2rem; margin-bottom:0.5rem;">🤖🤟</div>
-            <div style="font-size:0.85rem; color:var(--accent-cyan); font-weight:700;">[ Sign Language Animation Preview ]</div>
-            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.3rem;">"${activity.instructions}"</div>
+            <div style="font-size:0.85rem; color:#10b981; font-weight:800;">[ Sign Language Animation Preview ]</div>
+            <div style="font-size:0.8rem; color:#64748b; margin-top:0.4rem;">"${activity.instructions}"</div>
           </div>
           <button id="close-sign-language-btn" class="btn btn-secondary" style="width:100%; padding:0.75rem;">
             Close Window
@@ -801,42 +803,44 @@ export class AssessmentRunner {
       </div>
 
       <!-- Exit Confirmation Overlay -->
-      <div id="exit-confirm-overlay" style="display:none; position:fixed; inset:0; background:rgba(11,15,25,0.94); backdrop-filter:blur(14px); z-index:400; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
-        <div style="font-size:3.5rem; margin-bottom:1rem;">⚠️</div>
-        <h2 style="font-size:1.8rem; font-weight:800; color:#fff; margin-bottom:0.5rem;">Exit &amp; Reset Assessment?</h2>
-        <p style="color:var(--text-secondary); max-width:420px; margin-bottom:2rem; font-size:0.95rem; line-height:1.5;">
-          Exiting will stop your current progress, clear all saved assessment cache, and restart from the beginning.
-        </p>
-        <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center;">
-          <button id="cancel-exit-btn" class="btn btn-secondary" style="padding:0.75rem 1.5rem; font-weight:700;">Cancel</button>
-          <button id="confirm-exit-btn" class="btn btn-primary" style="background:#ef4444; border-color:#dc2626; padding:0.75rem 1.5rem; font-weight:700; box-shadow:0 4px 15px rgba(239,68,68,0.4);">
-            🚪 Yes, Exit &amp; Clear Cache
-          </button>
+      <div id="exit-confirm-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.75); backdrop-filter:blur(14px); z-index:400; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
+        <div style="background:#ffffff; border-radius:2rem; border:4px solid #ffffff; padding:2.5rem 2rem; max-width:440px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+          <div style="font-size:3.5rem; margin-bottom:0.75rem;">⚠️</div>
+          <h2 style="font-size:1.7rem; font-weight:900; color:#1e293b; margin-bottom:0.4rem;">Exit &amp; Reset Assessment?</h2>
+          <p style="color:#64748b; margin-bottom:1.75rem; font-size:0.92rem; line-height:1.5;">
+            Exiting will stop your current progress, clear all saved assessment cache, and restart from the beginning.
+          </p>
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:center;">
+            <button id="cancel-exit-btn" class="btn btn-secondary" style="padding:0.75rem 1.4rem; font-weight:800;">Cancel</button>
+            <button id="confirm-exit-btn" class="btn btn-primary" style="background:#ef4444; border-bottom:4px solid #dc2626; padding:0.75rem 1.4rem; font-weight:800; box-shadow:0 4px 15px rgba(239,68,68,0.35);">
+              🚪 Yes, Exit &amp; Reset
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Skill Ladder Domain Progress Strip (CodeRa Frontend) -->
-      <div style="background: rgba(15,23,42,0.75); border: 1px solid var(--border-color); border-radius: 20px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+      <!-- Skill Ladder Domain Progress Strip (CodeRa Green & White) -->
+      <div style="background: #ffffff; border: 4px solid #ffffff; border-radius: 2rem; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 15px 35px -10px rgba(0,0,0,0.06);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
           <div style="display:flex; align-items:center; gap:0.75rem;">
-            <div style="width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg, #10b981, #059669); display:flex; align-items:center; justify-content:center; font-size:1.2rem; box-shadow:0 4px 10px rgba(16,185,129,0.3);">
+            <div style="width:42px; height:42px; border-radius:1rem; background:#4ade80; border-bottom:4px solid #22c55e; display:flex; align-items:center; justify-content:center; font-size:1.4rem; box-shadow:0 4px 10px rgba(74,222,128,0.35);">
               🐸
             </div>
             <div>
-              <div style="font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--accent-emerald);">
+              <div style="font-size:0.75rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; color:#10b981;">
                 ${domainConfig.name}
               </div>
-              <div style="font-size:1rem; font-weight:800; color:#fff;">
+              <div style="font-size:1.1rem; font-weight:900; color:#1e293b;">
                 ${baseline.subSkill}
               </div>
             </div>
           </div>
-          <div style="background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); color:#fbbf24; padding:0.35rem 0.8rem; border-radius:12px; font-weight:800; font-size:0.82rem; display:flex; align-items:center; gap:0.4rem;">
+          <div style="background:#fef3c7; border:2px solid #fde68a; color:#d97706; padding:0.4rem 0.9rem; border-radius:1rem; font-weight:900; font-size:0.85rem; display:flex; align-items:center; gap:0.4rem;">
             ⭐ <span>${this.userAnswers.length} of 50 Completed</span>
           </div>
         </div>
 
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.6rem;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem;">
           ${[
             { id: 'cognitive', name: 'Cognitive Logic', icon: '🧠', range: [0, 11], total: 12 },
             { id: 'functional', name: 'Robot Missions', icon: '🤖', range: [12, 23], total: 12 },
@@ -849,35 +853,38 @@ export class AssessmentRunner {
             const answeredInDomain = this.userAnswers.filter(a => a.questionIndex >= d.range[0] && a.questionIndex <= d.range[1]).length;
             const pct = Math.min(100, Math.round((answeredInDomain / d.total) * 100));
 
-            let cardBg = 'rgba(255,255,255,0.03)';
-            let borderColor = 'rgba(255,255,255,0.08)';
-            let textColor = 'var(--text-secondary)';
-            let barBg = 'rgba(255,255,255,0.2)';
+            let cardBg = '#ffffff';
+            let borderColor = '#e2e8f0';
+            let borderBottom = '2px solid #e2e8f0';
+            let textColor = '#64748b';
+            let barBg = '#cbd5e1';
 
             if (isCompletedDomain) {
-              cardBg = 'rgba(16,185,129,0.08)';
-              borderColor = 'rgba(16,185,129,0.3)';
-              textColor = 'var(--accent-emerald)';
-              barBg = 'var(--accent-emerald)';
+              cardBg = '#ecfdf5';
+              borderColor = '#a7f3d0';
+              borderBottom = '2px solid #a7f3d0';
+              textColor = '#10b981';
+              barBg = '#34d399';
             } else if (isCurrentDomain) {
-              cardBg = 'rgba(6,182,212,0.12)';
-              borderColor = 'var(--accent-cyan)';
-              textColor = '#fff';
-              barBg = 'linear-gradient(90deg, var(--accent-cyan), var(--accent-blue))';
+              cardBg = '#eff6ff';
+              borderColor = '#60a5fa';
+              borderBottom = '4px solid #3b82f6';
+              textColor = '#1e40af';
+              barBg = '#3b82f6';
             }
 
             return `
-              <div style="background:${cardBg}; border:1px solid ${borderColor}; border-radius:12px; padding:0.6rem 0.75rem; display:flex; flex-direction:column; justify-content:space-between;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
-                  <span style="font-size:0.75rem; font-weight:700; color:${textColor};">${d.icon} ${d.name}</span>
-                  ${isCompletedDomain ? '<span style="font-size:0.75rem; color:var(--accent-emerald); font-weight:900;">✓</span>' : ''}
+              <div style="background:${cardBg}; border:2px solid ${borderColor}; border-bottom:${borderBottom}; border-radius:1rem; padding:0.75rem 0.85rem; display:flex; flex-direction:column; justify-content:space-between; transition:all 0.3s ease;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                  <span style="font-size:0.78rem; font-weight:800; color:${textColor};">${d.icon} ${d.name}</span>
+                  ${isCompletedDomain ? '<span style="font-size:0.8rem; color:#10b981; font-weight:900;">✓</span>' : ''}
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.3rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:#64748b; margin-bottom:0.35rem; font-weight:700;">
                   <span>${answeredInDomain}/${d.total} Qs</span>
-                  <span style="font-weight:700; color:${textColor};">${pct}%</span>
+                  <span style="font-weight:900; color:${textColor};">${pct}%</span>
                 </div>
-                <div style="width:100%; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
-                  <div style="width:${pct}%; height:100%; background:${barBg}; transition:width 0.3s ease;"></div>
+                <div style="width:100%; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
+                  <div style="width:${pct}%; height:100%; background:${barBg}; border-radius:3px; transition:width 0.3s ease;"></div>
                 </div>
               </div>
             `;
@@ -887,51 +894,51 @@ export class AssessmentRunner {
 
       <div class="glass-card activity-card">
         <div class="activity-header">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap:wrap; gap:0.5rem;">
             <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
               <span class="activity-domain-badge">${domainConfig.name}</span>
-              <span style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); background:rgba(255,255,255,0.06); padding:0.25rem 0.6rem; border-radius:8px;">
+              <span style="font-size:0.82rem; font-weight:800; color:#64748b; background:#f1f5f9; padding:0.35rem 0.75rem; border-radius:10px;">
                 Q${this.currentQuestionIndex + 1} of 50 • ${baseline.subSkill}
               </span>
               ${activity.source === 'azure_openai'
-                ? `<span style="font-size:0.75rem; font-weight:800; background:rgba(6,182,212,0.18); border:1px solid var(--accent-cyan); color:var(--accent-cyan); padding:0.25rem 0.6rem; border-radius:8px; display:inline-flex; align-items:center; gap:4px;" title="Generated dynamically via Azure OpenAI">🤖 Azure AI</span>`
-                : `<span style="font-size:0.75rem; font-weight:800; background:rgba(234,179,8,0.18); border:1px solid #eab308; color:#fde047; padding:0.25rem 0.6rem; border-radius:8px; display:inline-flex; align-items:center; gap:4px;" title="Loaded from deterministic Slot Config (Offline/Fallback)">⚡ Slot Config (Offline)</span>`
+                ? `<span style="font-size:0.75rem; font-weight:900; background:#ecfeff; border:2px solid #a5f3fc; color:#0891b2; padding:0.25rem 0.65rem; border-radius:10px; display:inline-flex; align-items:center; gap:4px;" title="Generated dynamically via Azure OpenAI">🤖 Azure AI</span>`
+                : `<span style="font-size:0.75rem; font-weight:900; background:#fefce8; border:2px solid #fef08a; color:#ca8a04; padding:0.25rem 0.65rem; border-radius:10px; display:inline-flex; align-items:center; gap:4px;" title="Loaded from deterministic Slot Config (Offline/Fallback)">⚡ Slot Config (Offline)</span>`
               }
             </div>
             <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
 
               <!-- 🔊 Audio Play Button -->
-              <button id="speak-question-btn" class="btn btn-secondary" style="padding:0.4rem 0.75rem; font-size:0.85rem; font-weight:700;" title="Read Aloud Question">
+              <button id="speak-question-btn" class="btn btn-secondary" style="padding:0.45rem 0.85rem; font-size:0.85rem; font-weight:800; background:#ecfdf5; border:2px solid #a7f3d0; border-bottom:4px solid #6ee7b7; color:#059669;" title="Read Aloud Question">
                 🔊 Audio
               </button>
 
               <!-- 🤟 Sign Language Toggle -->
-              <button id="toggle-sign-language-btn" class="btn btn-secondary" style="padding:0.4rem 0.75rem; font-size:0.85rem; font-weight:700; background:rgba(168,85,247,0.15); border:1px solid #a855f7; color:#c084fc;" title="Sign Language Instruction">
+              <button id="toggle-sign-language-btn" class="btn btn-secondary" style="padding:0.45rem 0.85rem; font-size:0.85rem; font-weight:800; background:#f5f3ff; border:2px solid #ddd6fe; border-bottom:4px solid #c4b5fd; color:#7c3aed;" title="Sign Language Instruction">
                 🤟 Sign Language
               </button>
 
               <!-- 👁️ Timer Visibility Toggle -->
-              <button id="toggle-timer-vis-btn" class="btn btn-secondary" style="padding:0.4rem 0.75rem; font-size:0.85rem;" title="Show/Hide Timer">
+              <button id="toggle-timer-vis-btn" class="btn btn-secondary" style="padding:0.45rem 0.85rem; font-size:0.85rem; font-weight:800;" title="Show/Hide Timer">
                 ${this.isTimerVisible ? '👁️ Hide Timer' : '🙈 Show Timer'}
               </button>
 
               <!-- ⏱️ Per-question countdown timer -->
-              <div id="question-timer-container" style="display:${this.isTimerVisible ? 'flex' : 'none'}; align-items:center; gap:0.5rem; background:rgba(15,23,42,0.8); border:1px solid var(--border-color); padding:0.4rem 0.9rem; border-radius:20px;">
+              <div id="question-timer-container" style="display:${this.isTimerVisible ? 'flex' : 'none'}; align-items:center; gap:0.5rem; background:#ffffff; border:2px solid #e2e8f0; padding:0.4rem 0.9rem; border-radius:20px; box-shadow:0 2px 5px rgba(0,0,0,0.03);">
                 <span style="font-size:0.95rem;">⏱️</span>
-                <span id="question-timer-display" style="font-family:monospace; font-size:1.1rem; font-weight:800; color:${this.questionTimerSecondsRemaining <= 15 ? '#ef4444' : 'var(--accent-cyan)'};">
+                <span id="question-timer-display" style="font-family:monospace; font-size:1.1rem; font-weight:900; color:${this.questionTimerSecondsRemaining <= 15 ? '#ef4444' : '#1e293b'};">
                   ${Math.floor(this.questionTimerSecondsRemaining / 60)}:${String(this.questionTimerSecondsRemaining % 60).padStart(2, '0')}
                 </span>
-                <div style="width:48px; height:5px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
-                  <div id="question-timer-ring" style="width:${(this.questionTimerSecondsRemaining / AssessmentRunner.QUESTION_TIME_LIMIT_SEC) * 100}%; height:100%; background:${this.questionTimerSecondsRemaining <= 15 ? '#ef4444' : 'var(--accent-cyan)'}; transition:width 0.9s linear;"></div>
+                <div style="width:48px; height:6px; background:#f1f5f9; border-radius:3px; overflow:hidden;">
+                  <div id="question-timer-ring" style="width:${(this.questionTimerSecondsRemaining / AssessmentRunner.QUESTION_TIME_LIMIT_SEC) * 100}%; height:100%; background:${this.questionTimerSecondsRemaining <= 15 ? '#ef4444' : '#10b981'}; transition:width 0.9s linear;"></div>
                 </div>
               </div>
 
               <!-- Pause Button -->
-              <button id="pause-btn" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.85rem;" title="Pause Assessment">
+              <button id="pause-btn" class="btn btn-secondary" style="padding:0.45rem 0.85rem; font-size:0.85rem; font-weight:800;" title="Pause Assessment">
                 ⏸️ Pause
               </button>
               <!-- Exit Exam Button -->
-              <button id="exit-exam-btn" class="btn btn-secondary" style="padding:0.4rem 0.85rem; font-size:0.85rem; background:rgba(239,68,68,0.15); border:1px solid #ef4444; color:#f87171;" title="Exit and Reset Exam">
+              <button id="exit-exam-btn" class="btn btn-secondary" style="padding:0.45rem 0.85rem; font-size:0.85rem; font-weight:800; background:#fee2e2; border:2px solid #fca5a5; border-bottom:4px solid #f87171; color:#ef4444;" title="Exit and Reset Exam">
                 🚪 Exit
               </button>
             </div>
@@ -951,10 +958,10 @@ export class AssessmentRunner {
               class="btn btn-primary"
               id="submit-answer-btn"
               ${this.isLoadingNextQuestion ? 'disabled' : ''}
-              style="background: ${this.isLoadingNextQuestion ? 'rgba(100,116,139,0.5)' : 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))'}; font-weight:700; width:100%; font-size:1.1rem; padding:0.9rem 2rem; transition: all 0.3s ease;"
+              style="background: ${this.isLoadingNextQuestion ? '#94a3b8' : '#3b82f6'}; border: none; border-bottom: 6px solid ${this.isLoadingNextQuestion ? '#64748b' : '#2563eb'}; color: #ffffff; border-radius: 1.25rem; font-weight: 900; width: 100%; font-size: 1.15rem; padding: 1.1rem 2rem; transition: all 0.2s ease; cursor: pointer;"
             >
               ${this.isLoadingNextQuestion
-                ? '<span style="display:flex;align-items:center;justify-content:center;gap:0.6rem;"><span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;animation:spin 0.8s linear infinite;"></span> Loading Next Question...</span>'
+                ? '<span style="display:flex;align-items:center;justify-content:center;gap:0.6rem;"><span style="width:18px;height:18px;border-radius:50%;border:3px solid rgba(255,255,255,0.4);border-top-color:#fff;animation:spin 0.8s linear infinite;"></span> Loading Next Question...</span>'
                 : 'Confirm &amp; Next ➔'
               }
             </button>
@@ -991,7 +998,7 @@ export class AssessmentRunner {
           mapHtml = `
             <div style="display:flex; flex-direction:column; align-items:center; gap:0.4rem;">
               <div>[ 🤖 Robo ] ➔ ➡️ [ 🧱 BIG ROCK! (Blocked!) ]</div>
-              <div style="color:var(--accent-amber); font-size:0.95rem;">⤵️ Turn Right Around Rock ➔ ➡️ Move Forward ➔ ⤴️ Turn Left</div>
+              <div style="color:#d97706; font-size:0.95rem;">⤵️ Turn Right Around Rock ➔ ➡️ Move Forward ➔ ⤴️ Turn Left</div>
               <div>[ 💎 Gem Treasure ]</div>
             </div>
           `;
@@ -1003,18 +1010,18 @@ export class AssessmentRunner {
       }
 
       return `
-        <div style="background: rgba(15,23,42,0.9); border: 2px solid var(--accent-cyan); padding: 0.85rem 1.25rem; border-radius: 14px; margin-bottom: 1.25rem; text-align: center; box-shadow: 0 0 15px rgba(6,182,212,0.2);">
-          <div style="font-size: 0.75rem; font-weight: 800; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem;">
+        <div style="background: #f0fdf4; border: 2px solid #86efac; padding: 1rem 1.5rem; border-radius: 1.25rem; margin-bottom: 1.25rem; text-align: center; box-shadow: 0 4px 15px rgba(16,185,129,0.08);">
+          <div style="font-size: 0.78rem; font-weight: 900; color: #059669; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem;">
             🗺️ Mission Route Map
           </div>
-          <div style="font-size: 1.05rem; font-weight: 700; color: #fff;">
+          <div style="font-size: 1.1rem; font-weight: 800; color: #1e293b;">
             ${mapHtml}
           </div>
         </div>
 
         <div class="robot-mission-container">
           <div>
-            <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-secondary);">Available Actions:</h4>
+            <h4 style="margin-bottom:0.5rem; font-size:0.9rem; color:#64748b; font-weight:800;">Available Actions:</h4>
             <div class="blocks-palette">
               ${blocks.map((blk: string) => `
                 <button class="code-block" data-block="${blk}">+ ${blk}</button>
@@ -1023,18 +1030,18 @@ export class AssessmentRunner {
           </div>
           <div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-              <h4 style="font-size:0.9rem; color:var(--text-secondary); margin:0;">Sequence (${answerState.robotSequence.length} steps):</h4>
+              <h4 style="font-size:0.9rem; color:#64748b; margin:0; font-weight:800;">Sequence (${answerState.robotSequence.length} steps):</h4>
               ${answerState.robotSequence.length > 0 ? `
-                <button id="clear-sequence-btn" style="font-size:0.75rem; color:var(--accent-amber); background:rgba(245,158,11,0.1); border:1px solid var(--accent-amber); padding:0.25rem 0.6rem; border-radius:6px; cursor:pointer;">🗑️ Clear</button>
+                <button id="clear-sequence-btn" style="font-size:0.75rem; font-weight:800; color:#d97706; background:#fef3c7; border:1px solid #fde68a; padding:0.25rem 0.65rem; border-radius:8px; cursor:pointer;">🗑️ Clear</button>
               ` : ''}
             </div>
             <div class="sequence-dropzone" id="sequence-box">
               ${answerState.robotSequence.length === 0
-                ? '<span style="color:var(--text-secondary); font-size:0.85rem;">Click blocks on left to build sequence...</span>'
+                ? '<span style="color:#94a3b8; font-size:0.9rem; font-weight:600; text-align:center; padding:1.5rem 0;">Click action blocks on the left to build your robot sequence...</span>'
                 : answerState.robotSequence.map((blk, i) => `
-                <div class="sequence-step" style="background:var(--accent-blue); padding:0.4rem 0.8rem; border-radius:6px; font-size:0.85rem; font-weight:600; display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+                <div class="sequence-step" style="background:#3b82f6; padding:0.5rem 0.9rem; border-radius:10px; font-size:0.9rem; font-weight:800; display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
                   <span>📌 ${i + 1}. ${blk}</span>
-                  <button class="remove-block-btn" data-idx="${i}" style="background:rgba(0,0,0,0.25); border:none; color:#fff; width:20px; height:20px; border-radius:50%; cursor:pointer; font-size:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">×</button>
+                  <button class="remove-block-btn" data-idx="${i}" style="background:rgba(0,0,0,0.25); border:none; color:#fff; width:22px; height:22px; border-radius:50%; cursor:pointer; font-size:0.8rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">×</button>
                 </div>
               `).join('')
               }
@@ -1052,9 +1059,9 @@ export class AssessmentRunner {
         { label: 'Option C', emoji: '⚽' }
       ];
       return `
-        <div style="margin-bottom: 1.25rem; font-size:1.1rem; color:var(--accent-cyan); font-weight:600; text-align:center; background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.2); border-radius:12px; padding:0.75rem 1rem; display:flex; align-items:center; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
+        <div style="margin-bottom: 1.25rem; font-size:1.1rem; color:#059669; font-weight:800; text-align:center; background:#ecfdf5; border:2px solid #a7f3d0; border-radius:1.25rem; padding:0.85rem 1.25rem; display:flex; align-items:center; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
           <span>🔊 "${audioPrompt}"</span>
-          <button id="listen-audio-btn" style="background:rgba(6,182,212,0.2); border:1px solid var(--accent-cyan); color:#fff; border-radius:8px; padding:0.35rem 0.85rem; font-size:0.85rem; cursor:pointer; font-weight:700; transition:all 0.2s;">
+          <button id="listen-audio-btn" style="background:#ffffff; border:2px solid #a7f3d0; color:#059669; border-radius:10px; padding:0.35rem 0.85rem; font-size:0.85rem; cursor:pointer; font-weight:800; transition:all 0.2s;">
             🔊 Listen Again
           </button>
         </div>
@@ -1064,8 +1071,8 @@ export class AssessmentRunner {
             const emoji = typeof opt === 'object' && opt.emoji ? opt.emoji : (['🤖','🍎','⚽'][idx] || '🎯');
             return `
               <button class="option-btn-3 ${answerState.selectedAnswerIndex === idx ? 'selected' : ''}" data-opt="${idx}">
-                <span style="font-size: 2.2rem;">${emoji}</span>
-                <span style="font-size: 0.95rem;">${label}</span>
+                <span style="font-size: 2.5rem; display:block; margin-bottom:0.25rem;">${emoji}</span>
+                <span style="font-size: 1rem; font-weight:800;">${label}</span>
               </button>
             `;
           }).join('')}
@@ -1079,7 +1086,7 @@ export class AssessmentRunner {
       return `
         <div class="motor-canvas-container" id="motor-canvas">
           ${!allHit ? `<div class="motor-target" id="target-element" style="top: ${this.motorTargetPos.top}px; left: ${this.motorTargetPos.left}px;"></div>` : ''}
-          <div style="position:absolute; bottom:10px; left:15px; font-size:0.85rem; color:var(--text-secondary);">
+          <div style="position:absolute; bottom:12px; left:16px; font-size:0.9rem; color:#64748b; font-weight:800;">
             Targets Clicked: ${answerState.motorClicks.length} / ${targetsCount}
             ${allHit ? ' ✅ All targets hit!' : ''}
           </div>
@@ -1097,10 +1104,10 @@ export class AssessmentRunner {
     return `
       ${gridMatrix ? `
         <div style="display:flex; justify-content:center; margin-bottom:1.5rem;">
-          <div style="background: rgba(15,23,42,0.9); border: 2px solid var(--accent-cyan); padding: 1rem 1.5rem; border-radius: 16px; box-shadow: 0 0 20px rgba(6,182,212,0.2);">
-            <div style="display:grid; grid-template-columns: repeat(${gridMatrix[0].length}, 1fr); gap: 0.75rem; text-align: center;">
+          <div style="background: #ffffff; border: 2px solid #a7f3d0; padding: 1.25rem 1.75rem; border-radius: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);">
+            <div style="display:grid; grid-template-columns: repeat(${gridMatrix[0].length}, 1fr); gap: 0.85rem; text-align: center;">
               ${gridMatrix.map(row => row.map((cell: string) => `
-                <div style="font-size: 1.5rem; background: rgba(255,255,255,0.06); padding: 0.75rem 1.25rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); color: ${cell.includes('❓') ? 'var(--accent-cyan)' : '#fff'}; font-weight: bold;">
+                <div style="font-size: 1.6rem; background: #f8fafc; padding: 0.85rem 1.4rem; border-radius: 12px; border: 2px solid #e2e8f0; color: ${cell.includes('❓') ? '#10b981' : '#1e293b'}; font-weight: 900;">
                   ${cell}
                 </div>
               `).join('')).join('')}
@@ -1110,8 +1117,8 @@ export class AssessmentRunner {
       ` : ''}
 
       ${sequenceList ? `
-        <div style="font-size: 1.8rem; display: flex; gap: 1rem; margin-bottom: 1.5rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); padding: 1rem 1.5rem; border-radius: 14px; justify-content: center; align-items: center; flex-wrap: wrap; text-align: center;">
-          ${sequenceList.map((item: string) => `<span style="background:rgba(255,255,255,0.05); padding:0.4rem 0.8rem; border-radius:8px; color:${item.includes('❓') ? 'var(--accent-cyan)' : '#fff'}">${item}</span>`).join('')}
+        <div style="font-size: 1.6rem; display: flex; gap: 0.85rem; margin-bottom: 1.5rem; background: #ffffff; border: 2px solid #e2e8f0; padding: 1.25rem 1.75rem; border-radius: 1.5rem; justify-content: center; align-items: center; flex-wrap: wrap; text-align: center; box-shadow: 0 6px 20px -5px rgba(0,0,0,0.04);">
+          ${sequenceList.map((item: string) => `<span style="background:#f8fafc; border:2px solid #e2e8f0; padding:0.5rem 1rem; border-radius:12px; font-weight:900; color:${item.includes('❓') ? '#10b981' : '#1e293b'}">${item}</span>`).join('')}
         </div>
       ` : ''}
 
@@ -1121,8 +1128,8 @@ export class AssessmentRunner {
           const emoji = typeof opt === 'object' && opt.emoji ? opt.emoji : '';
           return `
             <button class="option-btn-3 ${answerState.selectedAnswerIndex === idx ? 'selected' : ''}" data-opt="${idx}">
-              ${emoji ? `<span style="font-size: 2rem; display:block; margin-bottom:0.3rem;">${emoji}</span>` : ''}
-              <span style="font-size:1rem; font-weight:600;">${labelText}</span>
+              ${emoji ? `<span style="font-size: 2.3rem; display:block; margin-bottom:0.25rem;">${emoji}</span>` : ''}
+              <span style="font-size:1.05rem; font-weight:800;">${labelText}</span>
             </button>
           `;
         }).join('')}

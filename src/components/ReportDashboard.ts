@@ -158,24 +158,24 @@ export function renderReportDashboard(
   saveSessionToCEODatabase(session);
 
   container.innerHTML = `
-    <div class="glass-card" style="padding: 2.5rem; max-width:1150px; margin:0 auto;">
+    <div class="glass-card" style="padding: 2.5rem; max-width:1150px; margin:0 auto; background:#ffffff; border:4px solid #ffffff; border-radius:2rem; box-shadow:0 20px 40px -15px rgba(0,0,0,0.07);">
       
       <!-- Top Action Controls -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid var(--border-color); padding-bottom:1rem; flex-wrap:wrap; gap:0.75rem;">
-        <span style="background: rgba(16,185,129,0.15); border: 1px solid var(--accent-emerald); color: var(--accent-emerald); padding: 0.35rem 1rem; border-radius: 20px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:2px solid #f1f5f9; padding-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
+        <span style="background: #ecfdf5; border: 2px solid #a7f3d0; color: #10b981; padding: 0.4rem 1.1rem; border-radius: 20px; font-weight: 800; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">
           ✅ CodeRa 50-Question Assessment Complete (v${session.schema_version || '2.0'})
         </span>
         <div style="display:flex; gap:0.75rem; flex-wrap:wrap;" class="report-action-btns">
-          <button id="ceo-dashboard-btn" class="btn btn-secondary" style="font-size:0.85rem; background:rgba(6,182,212,0.15); border:1px solid var(--accent-cyan); color:var(--accent-cyan);">
+          <button id="ceo-dashboard-btn" class="btn btn-secondary" style="font-size:0.85rem; background:#ecfeff; border:2px solid #a5f3fc; color:#0891b2; font-weight:800;">
             🏛️ CEO Analytics Page
           </button>
-          <button id="download-pdf-btn" class="btn btn-primary" style="font-size:0.85rem; background: linear-gradient(135deg, #8b5cf6, #ec4899); box-shadow: 0 4px 15px rgba(139,92,246,0.4);">
+          <button id="download-pdf-btn" class="btn btn-primary" style="font-size:0.85rem; background: #3b82f6; border-bottom: 4px solid #2563eb; color:#fff; font-weight:800;">
             📄 Download PDF Report
           </button>
-          <button id="download-csv-btn" class="btn btn-secondary" style="font-size:0.85rem;">
+          <button id="download-csv-btn" class="btn btn-secondary" style="font-size:0.85rem; font-weight:800;">
             📊 Export CSV (Student)
           </button>
-          <button id="print-report-btn" class="btn btn-secondary" style="font-size:0.85rem;">
+          <button id="print-report-btn" class="btn btn-secondary" style="font-size:0.85rem; font-weight:800;">
             🖨️ Print Report
           </button>
         </div>
@@ -183,18 +183,18 @@ export function renderReportDashboard(
 
       <!-- Header -->
       <div style="text-align: center; margin-bottom: 2rem;">
-        <h1 style="font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        <h1 style="font-size: 2.3rem; font-weight: 900; color: #1e293b;">
           CodeRa Placement Assessment Report
         </h1>
-        <p style="color: var(--text-secondary); font-size: 1rem; margin-top: 0.25rem;">
-          Student: <strong>${session.student_name}</strong> • Age Group: ${session.age_group || '13-16'} • 50 Items Assessed
+        <p style="color: #64748b; font-size: 1.05rem; margin-top: 0.35rem; font-weight: 600;">
+          Student: <strong style="color:#1e293b;">${session.student_name}</strong> • Age Group: ${session.age_group || '13-16'} • 50 Items Assessed
         </p>
       </div>
 
-      <div class="report-grid" style="grid-template-columns: 320px 1fr;">
+      <div class="report-grid" style="grid-template-columns: 320px 1fr; gap: 1.75rem;">
         <!-- Placement Badge Card -->
-        <div class="placement-badge-card">
-          <div style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary);">
+        <div class="placement-badge-card" style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:1.75rem; padding:1.75rem; box-shadow:0 10px 25px -5px rgba(0,0,0,0.03);">
+          <div style="font-size: 0.82rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">
             Technology Readiness Score
           </div>
           
@@ -202,34 +202,34 @@ export function renderReportDashboard(
             <span class="score-text">${totalScore}</span>
           </div>
 
-          <div style="font-size: 0.85rem; color: var(--text-secondary);">Recommended CodeRa Level</div>
-          <div class="track-title" style="color:var(--accent-cyan); font-weight:800; font-size:1.3rem;">${recommendedTrack}</div>
+          <div style="font-size: 0.85rem; color: #64748b; font-weight: 700;">Recommended CodeRa Level</div>
+          <div class="track-title" style="color:#10b981; font-weight:900; font-size:1.4rem; margin-top:0.2rem;">${recommendedTrack}</div>
 
           <!-- Coding Readiness Sub-Score Card -->
-          <div style="margin-top: 1.25rem; background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); border-radius:12px; padding:0.85rem; text-align:center;">
-            <div style="font-size:0.75rem; font-weight:800; color:var(--accent-cyan); text-transform:uppercase;">
+          <div style="margin-top: 1.25rem; background:#eff6ff; border:2px solid #bfdbfe; border-radius:1rem; padding:1rem; text-align:center;">
+            <div style="font-size:0.78rem; font-weight:900; color:#1e40af; text-transform:uppercase;">
               💻 Coding Readiness Score
             </div>
-            <div style="font-size:1.6rem; font-weight:900; color:#fff; margin-top:0.2rem;">
+            <div style="font-size:1.8rem; font-weight:900; color:#1e293b; margin-top:0.2rem;">
               ${session.coding_readiness_score ?? Math.round(performanceIndicators.overallAccuracy)}%
             </div>
-            <div style="font-size:0.72rem; color:var(--text-secondary); margin-top:0.2rem;">
+            <div style="font-size:0.75rem; color:#64748b; margin-top:0.2rem; font-weight:600;">
               Algorithmic logic, sequencing &amp; loops
             </div>
           </div>
 
-          <div style="margin-top: 1.25rem; width: 100%; border-top: 1px solid var(--border-color); padding-top: 1rem; text-align: left; font-size: 0.85rem; color: var(--text-secondary);">
+          <div style="margin-top: 1.25rem; width: 100%; border-top: 2px solid #e2e8f0; padding-top: 1rem; text-align: left; font-size: 0.88rem; color: #64748b; font-weight:600;">
             <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
-              <span>Overall Accuracy:</span> <strong>${performanceIndicators.overallAccuracy}%</strong>
+              <span>Overall Accuracy:</span> <strong style="color:#1e293b;">${performanceIndicators.overallAccuracy}%</strong>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
-              <span>Active Thinking Time:</span> <strong>${totalActiveMins} min</strong>
+              <span>Active Thinking Time:</span> <strong style="color:#1e293b;">${totalActiveMins} min</strong>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
-              <span>Total Breaks Taken:</span> <strong>${session.total_breaks_count || 0} (${totalBreakMins} min)</strong>
+              <span>Total Breaks Taken:</span> <strong style="color:#1e293b;">${session.total_breaks_count || 0} (${totalBreakMins} min)</strong>
             </div>
             <div style="display:flex; justify-content:space-between;">
-              <span>Questions Timed Out:</span> <strong style="color:${totalTimedOutCount > 0 ? '#ef4444' : 'inherit'};">${totalTimedOutCount} / 50</strong>
+              <span>Questions Timed Out:</span> <strong style="color:${totalTimedOutCount > 0 ? '#ef4444' : '#1e293b'};">${totalTimedOutCount} / 50</strong>
             </div>
           </div>
         </div>
@@ -366,18 +366,18 @@ export function renderReportDashboard(
           </div>
         </div>
 
-        <!-- Next Steps: Live Screening & Video Introduction Module -->
-        <div style="margin-top: 2rem; background: linear-gradient(135deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9)); border: 1px solid rgba(6,182,212,0.3); border-radius: 16px; padding: 1.75rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3);">
+        <!-- Next Steps: Live Screening & Video Introduction Module (Green & White Theme) -->
+        <div style="margin-top: 2rem; background: #f0fdf4; border: 2px solid #86efac; border-radius: 1.5rem; padding: 1.75rem; box-shadow: 0 10px 30px rgba(16,185,129,0.06);">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.25rem;">
             <div>
-              <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--accent-cyan); background:rgba(6,182,212,0.12); padding:0.25rem 0.65rem; border-radius:8px; border:1px solid rgba(6,182,212,0.25);">
+              <span style="font-size:0.75rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; color:#059669; background:#dcfce7; padding:0.35rem 0.8rem; border-radius:10px; border:1px solid #86efac;">
                 🚀 Placement Next Steps
               </span>
-              <h3 style="font-size:1.3rem; font-weight:800; color:#fff; margin-top:0.4rem;">
+              <h3 style="font-size:1.35rem; font-weight:900; color:#1e293b; margin-top:0.4rem;">
                 Candidate Onboarding &amp; Introduction Screening
               </h3>
             </div>
-            <span style="font-size:0.8rem; color:var(--text-secondary);">
+            <span style="font-size:0.85rem; color:#64748b; font-weight:700;">
               Required for final track confirmation
             </span>
           </div>
@@ -385,43 +385,43 @@ export function renderReportDashboard(
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
             
             <!-- Option A: Live Screening -->
-            <div style="background: rgba(15,23,42,0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="background: #ffffff; border: 2px solid #e2e8f0; border-radius: 1.25rem; padding: 1.5rem; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
               <div>
                 <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.6rem;">
-                  <span style="font-size:1.6rem;">🎥</span>
+                  <span style="font-size:1.8rem;">🎥</span>
                   <div>
-                    <h4 style="font-size:1.05rem; font-weight:700; color:#fff;">Live 1-on-1 Screening</h4>
-                    <span style="font-size:0.75rem; color:var(--accent-cyan); font-weight:600;">With Admission Specialist</span>
+                    <h4 style="font-size:1.1rem; font-weight:900; color:#1e293b;">Live 1-on-1 Screening</h4>
+                    <span style="font-size:0.78rem; color:#0284c7; font-weight:800;">With Admission Specialist</span>
                   </div>
                 </div>
-                <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5; margin-bottom:1rem;">
+                <p style="font-size:0.88rem; color:#64748b; line-height:1.5; margin-bottom:1.25rem; font-weight:600;">
                   Schedule an interactive 10-minute live meeting with a CodeRa specialist to review strengths, answer questions, and discuss track placement.
                 </p>
               </div>
-              <button id="btn-live-screening" class="btn btn-secondary" style="width:100%; font-size:0.85rem; font-weight:700; background:rgba(59,130,246,0.15); border:1px solid #3b82f6; color:#60a5fa;">
+              <button id="btn-live-screening" class="btn btn-secondary" style="width:100%; font-size:0.88rem; font-weight:800; background:#eff6ff; border:2px solid #bfdbfe; border-bottom:4px solid #93c5fd; color:#1e40af;">
                 📅 Schedule Live Screening
               </button>
             </div>
 
             <!-- Option B: 1-Minute Video Introduction -->
-            <div style="background: rgba(15,23,42,0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="background: #ffffff; border: 2px solid #e2e8f0; border-radius: 1.25rem; padding: 1.5rem; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
               <div>
                 <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.6rem;">
-                  <span style="font-size:1.6rem;">📹</span>
+                  <span style="font-size:1.8rem;">📹</span>
                   <div>
-                    <h4 style="font-size:1.05rem; font-weight:700; color:#fff;">1-Minute Video Introduction</h4>
-                    <span style="font-size:0.75rem; color:var(--accent-emerald); font-weight:600;">Self-Paced Screening</span>
+                    <h4 style="font-size:1.1rem; font-weight:900; color:#1e293b;">1-Minute Video Introduction</h4>
+                    <span style="font-size:0.78rem; color:#10b981; font-weight:800;">Self-Paced Screening</span>
                   </div>
                 </div>
-                <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5; margin-bottom:1rem;">
+                <p style="font-size:0.88rem; color:#64748b; line-height:1.5; margin-bottom:1.25rem; font-weight:600;">
                   Record or upload a 60-second video introducing the student, their technology goals, and why they want to join CodeRa.
                 </p>
               </div>
-              <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                <button id="btn-record-video" class="btn btn-secondary" style="flex:1; min-width:130px; font-size:0.85rem; font-weight:700; background:rgba(236,72,153,0.15); border:1px solid #ec4899; color:#f472b6;">
+              <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                <button id="btn-record-video" class="btn btn-secondary" style="flex:1; min-width:130px; font-size:0.88rem; font-weight:800; background:#fdf2f8; border:2px solid #fbcfe8; border-bottom:4px solid #f472b6; color:#db2777;">
                   🔴 Record (1 Min)
                 </button>
-                <label id="lbl-upload-video" class="btn btn-secondary" style="flex:1; min-width:130px; font-size:0.85rem; font-weight:700; background:rgba(16,185,129,0.15); border:1px solid var(--accent-emerald); color:var(--accent-emerald); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                <label id="lbl-upload-video" class="btn btn-secondary" style="flex:1; min-width:130px; font-size:0.88rem; font-weight:800; background:#ecfdf5; border:2px solid #a7f3d0; border-bottom:4px solid #6ee7b7; color:#059669; display:flex; align-items:center; justify-content:center; cursor:pointer;">
                   📤 Upload Video
                   <input type="file" id="input-video-file" accept="video/*" style="display:none;" />
                 </label>
@@ -432,13 +432,13 @@ export function renderReportDashboard(
         </div>
 
         <!-- Qualitative AI Summary -->
-        <div style="margin-top: 2rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem;" class="summary-md">
+        <div style="margin-top: 2rem; background: #ffffff; border: 2px solid #e2e8f0; border-radius: 1.5rem; padding: 1.75rem; color: #1e293b; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.03);" class="summary-md">
           ${session.qualitative_summary ? formatMarkdown(session.qualitative_summary) : ''}
         </div>
       </div>
 
-      <div style="margin-top: 2.5rem; text-align: center; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
-        <button class="btn btn-primary" id="restart-btn" style="margin: 0 auto;">
+      <div style="margin-top: 2.5rem; text-align: center; border-top: 2px solid #f1f5f9; padding-top: 1.75rem;">
+        <button class="btn btn-primary" id="restart-btn" style="margin: 0 auto; padding: 0.9rem 2.5rem; font-size: 1.1rem;">
           🔄 Retake CodeRa Assessment
         </button>
       </div>
