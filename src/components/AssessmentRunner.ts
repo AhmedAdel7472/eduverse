@@ -13,6 +13,7 @@ import { PlacementEngine, PlacementResult } from '../engine/placementEngine';
 import { QualitativeAnalyzer } from '../ai/qualitativeAnalyzer';
 import { renderReportDashboard } from './ReportDashboard';
 import { CodingChallenge } from './CodingChallenge';
+import confetti from 'canvas-confetti';
 
 export interface StoredUserAnswer {
   selectedAnswerIndex: number | null;
@@ -1316,6 +1317,17 @@ export class AssessmentRunner {
     if (submitAnswerBtn) {
       submitAnswerBtn.addEventListener('click', () => {
         if (this.isLoadingNextQuestion) return;
+
+        // Playful celebratory confetti on answering
+        try {
+          confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.75 },
+            colors: ['#4ADE80', '#3B82F6', '#FBBF24', '#F472B6']
+          });
+        } catch (e) {}
+
         this.recordQuestionTimeData(answerState.isSolved);
         this.advanceToNextQuestion();
       });
@@ -1323,6 +1335,15 @@ export class AssessmentRunner {
   }
 
   private showCompletionLoadingScreen() {
+    try {
+      confetti({
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.5 },
+        colors: ['#4ADE80', '#3B82F6', '#FBBF24', '#F472B6', '#8B5CF6']
+      });
+    } catch (e) {}
+
     this.container.innerHTML = `
       <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; text-align:center; padding:3rem 1rem;">
         <div style="font-size:4rem; margin-bottom:1.5rem; animation:bounce 1.5s infinite;">🎉</div>
