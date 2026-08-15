@@ -547,6 +547,32 @@ export function exportTimeRecordsCSV(session: StudentSessionTelemetry) {
   URL.revokeObjectURL(url);
 }
 
+export function returnToLandingPage(): void {
+  AssessmentRunner.clearSavedSession();
+  try {
+    localStorage.removeItem('eduverse_assessment_session_v2');
+    localStorage.removeItem('eduverse_assessment_session');
+  } catch (e) {}
+
+  const testPage = document.getElementById('childTestPage');
+  if (testPage) {
+    testPage.classList.add('hidden');
+    testPage.classList.remove('exam-active');
+  }
+  const header = document.querySelector('header');
+  if (header) header.classList.remove('hidden');
+  const main = document.querySelector('main');
+  if (main) main.classList.remove('hidden');
+  const footer = document.querySelector('footer');
+  if (footer) footer.classList.remove('hidden');
+  document.body.classList.remove('exam-mode');
+  document.body.classList.remove('ceo-view-mode');
+  window.scrollTo(0, 0);
+
+  // Force clean reload back to home
+  window.location.href = window.location.pathname;
+}
+
 export function renderCEODashboard(
   container: HTMLElement,
   activeSession?: StudentSessionTelemetry,
@@ -563,14 +589,27 @@ export function renderCEODashboard(
         <p style="color: #64748b; margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto; font-size: 1rem; line-height: 1.5; font-weight: 600;">
           No completed student assessments found in the registry. Complete an assessment to generate real-time CEO analytics.
         </p>
-        <button id="ceo-new-test-btn" class="btn btn-primary" style="font-size: 1.05rem; padding: 0.9rem 2.5rem; font-weight: 800; background: #3b82f6; border-bottom: 4px solid #2563eb; color: #fff;">
-          🚀 Start New Student Assessment
-        </button>
+        <div style="display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;">
+          <button id="ceo-home-btn" class="btn btn-secondary" style="font-size: 1.05rem; padding: 0.85rem 2rem; font-weight: 800; background: #f8fafc; border: 2px solid #e2e8f0; border-bottom: 4px solid #cbd5e1; color: #1e293b; cursor:pointer;">
+            🏠 Back to Home
+          </button>
+          <button id="ceo-new-test-btn" class="btn btn-primary" style="font-size: 1.05rem; padding: 0.85rem 2.2rem; font-weight: 800; background: #3b82f6; border-bottom: 4px solid #2563eb; color: #fff; cursor:pointer;">
+            🚀 Start New Student Assessment
+          </button>
+        </div>
       </div>
     `;
+    const homeBtn = container.querySelector('#ceo-home-btn');
+    if (homeBtn) {
+      homeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        returnToLandingPage();
+      });
+    }
     const newTestBtn = container.querySelector('#ceo-new-test-btn');
     if (newTestBtn) {
-      newTestBtn.addEventListener('click', () => {
+      newTestBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         AssessmentRunner.clearSavedSession();
         window.location.href = window.location.pathname;
       });
@@ -623,9 +662,16 @@ export function renderCEODashboard(
           <h1 style="font-size: 2.2rem; font-weight: 900; color: #1e293b; margin: 0;">CodeRa CEO Executive Dashboard</h1>
           <p style="color: #64748b; font-size: 1rem; margin-top: 0.25rem; font-weight: 600;">Overview of all completed student assessments and readiness metrics</p>
         </div>
-        <button id="back-to-report-btn" class="btn btn-secondary" style="font-size: 0.9rem; font-weight: 800; background: #f8fafc; border: 2px solid #e2e8f0; border-bottom: 4px solid #cbd5e1; color: #1e293b; padding: 0.6rem 1.25rem;">
-          ${activeSession ? '🔙 Back to Current Report' : '🏠 Back to Home'}
-        </button>
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+          ${activeSession ? `
+            <button id="back-to-report-btn" class="btn btn-secondary" style="font-size: 0.88rem; font-weight: 800; background: #ecfeff; border: 2px solid #a5f3fc; border-bottom: 4px solid #67e8f9; color: #0891b2; padding: 0.6rem 1.25rem; cursor:pointer;">
+              📄 Current Student Report
+            </button>
+          ` : ''}
+          <button id="back-to-home-btn" class="btn btn-secondary" style="font-size: 0.88rem; font-weight: 800; background: #f8fafc; border: 2px solid #e2e8f0; border-bottom: 4px solid #cbd5e1; color: #1e293b; padding: 0.6rem 1.25rem; cursor:pointer;">
+            🏠 Back to Home
+          </button>
+        </div>
       </div>
 
       <!-- Stat Cards Grid (Green & White High Contrast) -->
@@ -682,21 +728,25 @@ export function renderCEODashboard(
     </div>
   `;
 
-  const backBtn = container.querySelector('#back-to-report-btn');
-  if (backBtn) {
-    backBtn.addEventListener('click', () => {
-      if (activeSession) {
-        const placement = activePlacement || PlacementEngine.evaluatePlacement(
-          activeSession.total_score,
-          activeSession.domain_scores,
-          activeSession.item_telemetries,
-          activeSession.schema_version || '2.0'
-        );
-        renderReportDashboard(container, activeSession, placement);
-      } else {
-        AssessmentRunner.clearSavedSession();
-        window.location.href = window.location.pathname;
-      }
+  const homeBtn = container.querySelector('#back-to-home-btn');
+  if (homeBtn) {
+    homeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      returnToLandingPage();
+    });
+  }
+
+  const reportBtn = container.querySelector('#back-to-report-btn');
+  if (reportBtn && activeSession) {
+    reportBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const placement = activePlacement || PlacementEngine.evaluatePlacement(
+        activeSession.total_score,
+        activeSession.domain_scores,
+        activeSession.item_telemetries,
+        activeSession.schema_version || '2.0'
+      );
+      renderReportDashboard(container, activeSession, placement);
     });
   }
 }
