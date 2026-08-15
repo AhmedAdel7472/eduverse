@@ -448,7 +448,14 @@ export function renderReportDashboard(
   // Attach Listeners
   const restartBtn = container.querySelector('#restart-btn');
   if (restartBtn) {
-    restartBtn.addEventListener('click', () => window.location.reload());
+    restartBtn.addEventListener('click', () => {
+      AssessmentRunner.clearSavedSession();
+      try {
+        localStorage.removeItem('eduverse_assessment_session_v2');
+        localStorage.removeItem('eduverse_assessment_session');
+      } catch (e) {}
+      window.location.href = window.location.pathname;
+    });
   }
 
   const printBtn = container.querySelector('#print-report-btn');

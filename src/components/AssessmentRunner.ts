@@ -151,8 +151,31 @@ export class AssessmentRunner {
     this.detachBeforeUnload();
     this.stopAllTimers();
     AssessmentRunner.clearSavedSession();
+
+    try {
+      localStorage.removeItem(AssessmentRunner.STORAGE_KEY);
+      localStorage.removeItem(AssessmentRunner.LEGACY_STORAGE_KEY);
+      localStorage.removeItem('eduverse_assessment_session_v2');
+      localStorage.removeItem('eduverse_assessment_session');
+    } catch (e) {}
+
+    const testPage = document.getElementById('childTestPage');
+    if (testPage) {
+      testPage.classList.add('hidden');
+      testPage.classList.remove('exam-active');
+    }
+    const header = document.querySelector('header');
+    if (header) header.classList.remove('hidden');
+    const main = document.querySelector('main');
+    if (main) main.classList.remove('hidden');
+    const footer = document.querySelector('footer');
+    if (footer) footer.classList.remove('hidden');
+    document.body.classList.remove('exam-mode');
+    document.body.classList.remove('ceo-view-mode');
+    window.scrollTo(0, 0);
+
     if (reload) {
-      window.location.reload();
+      window.location.href = window.location.pathname;
     }
   }
 
@@ -733,16 +756,16 @@ export class AssessmentRunner {
       </div>
 
       <!-- Exit Confirmation Overlay -->
-      <div id="exit-confirm-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.75); backdrop-filter:blur(14px); z-index:400; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
-        <div style="background:#ffffff; border-radius:2rem; border:4px solid #ffffff; padding:2.5rem 2rem; max-width:440px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+      <div id="exit-confirm-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.8); backdrop-filter:blur(14px); z-index:99999; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
+        <div style="background:#ffffff; border-radius:2rem; border:4px solid #ffffff; padding:2.5rem 2rem; max-width:440px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.35);">
           <div style="font-size:3.5rem; margin-bottom:0.75rem;">⚠️</div>
           <h2 style="font-size:1.7rem; font-weight:900; color:#1e293b; margin-bottom:0.4rem;">Exit &amp; Reset Assessment?</h2>
           <p style="color:#64748b; margin-bottom:1.75rem; font-size:0.92rem; line-height:1.5;">
             Exiting will stop your current progress, clear all saved assessment cache, and restart from the beginning.
           </p>
           <div style="display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:center;">
-            <button id="cancel-exit-btn" class="btn btn-secondary" style="padding:0.75rem 1.4rem; font-weight:800;">Cancel</button>
-            <button id="confirm-exit-btn" class="btn btn-primary" style="background:#ef4444; border-bottom:4px solid #dc2626; padding:0.75rem 1.4rem; font-weight:800; box-shadow:0 4px 15px rgba(239,68,68,0.35);">
+            <button id="cancel-exit-btn" class="btn btn-secondary" style="padding:0.75rem 1.4rem; font-weight:800; cursor:pointer;">Cancel</button>
+            <button id="confirm-exit-btn" class="btn btn-primary" style="background:#ef4444; border-bottom:4px solid #dc2626; padding:0.75rem 1.4rem; font-weight:800; box-shadow:0 4px 15px rgba(239,68,68,0.35); cursor:pointer;">
               🚪 Yes, Exit &amp; Reset
             </button>
           </div>
