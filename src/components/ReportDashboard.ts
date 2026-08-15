@@ -557,20 +557,23 @@ export function renderCEODashboard(
 
   if (sessions.length === 0) {
     container.innerHTML = `
-      <div class="glass-card" style="padding: 3rem; max-width: 900px; margin: 0 auto; text-align: center;">
+      <div class="glass-card" style="padding: 3.5rem 2rem; max-width: 900px; margin: 0 auto; text-align: center; background: #ffffff; border: 4px solid #ffffff; border-radius: 2rem; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.07);">
         <div style="font-size: 4rem; margin-bottom: 1rem;">🏛️</div>
-        <h2 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-bottom: 0.75rem;">CEO Executive Dashboard</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
-          No completed student assessments found in database. Run an assessment to generate CEO analytics.
+        <h2 style="font-size: 2rem; font-weight: 900; color: #1e293b; margin-bottom: 0.5rem;">CEO Executive Dashboard</h2>
+        <p style="color: #64748b; margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto; font-size: 1rem; line-height: 1.5; font-weight: 600;">
+          No completed student assessments found in the registry. Complete an assessment to generate real-time CEO analytics.
         </p>
-        <button id="ceo-new-test-btn" class="btn btn-primary" style="font-size: 1rem; padding: 0.8rem 2rem;">
+        <button id="ceo-new-test-btn" class="btn btn-primary" style="font-size: 1.05rem; padding: 0.9rem 2.5rem; font-weight: 800; background: #3b82f6; border-bottom: 4px solid #2563eb; color: #fff;">
           🚀 Start New Student Assessment
         </button>
       </div>
     `;
     const newTestBtn = container.querySelector('#ceo-new-test-btn');
     if (newTestBtn) {
-      newTestBtn.addEventListener('click', () => window.location.reload());
+      newTestBtn.addEventListener('click', () => {
+        AssessmentRunner.clearSavedSession();
+        window.location.href = window.location.pathname;
+      });
     }
     return;
   }
@@ -583,67 +586,92 @@ export function renderCEODashboard(
     const activeMins = Math.round((s.total_active_duration_ms || 0) / 60000);
     const flagsCount = Array.isArray(s.flags) ? s.flags.length : 0;
     const dateStr = s.start_time ? new Date(s.start_time).toLocaleDateString() : 'Today';
+    const rowBg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
 
     return `
-      <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.88rem;">
-        <td style="padding: 0.75rem 1rem; font-weight: 700;">#${idx + 1}</td>
-        <td style="padding: 0.75rem 1rem; font-weight: 700; color: #fff;">${s.student_name}</td>
-        <td style="padding: 0.75rem 1rem; color: var(--text-secondary);">${s.age_group || '13-16'}</td>
-        <td style="padding: 0.75rem 1rem; font-weight: 800; color: var(--accent-cyan);">${s.total_score}/100</td>
-        <td style="padding: 0.75rem 1rem;">
-          <span style="background: rgba(59,130,246,0.15); border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 0.25rem 0.6rem; border-radius: 8px; font-weight: 600; font-size: 0.8rem;">
+      <tr style="background: ${rowBg}; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; transition: background 0.2s;">
+        <td style="padding: 1rem 1.25rem; font-weight: 800; color: #64748b;">#${idx + 1}</td>
+        <td style="padding: 1rem 1.25rem; font-weight: 900; color: #1e293b;">${s.student_name}</td>
+        <td style="padding: 1rem 1.25rem; color: #64748b; font-weight: 700;">${s.age_group || '13-16'}</td>
+        <td style="padding: 1rem 1.25rem; font-weight: 900; color: #0284c7; font-size: 1rem;">${s.total_score}/100</td>
+        <td style="padding: 1rem 1.25rem;">
+          <span style="background: #ecfdf5; border: 1.5px solid #a7f3d0; color: #047857; padding: 0.35rem 0.75rem; border-radius: 10px; font-weight: 800; font-size: 0.82rem; display: inline-block;">
             ${s.placed_track || s.recommended_track || 'L1 Coder'}
           </span>
         </td>
-        <td style="padding: 0.75rem 1rem; text-align: center;">${activeMins}m</td>
-        <td style="padding: 0.75rem 1rem; text-align: center;">
-          ${flagsCount > 0 ? `<span style="color:#ef4444; font-weight:700;">⚠️ ${flagsCount} Flag${flagsCount > 1 ? 's' : ''}</span>` : '<span style="color:#10b981; font-weight:700;">✅ Clean</span>'}
+        <td style="padding: 1rem 1.25rem; text-align: center; font-weight: 700; color: #475569;">${activeMins}m</td>
+        <td style="padding: 1rem 1.25rem; text-align: center;">
+          ${flagsCount > 0
+            ? `<span style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 0.25rem 0.6rem; border-radius: 8px; font-weight: 800; font-size: 0.8rem;">⚠️ ${flagsCount} Flag${flagsCount > 1 ? 's' : ''}</span>`
+            : '<span style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #059669; padding: 0.25rem 0.6rem; border-radius: 8px; font-weight: 800; font-size: 0.8rem;">✅ Clean</span>'
+          }
         </td>
-        <td style="padding: 0.75rem 1rem; color: var(--text-secondary); font-size: 0.8rem;">${dateStr}</td>
+        <td style="padding: 1rem 1.25rem; color: #64748b; font-size: 0.82rem; font-weight: 600;">${dateStr}</td>
       </tr>
     `;
   }).join('');
 
   container.innerHTML = `
-    <div class="glass-card" style="padding: 2.5rem; max-width: 1100px; margin: 0 auto;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+    <div class="glass-card" style="padding: 2.5rem; max-width: 1150px; margin: 0 auto; background: #ffffff; border: 4px solid #ffffff; border-radius: 2rem; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.07);">
+      
+      <!-- CEO Top Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
         <div>
-          <h1 style="font-size: 1.8rem; font-weight: 800; color: #fff;">CodeRa CEO Executive Dashboard</h1>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Overview of all completed student assessments</p>
+          <div style="display: inline-flex; align-items: center; gap: 0.5rem; background: #ecfeff; border: 1.5px solid #a5f3fc; color: #0891b2; padding: 0.35rem 0.85rem; border-radius: 12px; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem;">
+            🏛️ Executive Oversight
+          </div>
+          <h1 style="font-size: 2.2rem; font-weight: 900; color: #1e293b; margin: 0;">CodeRa CEO Executive Dashboard</h1>
+          <p style="color: #64748b; font-size: 1rem; margin-top: 0.25rem; font-weight: 600;">Overview of all completed student assessments and readiness metrics</p>
         </div>
-        <button id="back-to-report-btn" class="btn btn-secondary" style="font-size: 0.85rem;">
+        <button id="back-to-report-btn" class="btn btn-secondary" style="font-size: 0.9rem; font-weight: 800; background: #f8fafc; border: 2px solid #e2e8f0; border-bottom: 4px solid #cbd5e1; color: #1e293b; padding: 0.6rem 1.25rem;">
           ${activeSession ? '🔙 Back to Current Report' : '🏠 Back to Home'}
         </button>
       </div>
 
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-bottom: 2rem;">
-        <div style="background: rgba(15,23,42,0.7); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 14px; text-align: center;">
-          <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Total Students Assessed</div>
-          <div style="font-size: 2.4rem; font-weight: 900; color: var(--accent-cyan); margin-top: 0.25rem;">${totalStudents}</div>
+      <!-- Stat Cards Grid (Green & White High Contrast) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+        
+        <!-- Stat 1: Total Students -->
+        <div style="background: #eff6ff; border: 2px solid #bfdbfe; border-bottom: 4px solid #60a5fa; padding: 1.75rem; border-radius: 1.5rem; text-align: center; box-shadow: 0 4px 15px rgba(59,130,246,0.05);">
+          <div style="font-size: 0.82rem; color: #1e40af; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Total Students Assessed</div>
+          <div style="font-size: 2.8rem; font-weight: 900; color: #1d4ed8; margin-top: 0.35rem; line-height: 1;">${totalStudents}</div>
+          <div style="font-size: 0.75rem; color: #3b82f6; font-weight: 700; margin-top: 0.5rem;">Cumulative Registry</div>
         </div>
-        <div style="background: rgba(15,23,42,0.7); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 14px; text-align: center;">
-          <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Average Readiness Score</div>
-          <div style="font-size: 2.4rem; font-weight: 900; color: var(--accent-emerald); margin-top: 0.25rem;">${avgTotalScore}/100</div>
+
+        <!-- Stat 2: Average Readiness Score -->
+        <div style="background: #ecfdf5; border: 2px solid #a7f3d0; border-bottom: 4px solid #34d399; padding: 1.75rem; border-radius: 1.5rem; text-align: center; box-shadow: 0 4px 15px rgba(16,185,129,0.05);">
+          <div style="font-size: 0.82rem; color: #065f46; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Average Readiness Score</div>
+          <div style="font-size: 2.8rem; font-weight: 900; color: #047857; margin-top: 0.35rem; line-height: 1;">${avgTotalScore}/100</div>
+          <div style="font-size: 0.75rem; color: #10b981; font-weight: 700; margin-top: 0.5rem;">Cohort Accuracy Metric</div>
         </div>
-        <div style="background: rgba(15,23,42,0.7); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 14px; text-align: center;">
-          <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Average Thinking Time</div>
-          <div style="font-size: 2.4rem; font-weight: 900; color: #fff; margin-top: 0.25rem;">${avgActiveMins} min</div>
+
+        <!-- Stat 3: Average Thinking Time -->
+        <div style="background: #fef3c7; border: 2px solid #fde68a; border-bottom: 4px solid #f59e0b; padding: 1.75rem; border-radius: 1.5rem; text-align: center; box-shadow: 0 4px 15px rgba(245,158,11,0.05);">
+          <div style="font-size: 0.82rem; color: #92400e; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Average Thinking Time</div>
+          <div style="font-size: 2.8rem; font-weight: 900; color: #b45309; margin-top: 0.35rem; line-height: 1;">${avgActiveMins} <span style="font-size: 1.4rem; font-weight: 800;">min</span></div>
+          <div style="font-size: 0.75rem; color: #d97706; font-weight: 700; margin-top: 0.5rem;">Active Engagement Duration</div>
         </div>
+
       </div>
 
-      <h3 style="font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 1rem;">Student Assessment Registry</h3>
-      <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(15,23,42,0.6);">
+      <!-- Table Section -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <h3 style="font-size: 1.3rem; font-weight: 900; color: #1e293b; margin: 0;">Student Assessment Registry</h3>
+        <span style="font-size: 0.82rem; color: #64748b; font-weight: 700;">Showing ${totalStudents} records</span>
+      </div>
+
+      <div style="overflow-x: auto; border: 2px solid #e2e8f0; border-radius: 1.25rem; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
         <table style="width: 100%; border-collapse: collapse; text-align: left;">
-          <thead style="background: rgba(30,41,59,0.95); font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">
+          <thead style="background: #f8fafc; font-size: 0.78rem; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0;">
             <tr>
-              <th style="padding: 0.75rem 1rem;">#</th>
-              <th style="padding: 0.75rem 1rem;">Student Name</th>
-              <th style="padding: 0.75rem 1rem;">Age Group</th>
-              <th style="padding: 0.75rem 1rem;">Total Score</th>
-              <th style="padding: 0.75rem 1rem;">Placed Level</th>
-              <th style="padding: 0.75rem 1rem; text-align: center;">Active Time</th>
-              <th style="padding: 0.75rem 1rem; text-align: center;">Flags</th>
-              <th style="padding: 0.75rem 1rem;">Date</th>
+              <th style="padding: 1rem 1.25rem; font-weight: 800;">#</th>
+              <th style="padding: 1rem 1.25rem; font-weight: 800;">Student Name</th>
+              <th style="padding: 1rem 1.25rem; font-weight: 800;">Age Group</th>
+              <th style="padding: 1rem 1.25rem; font-weight: 800;">Total Score</th>
+              <th style="padding: 1rem 1.25rem; font-weight: 800;">Placed Level</th>
+              <th style="padding: 1rem 1.25rem; text-align: center; font-weight: 800;">Active Time</th>
+              <th style="padding: 1rem 1.25rem; text-align: center; font-weight: 800;">Flags</th>
+              <th style="padding: 1rem 1.25rem; font-weight: 800;">Date</th>
             </tr>
           </thead>
           <tbody>
@@ -666,7 +694,8 @@ export function renderCEODashboard(
         );
         renderReportDashboard(container, activeSession, placement);
       } else {
-        window.location.reload();
+        AssessmentRunner.clearSavedSession();
+        window.location.href = window.location.pathname;
       }
     });
   }
