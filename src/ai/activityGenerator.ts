@@ -1,4 +1,4 @@
-﻿import { AssessmentDomain, SkillName, QuestionFormat } from '../engine/telemetrySchema';
+import { AssessmentDomain, SkillName, QuestionFormat } from '../engine/telemetrySchema';
 import { AzureOpenAIClient } from './azureOpenAIClient';
 
 export interface ActivityItem {
@@ -527,10 +527,35 @@ export class ActivityGenerator {
    *   1. Build a guaranteed-correct fallback from the slot config (instant, offline).
    *   2. Skip AI for robot_mission / picture_match / motor_target (interaction-based).
    *   3. Ask Azure OpenAI for the FULL question including matching answer options.
+export interface StudentMetricsContext {
+  studentName?: string;
+  diagnosis?: string;
+  interests?: string[];
+  currentAccuracy?: number;
+  averageResponseTimeMs?: number;
+  domainScores?: Record<string, number>;
+  placedTrack?: string;
+}
+
+export class ActivityGenerator {
+  private client: AzureOpenAIClient;
+
+  constructor() {
+    this.client = new AzureOpenAIClient();
+  }
+
+  /**
+   * Generates a fully coherent, valid ActivityItem for the given slot.
+   * Leverages student telemetry metrics and diagnosis for adaptive generation.
+   *
+   * Flow:
+   *   1. Build a complete, guaranteed procedural fallback payload from the slot config.
+   *   2. If the slot is robot_mission or picture_match, return the procedural version immediately.
+   *   3. Otherwise, call Azure OpenAI to generate a single cohesive JSON object.
    *   4. Strictly validate: exactly 3 options, exactly 1 correct, all labels non-empty.
    *   5. Any failure at steps 3-4 silently returns the slot-config fallback.
    */
-  public async generateActivity(slot: number): Promise<ActivityItem> {
+  public async generateActivity(slot: number, studentMetrics?: StudentMetricsContext): Promise<ActivityItem> {
     const base = QUESTION_BASELINES.find(b => b.slot === slot) || QUESTION_BASELINES[0];
 
     // ── Step 1: Build guaranteed fallback from slot config ──────────────────
@@ -563,9 +588,18 @@ export class ActivityGenerator {
     try {
       const domainLabel = base.domain.replace(/_/g, ' ');
       const skillLabel  = base.skill.replace(/_/g, ' ');
+      
+      const metricsContextNotes = studentMetrics ? [
+        `- Student Profile: ${studentMetrics.studentName || 'Student'}`,
+        studentMetrics.diagnosis ? `- Medical/Educational Diagnosis: ${studentMetrics.diagnosis} (Tailor visual cues, simplify complex syntax, and support focus)` : '',
+        studentMetrics.interests && studentMetrics.interests.length > 0 ? `- Student Interests: ${studentMetrics.interests.join(', ')} (Incorporate themes where appropriate)` : '',
+        studentMetrics.currentAccuracy !== undefined ? `- Current Session Accuracy: ${Math.round(studentMetrics.currentAccuracy * 100)}%` : '',
+        studentMetrics.averageResponseTimeMs ? `- Avg Latency: ${Math.round(studentMetrics.averageResponseTimeMs / 1000)}s per item` : ''
+      ].filter(Boolean).join('\n') : '';
+
       const prompt = [
         'You are an inclusive education assessment designer for SEN students (Grade 8 to University, ages 13-21).',
-        '',
+        metricsContextNotes ? `\nStudent Adaptive Context:\n${metricsContextNotes}\n` : '',
         'Generate a COMPLETE assessment question for:',
         `- Slot: ${slot} of 50`,
         `- Domain: ${domainLabel}`,

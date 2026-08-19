@@ -7,7 +7,7 @@ import {
   PartBreakRecord,
   CodingChallengeResult,
 } from '../engine/telemetrySchema';
-import { ActivityGenerator, ActivityItem, QUESTION_BASELINES } from '../ai/activityGenerator';
+import { ActivityGenerator, ActivityItem, QUESTION_BASELINES, StudentMetricsContext } from '../ai/activityGenerator';
 import { ScoringEngine, DOMAIN_CONFIG, TOTAL_BASE_QUESTIONS, PART_ONE_QUESTIONS } from '../engine/scoringEngine';
 import { PlacementEngine, PlacementResult } from '../engine/placementEngine';
 import { QualitativeAnalyzer } from '../ai/qualitativeAnalyzer';
@@ -84,6 +84,7 @@ export class AssessmentRunner {
   // Accessibility Toggles
   private isTimerVisible: boolean = true;
   private isSignLanguageModalOpen: boolean = false;
+  private isAudioMuted: boolean = true; // Audio is muted by default as requested
 
   private globalTimerInterval: any = null;
   private questionTimerInterval: any = null;
@@ -287,6 +288,10 @@ export class AssessmentRunner {
       this.attachBeforeUnload();
 
       this.saveSession(studentName);
+      
+      // Proactively prefetch upcoming question buffer in background
+      this.prefetchBufferAhead(0);
+
       await this.loadQuestion(0, true);
     }
   }
@@ -310,7 +315,8 @@ export class AssessmentRunner {
     }, 1000);
   }
 
-  public speakAudio(text: string) {
+  public speakAudio(text: string, force: boolean = false) {
+    if (this.isAudioMuted && !force) return;
     try {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -320,6 +326,29 @@ export class AssessmentRunner {
         window.speechSynthesis.speak(utterance);
       }
     } catch (e) {}
+  }
+
+  private getStudentMetricsContext(): StudentMetricsContext {
+    const answered = this.userAnswers.filter(a => a.answeredAt !== null);
+    const correctCount = answered.filter(a => a.isSolved || (a.selectedAnswerIndex !== null && this.cachedActivities[this.userAnswers.indexOf(a)]?.payload?.options?.[a.selectedAnswerIndex]?.correct)).length;
+    const accuracy = answered.length > 0 ? correctCount / answered.length : 1.0;
+    const avgLatency = this.questionTimeRecords.length > 0
+      ? (this.questionTimeRecords.reduce((acc, r) => acc + (r.durationActiveSeconds || 0), 0) / this.questionTimeRecords.length) * 1000
+      : 25000;
+
+    let parentProfile: any = {};
+    try {
+      const savedProfile = localStorage.getItem('codera_parent_profile') || localStorage.getItem('cognix_parent_profile');
+      if (savedProfile) parentProfile = JSON.parse(savedProfile);
+    } catch (e) {}
+
+    return {
+      studentName: this.studentName,
+      diagnosis: parentProfile.diagnosis || undefined,
+      interests: parentProfile.interests || undefined,
+      currentAccuracy: accuracy,
+      averageResponseTimeMs: avgLatency
+    };
   }
 
   private startQuestionTimer() {
@@ -389,7 +418,8 @@ export class AssessmentRunner {
 
     if (!this.cachedActivities[targetIndex]) {
       this.renderLoadingState(targetIndex);
-      this.cachedActivities[targetIndex] = await this.generator.generateActivity(baseline.slot);
+      const metrics = this.getStudentMetricsContext();
+      this.cachedActivities[targetIndex] = await this.generator.generateActivity(baseline.slot, metrics);
       if (myGen !== this.loadGen) return;
     }
 
@@ -408,8 +438,8 @@ export class AssessmentRunner {
     this.saveSession(this.studentName);
     this.render();
 
-    // Auto-speak audio prompt for picture_match questions
-    if (activeActivity && activeActivity.type === 'picture_match') {
+    // Auto-speak audio prompt for picture_match questions ONLY if not muted
+    if (!this.isAudioMuted && activeActivity && activeActivity.type === 'picture_match') {
       const promptText = activeActivity.payload?.audioPromptText || activeActivity.instructions;
       if (promptText) {
         this.speakAudio(promptText);
@@ -420,7 +450,8 @@ export class AssessmentRunner {
       this.startQuestionTimer();
     }
 
-    this.prefetchNextQuestion(targetIndex + 1);
+    // Proactively prefetch lookahead questions ahead so next clicks load instantly in 0ms!
+    this.prefetchBufferAhead(targetIndex);
   }
 
   private shuffleActivityOptions(activity: ActivityItem) {
@@ -460,9 +491,22 @@ export class AssessmentRunner {
   private async prefetchNextQuestion(nextIndex: number) {
     if (nextIndex >= 0 && nextIndex < TOTAL_BASE_QUESTIONS && !this.cachedActivities[nextIndex]) {
       const baseline = QUESTION_BASELINES[nextIndex];
-      this.generator.generateActivity(baseline.slot).then(activity => {
-        this.cachedActivities[nextIndex] = activity;
+      const metrics = this.getStudentMetricsContext();
+      this.generator.generateActivity(baseline.slot, metrics).then(activity => {
+        if (!this.cachedActivities[nextIndex]) {
+          this.cachedActivities[nextIndex] = activity;
+        }
       }).catch(() => {});
+    }
+  }
+
+  private prefetchBufferAhead(currentIndex: number) {
+    // Look ahead 3 questions in advance to ensure 0ms latency on user clicking Next
+    for (let offset = 1; offset <= 3; offset++) {
+      const target = currentIndex + offset;
+      if (target < TOTAL_BASE_QUESTIONS) {
+        this.prefetchNextQuestion(target);
+      }
     }
   }
 
@@ -865,9 +909,9 @@ export class AssessmentRunner {
             </div>
             <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
 
-              <!-- 🔊 Audio Play Button -->
-              <button id="speak-question-btn" class="btn btn-secondary" style="padding:0.45rem 0.85rem; font-size:0.85rem; font-weight:800; background:#ecfdf5; border:2px solid #a7f3d0; border-bottom:4px solid #6ee7b7; color:#059669;" title="Read Aloud Question">
-                🔊 Audio
+              <!-- 🔊 / 🔇 Audio Play & Mute Toggle Button -->
+              <button id="speak-question-btn" class="btn btn-secondary" style="padding:0.45rem 0.85rem; font-size:0.85rem; font-weight:800; background:${this.isAudioMuted ? '#f8fafc' : '#ecfdf5'}; border:2px solid ${this.isAudioMuted ? '#cbd5e1' : '#a7f3d0'}; border-bottom:4px solid ${this.isAudioMuted ? '#94a3b8' : '#6ee7b7'}; color:${this.isAudioMuted ? '#64748b' : '#059669'};" title="${this.isAudioMuted ? 'Audio is Muted (Click to Unmute & Listen)' : 'Audio is Active (Click to Mute)'}">
+                ${this.isAudioMuted ? '🔇 Audio (Muted)' : '🔊 Audio (On)'}
               </button>
 
               <!-- 🤟 Sign Language Toggle -->
@@ -1170,10 +1214,19 @@ export class AssessmentRunner {
     if (speakQuestionBtn) {
       speakQuestionBtn.addEventListener('click', () => {
         const activity = this.cachedActivities[this.currentQuestionIndex];
-        if (activity) {
-          const promptText = activity.payload?.audioPromptText || activity.instructions;
-          this.speakAudio(promptText);
+        if (this.isAudioMuted) {
+          this.isAudioMuted = false;
+          if (activity) {
+            const promptText = activity.payload?.audioPromptText || activity.instructions;
+            this.speakAudio(promptText, true);
+          }
+        } else {
+          this.isAudioMuted = true;
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+          }
         }
+        this.render();
       });
     }
 
@@ -1183,7 +1236,7 @@ export class AssessmentRunner {
         const activity = this.cachedActivities[this.currentQuestionIndex];
         if (activity) {
           const promptText = activity.payload?.audioPromptText || activity.instructions;
-          this.speakAudio(promptText);
+          this.speakAudio(promptText, true);
         }
       });
     }

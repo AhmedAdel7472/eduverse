@@ -548,7 +548,6 @@ export function exportTimeRecordsCSV(session: StudentSessionTelemetry) {
 }
 
 export function returnToLandingPage(): void {
-  AssessmentRunner.clearSavedSession();
   try {
     localStorage.removeItem('eduverse_assessment_session_v2');
     localStorage.removeItem('eduverse_assessment_session');
@@ -557,20 +556,27 @@ export function returnToLandingPage(): void {
   const testPage = document.getElementById('childTestPage');
   if (testPage) {
     testPage.classList.add('hidden');
+    testPage.style.display = 'none';
     testPage.classList.remove('exam-active');
+  }
+  const appContainer = document.getElementById('app');
+  if (appContainer) {
+    appContainer.innerHTML = '';
   }
   const header = document.querySelector('header');
   if (header) header.classList.remove('hidden');
-  const main = document.querySelector('main');
+  const main = document.querySelector('main:not(.main-container)');
   if (main) main.classList.remove('hidden');
   const footer = document.querySelector('footer');
   if (footer) footer.classList.remove('hidden');
+  
   document.body.classList.remove('exam-mode');
   document.body.classList.remove('ceo-view-mode');
-  window.scrollTo(0, 0);
+  window.scrollTo({ top: 0, behavior: 'instant' });
 
-  // Force clean reload back to home
-  window.location.href = window.location.pathname;
+  if (window.location.hash) {
+    history.replaceState(null, '', window.location.pathname);
+  }
 }
 
 export function renderCEODashboard(
@@ -611,7 +617,9 @@ export function renderCEODashboard(
       newTestBtn.addEventListener('click', (e) => {
         e.preventDefault();
         AssessmentRunner.clearSavedSession();
-        window.location.href = window.location.pathname;
+        returnToLandingPage();
+        const btnChild = document.getElementById('btnRoleChild');
+        if (btnChild) btnChild.click();
       });
     }
     return;
@@ -662,13 +670,16 @@ export function renderCEODashboard(
           <h1 style="font-size: 2.2rem; font-weight: 900; color: #1e293b; margin: 0;">CodeRa CEO Executive Dashboard</h1>
           <p style="color: #64748b; font-size: 1rem; margin-top: 0.25rem; font-weight: 600;">Overview of all completed student assessments and readiness metrics</p>
         </div>
-        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <div class="ceo-actions-group" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+          <button id="ceo-export-pdf-btn" class="btn btn-primary" style="font-size: 0.88rem; font-weight: 800; background: #3b82f6; border: 2px solid #2563eb; border-bottom: 4px solid #1d4ed8; color: #ffffff; padding: 0.6rem 1.25rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem;" title="Generate and Download Executive PDF Report">
+            📥 Generate Report PDF
+          </button>
           ${activeSession ? `
             <button id="back-to-report-btn" class="btn btn-secondary" style="font-size: 0.88rem; font-weight: 800; background: #ecfeff; border: 2px solid #a5f3fc; border-bottom: 4px solid #67e8f9; color: #0891b2; padding: 0.6rem 1.25rem; cursor:pointer;">
               📄 Current Student Report
             </button>
           ` : ''}
-          <button id="back-to-home-btn" class="btn btn-secondary" style="font-size: 0.88rem; font-weight: 800; background: #f8fafc; border: 2px solid #e2e8f0; border-bottom: 4px solid #cbd5e1; color: #1e293b; padding: 0.6rem 1.25rem; cursor:pointer;">
+          <button id="back-to-home-btn" onclick="window.returnToLandingPage ? window.returnToLandingPage() : window.location.reload()" class="btn btn-secondary" style="font-size: 0.88rem; font-weight: 800; background: #f8fafc; border: 2px solid #e2e8f0; border-bottom: 4px solid #cbd5e1; color: #1e293b; padding: 0.6rem 1.25rem; cursor:pointer;">
             🏠 Back to Home
           </button>
         </div>
@@ -728,9 +739,33 @@ export function renderCEODashboard(
     </div>
   `;
 
+  const pdfBtn = container.querySelector('#ceo-export-pdf-btn');
+  if (pdfBtn) {
+    pdfBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.print();
+    });
+  }
+
+  const floatingPdfBtn = container.querySelector('#floating-export-pdf-btn');
+  if (floatingPdfBtn) {
+    floatingPdfBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.print();
+    });
+  }
+
   const homeBtn = container.querySelector('#back-to-home-btn');
   if (homeBtn) {
     homeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      returnToLandingPage();
+    });
+  }
+
+  const floatingHomeBtn = container.querySelector('#floating-home-btn');
+  if (floatingHomeBtn) {
+    floatingHomeBtn.addEventListener('click', (e) => {
       e.preventDefault();
       returnToLandingPage();
     });

@@ -42,7 +42,24 @@ body.exam-mode {
 #childTestPage {
   background: #f8fafc !important;
   color: #1e293b !important;
-  min-height: 100vh;
+}
+
+#childTestPage.exam-active {
+  display: block !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 99999 !important;
+  overflow-y: auto !important;
+  background: #f8fafc !important;
+}
+
+#childTestPage.hidden {
+  display: none !important;
 }
 
 /* Header Navbar */
@@ -579,3 +596,132 @@ body.ceo-view-mode .app-header {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* =========================================================================
+   🖨️ Clean Professional Print & PDF Export Styles
+   ========================================================================= */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm;
+  }
+
+  /* Hide all landing page elements, modals, chatbots, and UI action buttons */
+  header,
+  main:not(.main-container),
+  footer,
+  #modalOverlay,
+  #chatbotToggleBtn,
+  #chatbotWindow,
+  #toast-notification,
+  .report-action-btns,
+  .ceo-actions-group,
+  #back-to-home-btn,
+  #ceo-export-pdf-btn,
+  #floating-export-pdf-btn,
+  #print-report-btn,
+  #download-pdf-btn,
+  #download-csv-btn,
+  #ceo-dashboard-btn,
+  #back-to-report-btn,
+  #ceo-home-btn,
+  .exit-overlay,
+  .app-header,
+  .question-grid-bar,
+  #pause-overlay {
+    display: none !important;
+  }
+
+  /* Reset body and html layout */
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    font-size: 10pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.exam-mode {
+    background-image: none !important;
+    min-height: auto !important;
+  }
+
+  /* Flatten fixed overlay so it flows as a normal document */
+  #childTestPage {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    inset: auto !important;
+    z-index: auto !important;
+  }
+
+  .main-container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Clean report cards without heavy shadows and borders */
+  .glass-card {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
+    padding: 18px !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    page-break-inside: auto !important;
+  }
+
+  /* Stat cards clean grid */
+  .glass-card > div[style*="grid-template-columns"] {
+    gap: 10px !important;
+    margin-bottom: 15px !important;
+  }
+
+  .glass-card > div[style*="grid-template-columns"] > div {
+    padding: 12px !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+  }
+
+  /* Avoid unwanted page cuts inside tables and badges */
+  table {
+    page-break-inside: auto !important;
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 8.5pt !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  th, td {
+    padding: 6px 8px !important;
+  }
+
+  .report-grid,
+  .placement-badge-card,
+  .flag-alert {
+    page-break-inside: avoid !important;
+  }
+}
+

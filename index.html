@@ -230,6 +230,72 @@
         .step-anim-7 {
             animation-delay: 2.4s;
         }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm 12mm;
+            }
+            header, main:not(.main-container), footer, #modalOverlay, #chatbotToggleBtn, #chatbotWindow, #toast-notification, .report-action-btns, .ceo-actions-group, #back-to-home-btn, #ceo-export-pdf-btn, #floating-export-pdf-btn, #print-report-btn, #download-pdf-btn, #download-csv-btn, #ceo-dashboard-btn, #back-to-report-btn, #ceo-home-btn, .exit-overlay, .app-header {
+                display: none !important;
+            }
+            html, body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                height: auto !important;
+                min-height: 0 !important;
+                overflow: visible !important;
+                font-size: 10pt !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            #childTestPage {
+                position: static !important;
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                overflow: visible !important;
+                background: #ffffff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                inset: auto !important;
+                z-index: auto !important;
+            }
+            .main-container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+            }
+            .glass-card {
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: none !important;
+                border-radius: 12px !important;
+                padding: 16px !important;
+                margin: 0 auto !important;
+                max-width: 100% !important;
+                background: #ffffff !important;
+                page-break-inside: auto !important;
+            }
+            table {
+                page-break-inside: auto !important;
+                border-collapse: collapse !important;
+                width: 100% !important;
+                font-size: 8.5pt !important;
+            }
+            tr {
+                page-break-inside: avoid !important;
+            }
+            thead {
+                display: table-header-group !important;
+            }
+            .report-grid, .placement-badge-card, .flag-alert {
+                page-break-inside: avoid !important;
+            }
+        }
     </style>
     <link rel="stylesheet" href="/src/styles/app.css">`n</head>
 
@@ -271,12 +337,6 @@
                             Sign Up
                         </button>
                     </div>
-                </div>
-
-                <div class="md:hidden flex items-center">
-                    <button class="text-slate-500 hover:text-primary p-2">
-                        <i class="fa-solid fa-bars text-2xl"></i>
-                    </button>
                 </div>
             </div>
         </div>
@@ -540,7 +600,7 @@
                 <div>
                     <h2 data-i18n="parentFormMainTitle" class="text-xl font-bold text-slate-900">Parent Registration &
                         Profile</h2>
-                    <p data-i18n="stage1Time" class="text-xs text-primary font-semibold mt-1">Estimated time: 5 minutes
+                    <p data-i18n="stage1Time" class="text-xs text-primary font-semibold mt-1">Estimated time: 3 minutes
                     </p>
                 </div>
                 <button
@@ -550,7 +610,7 @@
             </div>
 
             <div class="p-6 overflow-y-auto">
-                <form onsubmit="event.preventDefault();" class="space-y-8">
+                <form id="parentRegistrationForm" onsubmit="event.preventDefault();" class="space-y-8">
 
 
                     <div>
@@ -558,58 +618,99 @@
                             <span class="bg-primary text-white text-xs font-bold px-2 py-1 rounded">1</span>
                             <h3 data-i18n="stage1Title"
                                 class="text-lg font-bold text-slate-800 border-b-2 border-primary/20 pb-1">Stage 1:
-                                Parent Registration</h3>
+                                Student & Family Profile</h3>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label data-i18n="lblChildName"
-                                    class="block text-sm font-medium text-slate-700 mb-1">Child's Name</label>
-                                <input type="text"
+                                    class="block text-sm font-medium text-slate-700 mb-1">Child's Name *</label>
+                                <input type="text" id="parentChildName" required
+                                    placeholder="e.g. Alex Rivers"
                                     class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none">
                             </div>
                             <div>
                                 <label data-i18n="lblAge"
-                                    class="block text-sm font-medium text-slate-700 mb-1">Age</label>
-                                <input type="number"
+                                    class="block text-sm font-medium text-slate-700 mb-1">Age *</label>
+                                <input type="number" id="parentChildAge" min="5" max="25" value="14" required
                                     class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none">
                             </div>
-                            <div>
+                            <div class="md:col-span-2">
                                 <label data-i18n="lblDiagnosis"
-                                    class="block text-sm font-medium text-slate-700 mb-1">Diagnosis (if any)</label>
-                                <input type="text"
-                                    class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none">
+                                    class="block text-sm font-medium text-slate-700 mb-1">Diagnosis / Special Education Needs (SEN)</label>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                                    <select id="parentDiagnosisSelect" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none bg-white">
+                                        <option value="None / Typical Learner">None / Typical Learner</option>
+                                        <option value="ADHD (Attention Deficit Hyperactivity)">ADHD (Attention Deficit Hyperactivity)</option>
+                                        <option value="Autism Spectrum (ASD)">Autism Spectrum (ASD)</option>
+                                        <option value="Dyslexia / Learning Difference">Dyslexia / Learning Difference</option>
+                                        <option value="Speech & Language Delay">Speech & Language Delay</option>
+                                        <option value="Gifted & Talented">Gifted & Talented</option>
+                                        <option value="Other">Other / Specific Educational Plan</option>
+                                    </select>
+                                    <input type="text" id="parentDiagnosisNotes"
+                                        placeholder="Additional diagnosis notes or accommodation..."
+                                        class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none">
+                                </div>
+
+                                <!-- Son Diagnosis Attachment Box -->
+                                <div class="mt-2">
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-paperclip text-primary"></i>
+                                        <span>Attach Son's Medical / Educational Diagnosis Document (Optional)</span>
+                                    </label>
+                                    <div id="diagnosisDropArea" class="border-2 border-dashed border-indigo-200 hover:border-primary rounded-xl p-3.5 text-center cursor-pointer transition-all bg-indigo-50/40 hover:bg-indigo-50/80">
+                                        <input type="file" id="parentSonDiagnosisFile" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" class="hidden">
+                                        <div id="diagnosisFilePrompt" class="flex items-center justify-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-white text-primary flex items-center justify-center text-sm shadow-sm">
+                                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                            </div>
+                                            <div class="text-start">
+                                                <p class="text-xs font-bold text-slate-800">Click to upload or drag & drop diagnosis file</p>
+                                                <p class="text-[11px] text-slate-500">PDF, JPG, PNG (Max 10MB)</p>
+                                            </div>
+                                        </div>
+                                        <div id="diagnosisFilePreview" class="hidden flex items-center justify-between bg-white border border-indigo-200 rounded-lg p-2 px-3 shadow-sm">
+                                            <div class="flex items-center gap-2.5 text-start">
+                                                <i class="fa-solid fa-file-pdf text-red-500 text-lg"></i>
+                                                <div>
+                                                    <div class="text-xs font-bold text-slate-800" id="diagnosisAttachedFileName">diagnosis.pdf</div>
+                                                    <div class="text-[10px] text-emerald-600 font-semibold" id="diagnosisAttachedFileSize">Attached successfully</div>
+                                                </div>
+                                            </div>
+                                            <button type="button" id="removeDiagnosisBtn" class="text-slate-400 hover:text-red-500 p-1 text-xs transition-colors" title="Remove file">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
                             <div>
                                 <label data-i18n="lblLang"
-                                    class="block text-sm font-medium text-slate-700 mb-1">Language</label>
-                                <input type="text"
-                                    class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none">
-                            </div>
-                            <div>
-                                <label data-i18n="lblSchool"
-                                    class="block text-sm font-medium text-slate-700 mb-1">School</label>
-                                <input type="text"
+                                    class="block text-sm font-medium text-slate-700 mb-1">Primary Language</label>
+                                <input type="text" id="parentChildLang" value="English / Arabic"
                                     class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none">
                             </div>
                             <div>
                                 <label data-i18n="lblGrade"
-                                    class="block text-sm font-medium text-slate-700 mb-1">Grade</label>
-                                <input type="text"
+                                    class="block text-sm font-medium text-slate-700 mb-1">Grade / Level</label>
+                                <input type="text" id="parentChildGrade" placeholder="e.g. Grade 8 / Year 9"
                                     class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none">
                             </div>
                             <div class="md:col-span-2">
                                 <label data-i18n="lblDevices"
                                     class="block text-sm font-medium text-slate-700 mb-1">Devices Used</label>
-                                <input type="text"
+                                <input type="text" id="parentChildDevices"
                                     class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none"
-                                    placeholder="e.g., iPad, Laptop...">
+                                    placeholder="e.g., iPad, Laptop, Chromebook...">
                             </div>
                             <div class="md:col-span-2">
                                 <label data-i18n="lblTechExp"
                                     class="block text-sm font-medium text-slate-700 mb-1">Previous Tech
                                     Experience</label>
-                                <textarea rows="2"
-                                    class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none resize-none"></textarea>
+                                <textarea id="parentChildTechExp" rows="2"
+                                    class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary outline-none resize-none"
+                                    placeholder="e.g. Basic tablet games, Scratch blocks, robotics club..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -622,7 +723,7 @@
                             <span class="bg-secondary text-white text-xs font-bold px-2 py-1 rounded">2</span>
                             <h3 data-i18n="stage2Title"
                                 class="text-lg font-bold text-slate-800 border-b-2 border-secondary/20 pb-1">Stage 2:
-                                Parent Questionnaire</h3>
+                                Daily Living & Sensory Profile</h3>
                         </div>
 
 
@@ -636,35 +737,35 @@
                                     class="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:border-primary transition-colors">
                                     <span data-i18n="qTablet" class="text-sm font-medium text-slate-700">Uses a
                                         tablet?</span>
-                                    <input type="checkbox"
+                                    <input type="checkbox" id="chk-tablet" checked
                                         class="w-5 h-5 text-primary rounded border-slate-300 focus:ring-primary">
                                 </label>
                                 <label
                                     class="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:border-primary transition-colors">
                                     <span data-i18n="qComputer" class="text-sm font-medium text-slate-700">Uses a
                                         computer?</span>
-                                    <input type="checkbox"
+                                    <input type="checkbox" id="chk-computer" checked
                                         class="w-5 h-5 text-primary rounded border-slate-300 focus:ring-primary">
                                 </label>
                                 <label
                                     class="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:border-primary transition-colors">
                                     <span data-i18n="qMouse" class="text-sm font-medium text-slate-700">Can use a
                                         mouse?</span>
-                                    <input type="checkbox"
+                                    <input type="checkbox" id="chk-mouse" checked
                                         class="w-5 h-5 text-primary rounded border-slate-300 focus:ring-primary">
                                 </label>
                                 <label
                                     class="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:border-primary transition-colors">
                                     <span data-i18n="qInstructions" class="text-sm font-medium text-slate-700">Can
-                                        follow two instructions?</span>
-                                    <input type="checkbox"
+                                        follow multi-step instructions?</span>
+                                    <input type="checkbox" id="chk-instructions" checked
                                         class="w-5 h-5 text-primary rounded border-slate-300 focus:ring-primary">
                                 </label>
                                 <label
                                     class="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 shadow-sm cursor-pointer hover:border-primary transition-colors">
                                     <span data-i18n="qIndependent" class="text-sm font-medium text-slate-700">Works
                                         independently?</span>
-                                    <input type="checkbox"
+                                    <input type="checkbox" id="chk-independent"
                                         class="w-5 h-5 text-primary rounded border-slate-300 focus:ring-primary">
                                 </label>
                             </div>
@@ -673,7 +774,7 @@
 
                         <div>
                             <h4 data-i18n="secInterests" class="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                                <i class="fa-solid fa-heart text-red-500"></i> Interests
+                                <i class="fa-solid fa-heart text-red-500"></i> Interests & Passions
                             </h4>
                             <p data-i18n="qLikes" class="text-sm text-slate-500 mb-4">What do they like? (Select all
                                 that apply)</p>
@@ -681,65 +782,65 @@
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <!-- Checkbox Cards -->
                                 <div class="relative">
-                                    <input type="checkbox" id="int-lego" class="peer sr-only interest-checkbox">
+                                    <input type="checkbox" id="int-lego" value="LEGO" class="peer sr-only interest-checkbox">
                                     <label for="int-lego"
-                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
+                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white peer-checked:border-primary peer-checked:bg-indigo-50/50 hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
                                         <i class="fa-solid fa-cubes text-xl mb-2 text-orange-400"></i>
                                         LEGO
                                     </label>
                                 </div>
                                 <div class="relative">
-                                    <input type="checkbox" id="int-robots" class="peer sr-only interest-checkbox">
+                                    <input type="checkbox" id="int-robots" value="Robots" checked class="peer sr-only interest-checkbox">
                                     <label for="int-robots"
-                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
+                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white peer-checked:border-primary peer-checked:bg-indigo-50/50 hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
                                         <i class="fa-solid fa-robot text-xl mb-2 text-slate-400"></i>
                                         Robots
                                     </label>
                                 </div>
                                 <div class="relative">
-                                    <input type="checkbox" id="int-drawing" class="peer sr-only interest-checkbox">
+                                    <input type="checkbox" id="int-drawing" value="Drawing" class="peer sr-only interest-checkbox">
                                     <label for="int-drawing"
-                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
+                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white peer-checked:border-primary peer-checked:bg-indigo-50/50 hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
                                         <i class="fa-solid fa-palette text-xl mb-2 text-pink-400"></i>
                                         Drawing
                                     </label>
                                 </div>
                                 <div class="relative">
-                                    <input type="checkbox" id="int-games" class="peer sr-only interest-checkbox">
+                                    <input type="checkbox" id="int-games" value="Gaming" checked class="peer sr-only interest-checkbox">
                                     <label for="int-games"
-                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
+                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white peer-checked:border-primary peer-checked:bg-indigo-50/50 hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
                                         <i class="fa-solid fa-gamepad text-xl mb-2 text-purple-400"></i>
                                         Games
                                     </label>
                                 </div>
                                 <div class="relative">
-                                    <input type="checkbox" id="int-math" class="peer sr-only interest-checkbox">
+                                    <input type="checkbox" id="int-math" value="Math & Logic" class="peer sr-only interest-checkbox">
                                     <label for="int-math"
-                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
+                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white peer-checked:border-primary peer-checked:bg-indigo-50/50 hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
                                         <i class="fa-solid fa-calculator text-xl mb-2 text-blue-400"></i>
                                         Math
                                     </label>
                                 </div>
                                 <div class="relative">
-                                    <input type="checkbox" id="int-computers" class="peer sr-only interest-checkbox">
+                                    <input type="checkbox" id="int-computers" value="Computers" checked class="peer sr-only interest-checkbox">
                                     <label for="int-computers"
-                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
+                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white peer-checked:border-primary peer-checked:bg-indigo-50/50 hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
                                         <i class="fa-solid fa-desktop text-xl mb-2 text-emerald-400"></i>
                                         Computers
                                     </label>
                                 </div>
                                 <div class="relative">
-                                    <input type="checkbox" id="int-music" class="peer sr-only interest-checkbox">
+                                    <input type="checkbox" id="int-music" value="Music" class="peer sr-only interest-checkbox">
                                     <label for="int-music"
-                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
+                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white peer-checked:border-primary peer-checked:bg-indigo-50/50 hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
                                         <i class="fa-solid fa-music text-xl mb-2 text-yellow-500"></i>
                                         Music
                                     </label>
                                 </div>
                                 <div class="relative">
-                                    <input type="checkbox" id="int-science" class="peer sr-only interest-checkbox">
+                                    <input type="checkbox" id="int-science" value="Science" class="peer sr-only interest-checkbox">
                                     <label for="int-science"
-                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
+                                        class="flex flex-col items-center justify-center p-3 border-2 border-slate-100 rounded-xl cursor-pointer bg-white peer-checked:border-primary peer-checked:bg-indigo-50/50 hover:bg-slate-50 transition-all text-slate-600 font-medium text-sm">
                                         <i class="fa-solid fa-flask text-xl mb-2 text-cyan-400"></i>
                                         Science
                                     </label>
@@ -752,10 +853,10 @@
 
             <div class="p-4 border-t border-slate-100 bg-white rounded-b-2xl">
                 <button type="button" id="parentFormSubmitBtn"
-                    onclick="document.getElementById('parentFormModal').classList.add('hidden'); document.getElementById('childWithYouModal').classList.remove('hidden');"
                     data-i18n="btnSubmitApp"
-                    class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300">
-                    Submit Application
+                    class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300 flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-arrow-right"></i>
+                    <span>Save Profile & Continue</span>
                 </button>
             </div>
         </div>
@@ -771,18 +872,18 @@
                     class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4 text-green-500 text-2xl">
                     <i class="fa-solid fa-child-reaching"></i>
                 </div>
-                <h2 data-i18n="childWithYouTitle" class="text-xl font-bold text-slate-900 mb-2">Application Submitted!
+                <h2 data-i18n="childWithYouTitle" class="text-xl font-bold text-slate-900 mb-2">Profile Saved!
                 </h2>
                 <p data-i18n="childWithYouDesc" class="text-slate-500 text-sm mb-6">Is your child with you right now? We
                     can start the placement assessment immediately.</p>
                 <div class="space-y-3">
-                    <button type="button" onclick="startChildTest()" data-i18n="childWithYouYes"
-                        class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300 flex items-center justify-center gap-2">
+                    <button type="button" id="startTestFromParentBtn" onclick="startChildTest()" data-i18n="childWithYouYes"
+                        class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300 flex items-center justify-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-play"></i>
                         Yes, start the assessment now
                     </button>
                     <button type="button" onclick="closeModal()" data-i18n="childWithYouNo"
-                        class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-300">
+                        class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-300 cursor-pointer">
                         Not right now, go back home
                     </button>
                 </div>
@@ -803,37 +904,60 @@
                 <h2 data-i18n="childConfirmTitle" class="text-xl font-bold text-slate-900 mb-6">Are you sure you want to
                     take the test?</h2>
                 <button type="button" onclick="startChildTest()" data-i18n="confirmBtn"
-                    class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300">
-                    Confirm
+                    class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300 cursor-pointer">
+                    Confirm & Start
                 </button>
             </div>
         </div>
 
 
         <div id="institutionFormModal"
-            class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-8 hidden transform scale-95 transition-transform duration-300 relative">
-            <button class="closeModal absolute top-4 end-4 text-slate-400 hover:text-slate-600 transition-colors">
+            class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-7 hidden transform scale-95 transition-transform duration-300 relative max-h-[90vh] overflow-y-auto">
+            <button class="closeModal absolute top-4 end-4 text-slate-400 hover:text-slate-600 transition-colors bg-white w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center shadow-sm">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
-            <h2 data-i18n="instFormTitle" class="text-2xl font-bold text-slate-900 mb-6 text-center">How can we serve
-                you?</h2>
-            <form onsubmit="event.preventDefault();" class="space-y-4">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-primary flex items-center justify-center mx-auto mb-3 text-2xl shadow-sm border border-indigo-100">
+                    <i class="fa-solid fa-school-flag"></i>
+                </div>
+                <h2 data-i18n="instFormTitle" class="text-2xl font-bold text-slate-900">Institution & School Partnership</h2>
+                <p class="text-slate-500 text-xs mt-1">Leave your contact details and project requirements</p>
+            </div>
+
+            <form id="institutionPartnershipForm" onsubmit="event.preventDefault();" class="space-y-4">
                 <div
-                    class="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-center flex items-center justify-center gap-2">
+                    class="bg-gradient-to-r from-indigo-50 to-cyan-50 border border-indigo-100 rounded-xl p-3 text-center flex items-center justify-center gap-2">
                     <i class="fa-solid fa-phone text-primary"></i>
-                    <span class="text-sm font-medium text-slate-700" data-i18n="instContact">For support, call: </span>
+                    <span class="text-xs font-medium text-slate-700" data-i18n="instContact">Direct Hotline: </span>
                     <a href="tel:01115489561" class="text-primary font-bold text-sm" dir="ltr">01115489561</a>
                 </div>
                 <div>
-                    <label data-i18n="instFormLabel" class="block text-sm font-medium text-slate-700 mb-1">Your Request
-                        Details</label>
-                    <textarea data-i18n-placeholder="instFormPlace" rows="4"
-                        class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors resize-none"
-                        placeholder="Write what you want to do here..."></textarea>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Institution / School Name *</label>
+                    <input type="text" id="instOrgName" required placeholder="e.g. Modern Future International Academy" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors">
                 </div>
-                <button type="submit" data-i18n="btnSubmitApp"
-                    class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300 mt-4">
-                    Submit
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Contact Person Name</label>
+                        <input type="text" id="instContactPerson" placeholder="e.g. Dr. Sarah Johnson" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                            <i class="fa-solid fa-phone text-primary"></i>
+                            <span>Phone Number (Required) *</span>
+                        </label>
+                        <input type="tel" id="instContactPhone" required placeholder="e.g. 01115489561 or +20..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-medium">
+                    </div>
+                </div>
+                <div>
+                    <label data-i18n="instFormLabel" class="block text-xs font-bold text-slate-700 mb-1">Your Request Details & Service Needs *</label>
+                    <textarea id="instRequestDetails" required rows="3"
+                        class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors resize-none"
+                        placeholder="Write student numbers, SEN curriculum requirements, teacher training, or assessment licensing details..."></textarea>
+                </div>
+                <button type="submit" id="instSubmitBtn" data-i18n="btnSubmitApp"
+                    class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 duration-300 mt-2 flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Submit Institution Request</span>
                 </button>
             </form>
         </div>
@@ -848,7 +972,7 @@
                 <span
                     class="inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-50 via-indigo-50 to-emerald-50 border-2 border-indigo-200/80 text-indigo-700 px-6 py-2.5 rounded-full text-sm font-extrabold shadow-md shadow-indigo-100/50 transform hover:scale-105 transition-all">
                     <span>🎮</span>
-                    <span>Designed for Every Learner &mdash; Parents, Children &amp; SEN Students Welcome</span>
+                    <span data-i18n="heroBadge">Designed for Every Learner &mdash; Parents, Children &amp; SEN Students Welcome</span>
                     <span>⭐️</span>
                 </span>
             </div>
@@ -864,22 +988,22 @@
                 <div
                     class="bg-gradient-to-br from-amber-50/80 to-orange-50/50 border-2 border-amber-200/80 rounded-3xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
                     <div class="text-4xl mb-3 animate-bounce">🎯</div>
-                    <div class="font-black text-slate-800 text-lg mb-1">Assess</div>
-                    <div class="text-xs font-bold text-slate-500 leading-relaxed">Discover unique strengths with our
+                    <div class="font-black text-slate-800 text-lg mb-1" data-i18n="heroCard1Title">Assess</div>
+                    <div class="text-xs font-bold text-slate-500 leading-relaxed" data-i18n="heroCard1Desc">Discover unique strengths with our
                         smart 50-question assessment</div>
                 </div>
                 <div
                     class="bg-gradient-to-br from-indigo-50/80 to-blue-50/50 border-2 border-indigo-200/80 rounded-3xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
                     <div class="text-4xl mb-3">💻</div>
-                    <div class="font-black text-slate-800 text-lg mb-1">Code &amp; Build</div>
-                    <div class="text-xs font-bold text-slate-500 leading-relaxed">Hands-on projects tailored to every
+                    <div class="font-black text-slate-800 text-lg mb-1" data-i18n="heroCard2Title">Code &amp; Build</div>
+                    <div class="text-xs font-bold text-slate-500 leading-relaxed" data-i18n="heroCard2Desc">Hands-on projects tailored to every
                         learner</div>
                 </div>
                 <div
                     class="bg-gradient-to-br from-emerald-50/80 to-teal-50/50 border-2 border-emerald-200/80 rounded-3xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
                     <div class="text-4xl mb-3">🚀</div>
-                    <div class="font-black text-slate-800 text-lg mb-1">Specialize &amp; Work</div>
-                    <div class="text-xs font-bold text-slate-500 leading-relaxed">A clear pathway from student to
+                    <div class="font-black text-slate-800 text-lg mb-1" data-i18n="heroCard3Title">Specialize &amp; Work</div>
+                    <div class="text-xs font-bold text-slate-500 leading-relaxed" data-i18n="heroCard3Desc">A clear pathway from student to
                         confident digital creator</div>
                 </div>
             </div>
@@ -1043,6 +1167,102 @@
                         </div>
                     </div>
 
+                    <!-- Accordion Item 4: Philosophy -->
+                    <div
+                        class="bg-white rounded-3xl border-2 border-purple-200 hover:border-purple-400 transition-all duration-300 shadow-lg overflow-hidden group">
+                        <button type="button" onclick="toggleAccordion('philosophy-content', 'philosophy-icon')"
+                            class="w-full flex items-center justify-between p-6 md:p-7 bg-gradient-to-r from-purple-50/80 via-white to-pink-50/50 hover:from-purple-100/80 hover:to-pink-100/60 transition-all text-start cursor-pointer">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-14 h-14 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-2xl font-bold shadow-md shadow-purple-200">
+                                    <i class="fa-solid fa-heart"></i>
+                                </div>
+                                <div>
+                                    <h2 data-i18n="philosophy" class="text-2xl md:text-3xl font-black text-slate-900 m-0">
+                                        Our Philosophy</h2>
+                                    <span
+                                        class="inline-block text-xs font-extrabold text-purple-700 bg-purple-100 px-3 py-1 rounded-full mt-1">انقر
+                                        للفتح / الإغلاق 🔽</span>
+                                </div>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-white border-2 border-purple-200 flex items-center justify-center text-purple-600 transition-transform duration-300 shadow-sm group-hover:scale-110"
+                                id="philosophy-icon">
+                                <i class="fa-solid fa-chevron-down text-lg"></i>
+                            </div>
+                        </button>
+                        <div id="philosophy-content"
+                            class="hidden px-8 py-7 border-t border-purple-100 bg-white text-slate-700 leading-relaxed">
+                            <p data-i18n="phil1"
+                                class="mb-5 text-lg font-medium text-slate-800 border-s-4 border-purple-500 ps-4 py-1 bg-purple-50/50 rounded-e-xl">
+                                We believe that ability should never define opportunity.
+                            </p>
+                            <p data-i18n="phil2" class="mb-4">
+                                Every student learns differently, progresses at a unique pace, and possesses strengths that can flourish within the right environment.
+                            </p>
+                            <p data-i18n="phil3">
+                                Technology is not simply a subject to be taught &mdash; it is a powerful tool for communication, creativity, independence, and inclusion. By combining adaptive education with evidence-informed practices, we help learners transform curiosity into capability and capability into lifelong opportunity.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Accordion Item 5: Our Impact -->
+                    <div
+                        class="bg-white rounded-3xl border-2 border-amber-200 hover:border-amber-400 transition-all duration-300 shadow-lg overflow-hidden group">
+                        <button type="button" onclick="toggleAccordion('impact-content', 'impact-icon')"
+                            class="w-full flex items-center justify-between p-6 md:p-7 bg-gradient-to-r from-amber-50/80 via-white to-orange-50/50 hover:from-amber-100/80 hover:to-orange-100/60 transition-all text-start cursor-pointer">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-2xl font-bold shadow-md shadow-amber-200">
+                                    <i class="fa-solid fa-bolt"></i>
+                                </div>
+                                <div>
+                                    <h2 data-i18n="impact" class="text-2xl md:text-3xl font-black text-slate-900 m-0">
+                                        Our Impact</h2>
+                                    <span
+                                        class="inline-block text-xs font-extrabold text-amber-700 bg-amber-100 px-3 py-1 rounded-full mt-1">انقر
+                                        للفتح / الإغلاق 🔽</span>
+                                </div>
+                            </div>
+                            <div class="w-12 h-12 rounded-2xl bg-white border-2 border-amber-200 flex items-center justify-center text-amber-600 transition-transform duration-300 shadow-sm group-hover:scale-110"
+                                id="impact-icon">
+                                <i class="fa-solid fa-chevron-down text-lg"></i>
+                            </div>
+                        </button>
+                        <div id="impact-content"
+                            class="hidden px-8 py-7 border-t border-amber-100 bg-white text-slate-700 leading-relaxed">
+                            <p data-i18n="impactSubtitle"
+                                class="mb-5 text-lg font-medium text-slate-800 border-s-4 border-amber-500 ps-4 py-1 bg-amber-50/50 rounded-e-xl">
+                                We prepare students to:
+                            </p>
+                            <ul class="space-y-4">
+                                <li class="flex items-start gap-3">
+                                    <i class="fa-solid fa-circle-check text-emerald-500 text-lg mt-0.5"></i>
+                                    <span data-i18n="impact1" class="text-slate-700 font-medium">Think critically and solve problems creatively.</span>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <i class="fa-solid fa-circle-check text-emerald-500 text-lg mt-0.5"></i>
+                                    <span data-i18n="impact2" class="text-slate-700 font-medium">Build confidence through hands-on technology experiences.</span>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <i class="fa-solid fa-circle-check text-emerald-500 text-lg mt-0.5"></i>
+                                    <span data-i18n="impact3" class="text-slate-700 font-medium">Develop computational thinking and engineering skills.</span>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <i class="fa-solid fa-circle-check text-emerald-500 text-lg mt-0.5"></i>
+                                    <span data-i18n="impact4" class="text-slate-700 font-medium">Create meaningful digital and robotics projects.</span>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <i class="fa-solid fa-circle-check text-emerald-500 text-lg mt-0.5"></i>
+                                    <span data-i18n="impact5" class="text-slate-700 font-medium">Participate in STEM competitions and innovation challenges.</span>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <i class="fa-solid fa-circle-check text-emerald-500 text-lg mt-0.5"></i>
+                                    <span data-i18n="impact6" class="text-slate-700 font-medium">Build a portfolio of achievements that supports future education and career pathways.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="space-y-8 mb-12">
@@ -1057,63 +1277,6 @@
                         <p data-i18n="promiseDesc" class="text-lg text-slate-700">Every learner deserves the opportunity
                             to discover, create, innovate, and belong.</p>
                     </div>
-                </div>
-
-                <div
-                    class="bg-gradient-to-br from-indigo-50 to-white p-8 rounded-2xl border border-indigo-100 shadow-md mb-12 relative overflow-hidden">
-                    <div class="absolute -end-6 -top-6 text-indigo-100 text-9xl rtl-flip">
-                        <i class="fa-solid fa-quote-right"></i>
-                    </div>
-                    <h2 data-i18n="philosophy" class="text-3xl font-bold text-slate-900 mb-6 relative z-10">Our
-                        Philosophy</h2>
-                    <p data-i18n="phil1" class="mb-4 text-xl font-semibold text-primary relative z-10">We believe that
-                        ability should never define opportunity.</p>
-                    <p data-i18n="phil2" class="mb-4 text-slate-700 relative z-10">Every student learns differently,
-                        progresses at a unique pace, and possesses strengths that can flourish within the right
-                        environment.</p>
-                    <p data-i18n="phil3" class="text-slate-700 relative z-10">Technology is not simply a subject to be
-                        taughtit is a powerful tool for communication, creativity, independence, and inclusion. By
-                        combining adaptive education with evidence-informed practices, we help learners transform
-                        curiosity into capability and capability into lifelong opportunity.</p>
-                </div>
-
-                <div class="mb-12 bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-                    <h2 data-i18n="impact" class="text-3xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-                        <i class="fa-solid fa-bolt text-yellow-500"></i> Our Impact
-                    </h2>
-                    <p data-i18n="impactSubtitle" class="mb-6 text-slate-600 font-medium">We prepare students to:</p>
-                    <ul class="space-y-4">
-                        <li class="flex items-start gap-3">
-                            <i class="fa-solid fa-check-circle text-secondary mt-1.5"></i>
-                            <span data-i18n="impact1" class="text-slate-700">Think critically and solve problems
-                                creatively.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <i class="fa-solid fa-check-circle text-secondary mt-1.5"></i>
-                            <span data-i18n="impact2" class="text-slate-700">Build confidence through hands-on
-                                technology experiences.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <i class="fa-solid fa-check-circle text-secondary mt-1.5"></i>
-                            <span data-i18n="impact3" class="text-slate-700">Develop computational thinking and
-                                engineering skills.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <i class="fa-solid fa-check-circle text-secondary mt-1.5"></i>
-                            <span data-i18n="impact4" class="text-slate-700">Create meaningful digital and robotics
-                                projects.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <i class="fa-solid fa-check-circle text-secondary mt-1.5"></i>
-                            <span data-i18n="impact5" class="text-slate-700">Participate in STEM competitions and
-                                innovation challenges.</span>
-                        </li>
-                        <li class="flex items-start gap-3">
-                            <i class="fa-solid fa-check-circle text-secondary mt-1.5"></i>
-                            <span data-i18n="impact6" class="text-slate-700">Build a portfolio of achievements that
-                                supports future education and career pathways.</span>
-                        </li>
-                    </ul>
                 </div>
 
                 <div class="bg-indigo-50/80 p-8 rounded-2xl border border-indigo-100">
@@ -1338,6 +1501,84 @@
         </div>
     </footer>
 
+    <!-- ========================================================================= -->
+    <!-- 🤖 Floating AI Educational & Support Chatbot Widget -->
+    <!-- ========================================================================= -->
+    <div id="coderaChatbotContainer" class="fixed bottom-6 end-6 z-50 flex flex-col items-end">
+        <!-- Floating Launcher Button -->
+        <button id="chatbotToggleBtn" type="button"
+            class="group relative flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-primary via-indigo-600 to-purple-600 text-white shadow-2xl hover:shadow-indigo-500/50 hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-white/80 cursor-pointer"
+            title="CodeRa AI Assistant">
+            <span class="absolute -top-1 -end-1 flex h-4 w-4">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-4 w-4 bg-cyan-500 border-2 border-white"></span>
+            </span>
+            <i id="chatbotIconOpen" class="fa-solid fa-robot text-2xl group-hover:rotate-12 transition-transform duration-300"></i>
+            <i id="chatbotIconClose" class="fa-solid fa-xmark text-2xl hidden"></i>
+        </button>
+
+        <!-- Chat Window Popup -->
+        <div id="chatbotWindow"
+            class="hidden w-96 max-w-[calc(100vw-2rem)] h-[540px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden mb-4 transition-all duration-300 transform origin-bottom-right">
+            
+            <!-- Chatbot Header -->
+            <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-primary p-4 text-white flex justify-between items-center shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white text-lg border border-white/30">
+                        🤖
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm leading-tight flex items-center gap-1.5">
+                            <span>CodeRa AI Advisor</span>
+                            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+                        </h3>
+                        <p class="text-[11px] text-indigo-100/90">Instant SEN & Placement Guidance</p>
+                    </div>
+                </div>
+                <button id="chatbotCloseBtn" type="button" class="text-white/80 hover:text-white hover:bg-white/10 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-minus"></i>
+                </button>
+            </div>
+
+            <!-- Messages Stream -->
+            <div id="chatbotMessages" class="flex-1 p-4 overflow-y-auto space-y-3.5 bg-slate-50/50 text-sm">
+                <!-- Bot Intro Message -->
+                <div class="flex items-start gap-2.5">
+                    <div class="w-7 h-7 rounded-full bg-primary text-white flex-shrink-0 flex items-center justify-center text-xs">
+                        🤖
+                    </div>
+                    <div class="bg-white border border-slate-200 text-slate-800 p-3 rounded-2xl rounded-tl-sm shadow-sm max-w-[85%] text-xs leading-relaxed">
+                        Hello! 👋 I am your <strong>CodeRa AI Advisor</strong>. How can I help you today? Ask me about our <strong>50-Question AI Assessment</strong>, <strong>SEN & Autism Accommodations</strong>, <strong>5 Career Tracks</strong>, or <strong>Institutional Partnerships</strong>!
+                    </div>
+                </div>
+
+                <!-- Quick Prompt Chips -->
+                <div id="chatQuickPrompts" class="flex flex-wrap gap-1.5 pt-1">
+                    <button type="button" class="quick-chip text-[11px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-full px-3 py-1.5 transition-all text-start cursor-pointer" data-prompt="How does the 50-Question AI Assessment work?">
+                        🎯 50-Question Assessment
+                    </button>
+                    <button type="button" class="quick-chip text-[11px] font-semibold bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 rounded-full px-3 py-1.5 transition-all text-start cursor-pointer" data-prompt="What are the 5 Career Tracks and how is level decided?">
+                        🛣️ 5 Career Tracks
+                    </button>
+                    <button type="button" class="quick-chip text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-3 py-1.5 transition-all text-start cursor-pointer" data-prompt="How does CodeRa support ADHD, Autism, and SEN learners?">
+                        🧠 SEN & Diagnosis Support
+                    </button>
+                    <button type="button" class="quick-chip text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-full px-3 py-1.5 transition-all text-start cursor-pointer" data-prompt="How can schools and institutions partner with CodeRa?">
+                        🏫 School Partnerships
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Input Bar -->
+            <form id="chatbotForm" class="p-3 border-t border-slate-100 bg-white flex items-center gap-2">
+                <input type="text" id="chatbotInput" required placeholder="Type your question here..."
+                    class="flex-1 bg-slate-100 text-slate-800 text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all">
+                <button type="submit" class="bg-primary hover:bg-primary/90 text-white w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </form>
+        </div>
+    </div>
 
     <div id="childTestPage" class="bg-slate-50 text-slate-800 hidden min-h-screen">
         <main class="main-container h-full w-full">
@@ -1420,8 +1661,20 @@
         };
 
         window.openCEODashboard = function () {
-            const ceoModal = document.getElementById('ceoDashboardModal');
-            if (ceoModal) openModal(ceoModal);
+            closeModal();
+            if (typeof window.openCEODashboardModule === 'function') {
+                window.openCEODashboardModule();
+            } else {
+                document.body.classList.add('exam-mode', 'ceo-view-mode');
+                const testPage = document.getElementById('childTestPage');
+                if (testPage) {
+                    testPage.classList.remove('hidden');
+                    testPage.classList.add('exam-active');
+                    testPage.style.display = 'block';
+                    testPage.scrollTop = 0;
+                }
+                window.scrollTo(0, 0);
+            }
         };
 
         if (navSignInBtn) navSignInBtn.addEventListener('click', () => openModal(signInModal));
@@ -1477,35 +1730,139 @@
             });
         }
 
+        // --- Role Buttons ---
         if (btnRoleChild) {
             btnRoleChild.addEventListener('click', () => {
-                closeModal();
-                showNotification(
-                    currentLang === 'ar' ? '🎉 مرحباً بك! جاري بدء اختبار التقييم التفاعلي...' : '🎉 Welcome! Launching your Placement Test...',
-                    'success'
-                );
-                setTimeout(() => {
-                    startChildTest();
-                }, 500);
+                switchModal(roleSelectionModal, childConfirmModal);
             });
         }
 
         if (btnRoleParent) {
             btnRoleParent.addEventListener('click', () => {
-                closeModal();
-                showNotification(
-                    currentLang === 'ar' ? '🎯 جاري توجيهك لاختبار تحديد المستوى والتسكين...' : '🎯 Directing to Placement Assessment...',
-                    'success'
-                );
-                setTimeout(() => {
-                    startChildTest();
-                }, 500);
+                switchModal(roleSelectionModal, parentFormModal);
             });
         }
 
         if (btnRoleInstitution) {
             btnRoleInstitution.addEventListener('click', () => {
                 switchModal(roleSelectionModal, institutionFormModal);
+            });
+        }
+
+        // --- Parent Form File Attachment & Submission ---
+        let attachedDiagnosisData = null;
+        const parentSonDiagnosisFile = document.getElementById('parentSonDiagnosisFile');
+        const diagnosisDropArea = document.getElementById('diagnosisDropArea');
+        const diagnosisFilePrompt = document.getElementById('diagnosisFilePrompt');
+        const diagnosisFilePreview = document.getElementById('diagnosisFilePreview');
+        const diagnosisAttachedFileName = document.getElementById('diagnosisAttachedFileName');
+        const removeDiagnosisBtn = document.getElementById('removeDiagnosisBtn');
+
+        if (diagnosisDropArea && parentSonDiagnosisFile) {
+            diagnosisDropArea.addEventListener('click', (e) => {
+                if (e.target !== removeDiagnosisBtn && !removeDiagnosisBtn?.contains(e.target)) {
+                    parentSonDiagnosisFile.click();
+                }
+            });
+
+            parentSonDiagnosisFile.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (file) {
+                    attachedDiagnosisData = {
+                        name: file.name,
+                        size: (file.size / 1024).toFixed(1) + ' KB',
+                        type: file.type,
+                        lastModified: file.lastModified
+                    };
+                    if (diagnosisAttachedFileName) diagnosisAttachedFileName.textContent = file.name;
+                    if (diagnosisFilePrompt) diagnosisFilePrompt.classList.add('hidden');
+                    if (diagnosisFilePreview) diagnosisFilePreview.classList.remove('hidden');
+                }
+            });
+        }
+
+        if (removeDiagnosisBtn) {
+            removeDiagnosisBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                attachedDiagnosisData = null;
+                if (parentSonDiagnosisFile) parentSonDiagnosisFile.value = '';
+                if (diagnosisFilePreview) diagnosisFilePreview.classList.add('hidden');
+                if (diagnosisFilePrompt) diagnosisFilePrompt.classList.remove('hidden');
+            });
+        }
+
+        const parentFormSubmitBtn = document.getElementById('parentFormSubmitBtn');
+        if (parentFormSubmitBtn) {
+            parentFormSubmitBtn.addEventListener('click', () => {
+                const childNameInput = document.getElementById('parentChildName');
+                const childAgeInput = document.getElementById('parentChildAge');
+                const diagnosisSelect = document.getElementById('parentDiagnosisSelect');
+                const diagnosisNotes = document.getElementById('parentDiagnosisNotes');
+                const childGradeInput = document.getElementById('parentChildGrade');
+                const childTechExp = document.getElementById('parentChildTechExp');
+
+                const selectedInterests = Array.from(document.querySelectorAll('.interest-checkbox:checked')).map(cb => cb.value);
+
+                const childName = (childNameInput && childNameInput.value.trim()) || 'Alex Rivers';
+                const age = (childAgeInput && childAgeInput.value.trim()) || '14';
+                const diagnosis = (diagnosisSelect ? diagnosisSelect.value : 'None') + (diagnosisNotes && diagnosisNotes.value ? ` (${diagnosisNotes.value.trim()})` : '');
+
+                const parentProfile = {
+                    childName,
+                    age,
+                    diagnosis,
+                    grade: childGradeInput ? childGradeInput.value : '',
+                    techExp: childTechExp ? childTechExp.value : '',
+                    interests: selectedInterests,
+                    attachedDiagnosis: attachedDiagnosisData,
+                    savedAt: Date.now()
+                };
+
+                try {
+                    localStorage.setItem('codera_parent_profile', JSON.stringify(parentProfile));
+                } catch (err) {}
+
+                showNotification(
+                    currentLang === 'ar' ? '✅ تم حفظ بيانات الطالب والتشخيص بنجاح!' : '✅ Student Profile & Diagnosis attached successfully!',
+                    'success'
+                );
+
+                switchModal(parentFormModal, childWithYouModal);
+            });
+        }
+
+        // --- Institution Form Submission ---
+        const instPartnershipForm = document.getElementById('institutionPartnershipForm');
+        if (instPartnershipForm) {
+            instPartnershipForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const orgName = document.getElementById('instOrgName')?.value || '';
+                const contactPerson = document.getElementById('instContactPerson')?.value || '';
+                const phone = document.getElementById('instContactPhone')?.value || '';
+                const details = document.getElementById('instRequestDetails')?.value || '';
+
+                const requestObj = {
+                    orgName,
+                    contactPerson,
+                    phone,
+                    details,
+                    timestamp: new Date().toISOString()
+                };
+
+                try {
+                    const prev = JSON.parse(localStorage.getItem('codera_institution_requests') || '[]');
+                    prev.push(requestObj);
+                    localStorage.setItem('codera_institution_requests', JSON.stringify(prev));
+                } catch (err) {}
+
+                closeModal();
+                instPartnershipForm.reset();
+                showNotification(
+                    currentLang === 'ar' 
+                        ? `✅ تم استلام طلب المؤسسة بنجاح! سيتواصل فريقنا معك على الرقم ${phone} قريباً.`
+                        : `✅ Request received! Our team will contact you shortly at ${phone}.`,
+                    'success'
+                );
             });
         }
 
@@ -1561,6 +1918,13 @@
         const translations = {
             en: {
                 langBtn: "", signIn: "Sign In", signUp: "Sign Up",
+                heroBadge: "Designed for Every Learner — Parents, Children & SEN Students Welcome",
+                heroCard1Title: "Assess",
+                heroCard1Desc: "Discover unique strengths with our smart 50-question assessment",
+                heroCard2Title: "Code & Build",
+                heroCard2Desc: "Hands-on projects tailored to every learner",
+                heroCard3Title: "Specialize & Work",
+                heroCard3Desc: "A clear pathway from student to confident digital creator",
                 whoWeAre: "Welcome To CodeRa", subtitle: "Discover the vision behind CodeRa and how we are transforming education.",
                 aboutTitle: "CodeRa  The Inclusive Tech Ecosystem", aboutHeading: "Who We Are",
                 aboutP1: "CodeRa is the first inclusive technology ecosystem dedicated to empowering students with special educational needs through future-focused digital education.",
@@ -1625,6 +1989,13 @@
             },
             ar: {
                 langBtn: "English", signIn: "تسجيل الدخول", signUp: "إنشاء حساب جديد",
+                heroBadge: "مصمم لجميع المتعلمين — نرحب بأولياء الأمور والأطفال وأصحاب الهمم",
+                heroCard1Title: "تقييم ذكي 🎯",
+                heroCard1Desc: "اكتشف نقاط القوة والقدرات الفريدة لطفلك من خلال تقييمنا الذكي المكون من 50 سؤالاً",
+                heroCard2Title: "برمجة وبناء 💻",
+                heroCard2Desc: "مشاريع عملية تفاعلية وتطبيقات برمجية مخصصة لتناسب كل متعلم",
+                heroCard3Title: "تخصص وإنجاز 🚀",
+                heroCard3Desc: "مسار تعليمي منظم وواضح يحول طفلك إلى صانع ومبتكر رقمي واثق",
                 ceoDashboard: "لوحة قيادة الرئيس التنفيذي 👑",
                 ceoTitle: "مركز القيادة التنفيذية لـ CodeRa 👑",
                 ceoSubtitle: "التحليلات والمؤشرات اللحظية للنظام التكنولوجي الشامل بالذكاء الاصطناعي",
@@ -1746,6 +2117,206 @@
             }
         };
 
+        // =========================================================================
+        // 🤖 Floating AI Chatbot Logic
+        // =========================================================================
+        const chatbotToggleBtn = document.getElementById('chatbotToggleBtn');
+        const chatbotWindow = document.getElementById('chatbotWindow');
+        const chatbotCloseBtn = document.getElementById('chatbotCloseBtn');
+        const chatbotIconOpen = document.getElementById('chatbotIconOpen');
+        const chatbotIconClose = document.getElementById('chatbotIconClose');
+        const chatbotMessages = document.getElementById('chatbotMessages');
+        const chatbotForm = document.getElementById('chatbotForm');
+        const chatbotInput = document.getElementById('chatbotInput');
+
+        let isChatbotOpen = false;
+
+        function toggleChatbot(open) {
+            isChatbotOpen = typeof open === 'boolean' ? open : !isChatbotOpen;
+            if (isChatbotOpen) {
+                chatbotWindow.classList.remove('hidden');
+                chatbotIconOpen.classList.add('hidden');
+                chatbotIconClose.classList.remove('hidden');
+                setTimeout(() => chatbotInput?.focus(), 100);
+            } else {
+                chatbotWindow.classList.add('hidden');
+                chatbotIconOpen.classList.remove('hidden');
+                chatbotIconClose.classList.add('hidden');
+            }
+        }
+
+        if (chatbotToggleBtn) chatbotToggleBtn.addEventListener('click', () => toggleChatbot());
+        if (chatbotCloseBtn) chatbotCloseBtn.addEventListener('click', () => toggleChatbot(false));
+
+        const chatHistory = [
+            {
+                role: 'system',
+                content: 'You are CodeRa AI Advisor, the official dedicated educational consultant for CodeRa (The Inclusive Tech Ecosystem). CodeRa offers: 1) A smart 50-Question AI Assessment testing 5 core digital readiness pillars; 2) 5 Career Tracks (Explorer: tactile robotics; Builder: LEGO robotics; Creator: Scratch games; Innovator: Python/IoT; Future Engineer: AI capstone projects); 3) Complete SEN & Autism/ADHD accommodations (high-contrast visuals, optional read-aloud audio with mute/unmute control, sign language guides, scheduled wellness breaks, low-pressure pacing); 4) Institutional partnerships with schools (direct hotline: 01115489561).\n\nSTRICT DOMAIN RESTRICTION & SCOPE POLICY:\n- You must ONLY answer questions directly related to CodeRa, its assessment, tracks, inclusive STEM/robotics education, and SEN accommodations.\n- If the user asks anything outside CodeRa\'s scope (such as politics, cooking recipes, weather, general trivia, celebrities, sports, non-STEM homework, or unrelated software), you MUST politely refuse and guide them back to CodeRa.\n- Arabic refusal message: "عذراً، أنا مخصص للإجابة فقط عن كل ما يتعلق بمنصة **CodeRa**، تقييمات التسكين الذكية، مسارات الروبوتات والبرمجة، وتسهيلات أصحاب الهمم (SEN). كيف يمكنني مساعدتك في برامج كوديرا اليوم؟ 🌟"\n- English refusal message: "I am specifically designed to assist with **CodeRa**, our 50-Question AI Assessment, coding & robotics tracks, and inclusive SEN education. How can I help you explore CodeRa today? 🌟"\n- Always respond warmly in the user\'s language (Arabic or English), utilizing formatted markdown lists, bold keywords, and friendly emojis.'
+            }
+        ];
+
+        function formatMarkdown(text) {
+            if (!text) return '';
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/^### (.*$)/gim, '<h4 class="font-bold text-slate-900 mt-2 mb-1 text-sm">$1</h4>')
+                .replace(/^## (.*$)/gim, '<h3 class="font-bold text-slate-900 mt-2 mb-1 text-sm">$1</h3>')
+                .replace(/^\s*[\-\*]\s+(.*$)/gim, '<li class="ms-4 list-disc">$1</li>')
+                .replace(/^\s*(\d+)\.\s+(.*$)/gim, '<li class="ms-4 list-decimal">$2</li>')
+                .replace(/\n/g, '<br/>');
+            return html;
+        }
+
+        function appendChatMessage(text, isUser = false) {
+            const msgRow = document.createElement('div');
+            msgRow.className = `flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = `w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs shadow-sm ${isUser ? 'bg-indigo-600 text-white' : 'bg-primary text-white'}`;
+            avatar.textContent = isUser ? '👤' : '🤖';
+
+            const bubble = document.createElement('div');
+            bubble.className = `p-3 rounded-2xl text-xs leading-relaxed max-w-[85%] shadow-sm ${
+                isUser 
+                    ? 'bg-primary text-white rounded-tr-sm text-start font-medium' 
+                    : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm text-start'
+            }`;
+            bubble.innerHTML = isUser ? text.replace(/\n/g, '<br/>') : formatMarkdown(text);
+
+            msgRow.appendChild(avatar);
+            msgRow.appendChild(bubble);
+            chatbotMessages.appendChild(msgRow);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const typingRow = document.createElement('div');
+            typingRow.id = 'chat-typing-indicator';
+            typingRow.className = 'flex items-start gap-2.5';
+            typingRow.innerHTML = `
+                <div class="w-7 h-7 rounded-full bg-primary text-white flex-shrink-0 flex items-center justify-center text-xs shadow-sm">🤖</div>
+                <div class="bg-white border border-slate-200 p-3 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style="animation-delay: 0s;"></span>
+                    <span class="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style="animation-delay: 0.2s;"></span>
+                    <span class="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style="animation-delay: 0.4s;"></span>
+                </div>
+            `;
+            chatbotMessages.appendChild(typingRow);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typingRow = document.getElementById('chat-typing-indicator');
+            if (typingRow) typingRow.remove();
+        }
+        async function getAIResponse(query) {
+            // Azure AI Services API key (configurable via localStorage.setItem('azure_ai_api_key', '...') or environment)
+            const apiKey = localStorage.getItem('azure_ai_api_key') || "YOUR_AZURE_API_KEY_HERE";
+            const endpoints = [
+                "https://ah30309142502238-8748-resource.openai.azure.com/openai/deployments/DeepSeek-V3.2/chat/completions?api-version=2024-08-01-preview",
+                "https://ah30309142502238-8748-resource.openai.azure.com/openai/deployments/o4-mini/chat/completions?api-version=2024-08-01-preview"
+            ];
+
+            chatHistory.push({ role: 'user', content: query });
+            if (chatHistory.length > 12) {
+                // Keep system prompt + last 10 messages
+                chatHistory.splice(1, chatHistory.length - 11);
+            }
+
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'api-key': apiKey
+                        },
+                        body: JSON.stringify({
+                            messages: chatHistory
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+                            const aiText = data.choices[0].message.content;
+                            chatHistory.push({ role: 'assistant', content: aiText });
+                            return aiText;
+                        }
+                    }
+                } catch (error) {
+                    console.warn("Chatbot endpoint error, trying backup:", error);
+                }
+            }
+
+            return getStaticFallbackResponse(query);
+        }
+
+        function getStaticFallbackResponse(query) {
+            const q = query.toLowerCase();
+            const isAr = /[\u0600-\u06FF]/.test(query) || currentLang === 'ar';
+
+            if (q.includes('50') || q.includes('assessment') || q.includes('test') || q.includes('تقييم') || q.includes('اختبار')) {
+                return isAr
+                    ? '🎯 **نظام التقييم الرقمي الذكي (50 سؤالاً):**\nيقيس الاختبار 5 مهارات أساسية:\n1. التفكير المنطقي وحل المشكلات 🧩\n2. المهارات الحركية والتفاعل الرقمي 🖱️\n3. التواصل والتعليمات الصوتية/البصرية 🔊\n4. الانتباه والذاكرة البصرية 👁️\n5. المفاهيم البرمجية الأساسية 💻\n\nيتم تسكين الطالب تلقائياً في المستوى المناسب فور الانتهاء!'
+                    : '🎯 **The 50-Question AI Placement Assessment:**\nIt measures 5 core digital readiness pillars:\n1. Logical & Computational Thinking 🧩\n2. Fine Motor & Screen Interaction 🖱️\n3. Receptive & Audio-Visual Communication 🔊\n4. Attention & Visual Memory 👁️\n5. Foundational Coding Concepts 💻\n\nIt automatically determines the child\'s track upon completion!';
+            }
+
+            if (q.includes('track') || q.includes('level') || q.includes('مسار') || q.includes('مستو')) {
+                return isAr
+                    ? '🛣️ **المسارات الـ 5 المتاحة في CodeRa:**\n• **مسار المستكشف (Explorer):** للبدايات والتفاعل الأساسي والروبوتات البسيطة 🧭\n• **مسار البناء (Builder):** بناء وبرمجة روبوتات LEGO والتحكم 🔨\n• **مسار المبدع (Creator):** برمجة الألعاب التفاعلية بـ Scratch و LEGO SPIKE 🎨\n• **مسار المبتكر (Innovator):** برمجة Python و Arduino وإنترنت الأشياء 💡\n• **مهندس المستقبل (Future Engineer):** مشاريع تخرج متقدمة وذكاء اصطناعي 🚀'
+                    : '🛣️ **CodeRa 5 Career Pathways:**\n• **Explorer Track:** Tactile robotics & foundational logic 🧭\n• **Builder Track:** LEGO robotics & sensor programming 🔨\n• **Creator Track:** Interactive Scratch games & smart automation 🎨\n• **Innovator Track:** Python, Arduino & IoT engineering 💡\n• **Future Engineer Track:** AI capstone portfolios & real-world projects 🚀';
+            }
+
+            if (q.includes('adhd') || q.includes('autism') || q.includes('sen') || q.includes('توحد') || q.includes('فرط حركة') || q.includes('تشخيص') || q.includes('احتياجات') || q.includes('صعوبات')) {
+                return isAr
+                    ? '🧠 **دعم أصحاب الهمم وصعوبات التعلم (SEN):**\n• أسئلة تفاعلية بصرية وصوتية مع تحكم كامل بالصوت (Mute/Unmute) 🔇🔊\n• دعم لغة الإشارة وفواصل استراحة ذكية بين الأجزاء ⏸️\n• خوارزمية ذكاء اصطناعي تتكيف تلقائياً مع تشخيص طفلك وتمنحه الدعم والوقت الكافي بدون أي ضغوط!'
+                    : '🧠 **Inclusive SEN & Diagnosis Support:**\n• High-contrast visual cues, optional speech read-aloud, and sound control 🔇🔊\n• Built-in Sign Language video guides and scheduled wellness breaks ⏸️\n• Adaptive AI engine that adjusts instruction style to the student\'s diagnosis without stress!';
+            }
+
+            if (q.includes('school') || q.includes('institution') || q.includes('partner') || q.includes('مدرسة') || q.includes('مؤسسة') || q.includes('شراكة') || q.includes('اتصال') || q.includes('رقم')) {
+                return isAr
+                    ? '🏫 **شراكات المدارس والمؤسسات:**\nنوفر تراخيص لتقييم الطلاب، مناهج روبوتات وبرمجة شاملة، وتدريب المعلمين.\nيمكنك ملء استمارة المؤسسة وترك رقم هاتفك، أو الاتصال بالخط الساخن مباشرة: **01115489561** 📞'
+                    : '🏫 **School & Institutional Partnerships:**\nWe provide placement licenses, inclusive coding curricula, and teacher enablement.\nFill out the Institution form with your contact phone or call our hotline: **01115489561** 📞';
+            }
+
+            return isAr
+                ? 'عذراً، أنا مخصص للإجابة فقط عن كل ما يتعلق بمنصة **CodeRa**، تقييمات التسكين الذكية، مسارات الروبوتات والبرمجة، وتسهيلات أصحاب الهمم (SEN). كيف يمكنني مساعدتك في برامج كوديرا اليوم؟ 🌟'
+                : 'I am specifically designed to assist with **CodeRa**, our 50-Question AI Assessment, coding & robotics tracks, and inclusive SEN education. How can I help you explore CodeRa today? 🌟';
+        }
+
+        if (chatbotForm && chatbotInput) {
+            chatbotForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const text = chatbotInput.value.trim();
+                if (!text) return;
+                appendChatMessage(text, true);
+                chatbotInput.value = '';
+
+                showTypingIndicator();
+                const reply = await getAIResponse(text);
+                removeTypingIndicator();
+                appendChatMessage(reply, false);
+            });
+        }
+
+        document.querySelectorAll('.quick-chip').forEach(chip => {
+            chip.addEventListener('click', async () => {
+                const prompt = chip.getAttribute('data-prompt');
+                if (prompt) {
+                    appendChatMessage(prompt, true);
+                    showTypingIndicator();
+                    const reply = await getAIResponse(prompt);
+                    removeTypingIndicator();
+                    appendChatMessage(reply, false);
+                }
+            });
+        });
+
         function startChildTest(restore = false) {
             closeModal();
             document.body.classList.add('exam-mode');
@@ -1756,8 +2327,19 @@
             }
             window.scrollTo(0, 0);
 
+            let studentName = 'Alex Rivers';
+            try {
+                const parentProfile = localStorage.getItem('codera_parent_profile');
+                if (parentProfile) {
+                    const parsed = JSON.parse(parentProfile);
+                    if (parsed.childName && parsed.childName.trim()) {
+                        studentName = parsed.childName.trim();
+                    }
+                }
+            } catch (err) {}
+
             if (typeof window.initAssessment === 'function') {
-                window.initAssessment('Alex Rivers', restore);
+                window.initAssessment(studentName, restore);
             }
         }
 

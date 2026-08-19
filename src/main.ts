@@ -1,17 +1,31 @@
 import './styles/app.css';
 import { AssessmentRunner } from './components/AssessmentRunner';
-import { renderCEODashboard } from './components/ReportDashboard';
+import { renderCEODashboard, returnToLandingPage } from './components/ReportDashboard';
 
 let currentRunner: AssessmentRunner | null = null;
 
-export function initAssessment(studentName: string = 'Alex Rivers', restoreIfAvailable: boolean = false) {
+export function initAssessment(studentName?: string, restoreIfAvailable: boolean = false) {
+  let name = studentName;
+  if (!name || name === 'Alex Rivers') {
+    try {
+      const parentProfile = localStorage.getItem('codera_parent_profile');
+      if (parentProfile) {
+        const parsed = JSON.parse(parentProfile);
+        if (parsed.childName && parsed.childName.trim()) {
+          name = parsed.childName.trim();
+        }
+      }
+    } catch (e) {}
+  }
+  name = name || 'Alex Rivers';
+
   const appContainer = document.getElementById('app');
   if (appContainer) {
     if (!restoreIfAvailable) {
       AssessmentRunner.clearSavedSession();
     }
     currentRunner = new AssessmentRunner(appContainer);
-    currentRunner.startSession(studentName, restoreIfAvailable);
+    currentRunner.startSession(name, restoreIfAvailable);
   }
 }
 
@@ -20,16 +34,7 @@ export function exitAssessment(reload: boolean = true) {
   if (currentRunner) {
     currentRunner.exitAndReset(reload);
   } else {
-    const testPage = document.getElementById('childTestPage');
-    if (testPage) {
-      testPage.classList.add('hidden');
-      testPage.classList.remove('exam-active');
-    }
-    document.body.classList.remove('exam-mode');
-    document.body.classList.remove('ceo-view-mode');
-    if (reload) {
-      window.location.href = window.location.pathname;
-    }
+    returnToLandingPage();
   }
 }
 
@@ -41,6 +46,7 @@ export function openCEODashboard() {
     document.body.classList.add('ceo-view-mode');
     childTestPage.classList.remove('hidden');
     childTestPage.classList.add('exam-active');
+    childTestPage.scrollTop = 0;
     window.scrollTo(0, 0);
     renderCEODashboard(appContainer);
   }
@@ -49,7 +55,9 @@ export function openCEODashboard() {
 // Attach to window object for landing page scripts
 (window as any).initAssessment = initAssessment;
 (window as any).exitAssessment = exitAssessment;
+(window as any).returnToLandingPage = returnToLandingPage;
 (window as any).openCEODashboard = openCEODashboard;
+(window as any).openCEODashboardModule = openCEODashboard;
 
 document.addEventListener('DOMContentLoaded', () => {
   const appContainer = document.getElementById('app');
